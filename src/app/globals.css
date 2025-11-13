@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f0f11;
+  --brand-from: #3aa0ff;
+  --brand-via: #6c6cff;
+  --brand-to: #ff3aa3;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+@utility bg-brand-gradient {
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-via), var(--brand-to));
+}
+
+@utility shadow-glow {
+  box-shadow: 0 10px 40px rgba(98, 166, 255, 0.35), 0 10px 60px rgba(255, 58, 163, 0.25);
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  max-width: 1200px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
