@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="container">
         <div className="flex flex-col items-center gap-4 sm:gap-3 sm:flex-row sm:justify-between">
           <p className="text-center sm:text-left">
-            <span aria-label="Copyright">©</span> {currentYear} <span aria-label="Supersmarx company name">Supersmartx</span>
+            <span aria-label="Copyright">©</span> {currentYear} <span aria-label="Supersmarx company name">SupersmartX</span>
           </p>
           <nav aria-label="Footer navigation">
             <ul className="flex items-center gap-3 sm:gap-4">

@@ -78,7 +78,7 @@ export default function Hero() {
                 src="/logo.png"
                 width={120}
                 height={120}
-                alt="Supersmartx logo"
+                alt="SupersmartX logo"
                 className="rounded-2xl sm:h-40 sm:w-40"
                 onError={() => setImgError(true)}
               />

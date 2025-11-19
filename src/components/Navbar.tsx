@@ -19,12 +19,12 @@ export default function Navbar() {
               src="/logo.png"
               width={36}
               height={36}
-              alt="Supersmartx logo"
+              alt="SupersmartX logo"
               className="shadow-glow rounded-full"
               onError={() => setError(true)}
             />
           )}
-          <span className="text-lg font-semibold" aria-label="Supersmarx home">Supersmartx</span>
+          <span className="text-lg font-semibold" aria-label="Supersmarx home">SupersmartX</span>
         </Link>
         
         {/* Desktop Menu */}

@@ -1,5 +1,5 @@
-export const PRODUCT_NAME = "smartmeet"
-export const HEADLINE = "smartmeet platform for people"
+export const PRODUCT_NAME = "Smartmeet"
+export const HEADLINE = "Smartmeet platform for people"
 export const SUBHEADLINE = "Plan smarter agendas, capture decisions, and turn meetings into actions."
 export const FEATURES = [
   {
