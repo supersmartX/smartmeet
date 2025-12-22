@@ -1,12 +1,21 @@
 export const PRODUCT_NAME = "Smartmeet"
-export const HEADLINE = "Smartmeet platform for people"
-export const SUBHEADLINE = "Plan smarter agendas, capture decisions, and turn meetings into actions."
+export const HEADLINE = "Your Meetings, Transformed into Actionable Insights"
+export const SUBHEADLINE = "Smartmeet records your meetings and automatically generates summaries, action items, and documentation using AI."
 export const FEATURES = [
   {
-    title: "AI Agenda Builder",
-    description: "Generate focused agendas from goals and documents.",
+    title: "🔴 Record Tab Audio",
+    description: "Seamlessly capture live audio from any browser tab including Google Meet, Zoom, and Teams meetings.",
   },
-  { title: "Auto Summaries", description: "Instant takeaways and next steps for every meeting." },
-  { title: "Smart Action Items", description: "Assign tasks with owners and due dates in one click." },
-  { title: "Seamless Integrations", description: "Works with calendars and tools you already use." },
+  {
+    title: "🔁 End-to-End Pipeline",
+    description: "Complete workflow automation: audio capture → transcription → intelligent summarization → code generation → documentation → automated testing.",
+  },
+  {
+    title: "💾 Download Code",
+    description: "Instantly save generated Python code as ready-to-use `.py` files with proper formatting and structure.",
+  },
+  {
+    title: "📋 Syntax Highlighting",
+    description: "Beautiful, readable code display with professional syntax highlighting powered by highlight.js for better comprehension.",
+  },
 ]

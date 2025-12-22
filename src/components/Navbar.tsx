@@ -1,76 +1,128 @@
 "use client"
 import Link from "next/link"
 import Image from "next/image"
-import Button from "@/components/Button"
 import { useState } from "react"
+import { useAuth } from "@/context/AuthContext"
+import { ModeToggle } from "@/components/ModeToggle"
+import { Menu, X, Sparkles } from "lucide-react"
 
 export default function Navbar() {
   const [error, setError] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { isAuthenticated, user, logout } = useAuth()
   
   return (
-    <header className="container py-4">
-      <div className="flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          {error ? (
-            <div className="h-9 w-9 rounded-full bg-brand-gradient shadow-glow" />
-          ) : (
+    <header className="sticky top-0 z-50 w-full border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-black/80 backdrop-blur-xl">
+      <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="relative w-9 h-9 group-hover:scale-110 transition-transform">
             <Image
-              src="/logo.png"
-              width={36}
-              height={36}
-              alt="SupersmartX logo"
-              className="shadow-glow rounded-full"
-              onError={() => setError(true)}
+              src="/logoX.png"
+              alt="Smartmeet Logo"
+              fill
+              className="object-contain"
+              priority
             />
-          )}
-          <span className="text-lg font-semibold" aria-label="Supersmarx home">SupersmartX</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Smartmeet</span>
+            <span className="text-[10px] font-black text-brand-via uppercase tracking-[0.2em] -mt-1">AI Insights</span>
+          </div>
         </Link>
         
         {/* Desktop Menu */}
-        <div className="hidden sm:flex items-center gap-3">
-          <Link href="#features" className="text-sm text-black/80 dark:text-white/80">Features</Link>
-          <Link href="#download" className="text-sm text-black/80 dark:text-white/80">Download</Link>
-          <Button href="#download" variant="primary">Add Extension</Button>
+        <div className="hidden md:flex items-center gap-8">
+          <nav className="flex items-center gap-6">
+            <Link href="/#features" className="text-xs font-black text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 uppercase tracking-widest transition-colors">Features</Link>
+            <Link href="/#pricing" className="text-xs font-black text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 uppercase tracking-widest transition-colors">Pricing</Link>
+          </nav>
+          
+          <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800" />
+          
+          <div className="flex items-center gap-4">
+            <ModeToggle />
+            {isAuthenticated ? (
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">Hi, {user?.name.split(' ')[0]}</span>
+                <Link href="/dashboard" className="px-6 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-black rounded-xl hover:scale-105 transition-all shadow-xl shadow-black/10">
+                  DASHBOARD
+                </Link>
+              </div>
+            ) : (
+              <Link href="/login" className="px-6 py-2.5 bg-brand-gradient text-white text-xs font-black rounded-xl hover:scale-105 transition-all shadow-glow flex items-center gap-2">
+                <Sparkles className="w-3 h-3" />
+                GET STARTED
+              </Link>
+            )}
+          </div>
         </div>
         
         {/* Mobile Menu Button */}
-        <button
-          className="sm:hidden p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-label="Toggle menu"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {isMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
+        <div className="flex items-center gap-3 md:hidden">
+          <ModeToggle />
+          <button
+            className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
       
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="sm:hidden mt-4 pb-4 border-t border-black/10 dark:border-white/10">
-          <div className="flex flex-col gap-3 pt-4">
+        <div className="md:hidden border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black px-4 py-6 space-y-6 animate-in fade-in slide-in-from-top-4">
+          <nav className="flex flex-col gap-4">
             <Link 
-              href="#features" 
-              className="text-sm text-black/80 dark:text-white/80 py-2"
+              href="/#features" 
+              className="text-sm font-black text-zinc-900 dark:text-zinc-100 py-2 uppercase tracking-widest"
               onClick={() => setIsMenuOpen(false)}
             >
               Features
             </Link>
             <Link 
-              href="#download" 
-              className="text-sm text-black/80 dark:text-white/80 py-2"
+              href="/#pricing" 
+              className="text-sm font-black text-zinc-900 dark:text-zinc-100 py-2 uppercase tracking-widest"
               onClick={() => setIsMenuOpen(false)}
             >
-              Download
+              Pricing
             </Link>
-            <Button href="#download" variant="primary" onClick={() => setIsMenuOpen(false)}>
-              Add Extension
-            </Button>
+          </nav>
+          
+          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+            {isAuthenticated ? (
+              <div className="flex flex-col gap-4">
+                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                  SIGNED IN AS {user?.email}
+                </div>
+                <Link 
+                  href="/dashboard"
+                  className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-black rounded-xl text-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  GO TO DASHBOARD
+                </Link>
+                <button 
+                  onClick={() => {
+                    logout()
+                    setIsMenuOpen(false)
+                  }}
+                  className="text-xs font-black text-red-600 py-2 text-left uppercase tracking-widest"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <Link 
+                href="/login"
+                className="w-full py-4 bg-brand-gradient text-white text-xs font-black rounded-xl text-center flex items-center justify-center gap-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Sparkles className="w-4 h-4" />
+                GET STARTED
+              </Link>
+            )}
           </div>
         </div>
       )}

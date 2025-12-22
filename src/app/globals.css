@@ -26,14 +26,56 @@
   background-image: linear-gradient(135deg, var(--brand-from), var(--brand-via), var(--brand-to));
 }
 
+@utility text-brand-gradient {
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-via), var(--brand-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 @utility shadow-glow {
-  box-shadow: 0 10px 40px rgba(98, 166, 255, 0.35), 0 10px 60px rgba(255, 58, 163, 0.25);
+  box-shadow: 0 10px 40px rgba(98, 166, 255, 0.25), 0 10px 60px rgba(255, 58, 163, 0.15);
+}
+
+@utility shadow-glow-lg {
+  box-shadow: 0 20px 60px rgba(98, 166, 255, 0.35), 0 20px 80px rgba(255, 58, 163, 0.25);
 }
 
 @utility container {
   margin-inline: auto;
   padding-inline: 1rem;
   max-width: 1200px;
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #e4e4e7;
+    border-radius: 10px;
+  }
+  .dark &::-webkit-scrollbar-thumb {
+    background: #27272a;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #d4d4d8;
+  }
+  .dark &::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+  }
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 body {
