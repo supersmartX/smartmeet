@@ -18,15 +18,15 @@ export default function Navbar() {
           <div className="relative w-9 h-9 group-hover:scale-110 transition-transform">
             <Image
               src="/logoX.png"
-              alt="Smartmeet Logo"
+              alt="Supersmart Logo"
               fill
               className="object-contain"
               priority
             />
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Smartmeet</span>
-            <span className="text-[10px] font-black text-brand-via uppercase tracking-[0.2em] -mt-1">AI Insights</span>
+            <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
+            <span className="text-[10px] font-black text-brand-via uppercase tracking-[0.2em] -mt-1">Audio-to-Code</span>
           </div>
         </Link>
         

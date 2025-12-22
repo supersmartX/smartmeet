@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // In a real app, this would check with your backend
         // For now, we'll use localStorage for demo purposes
-        const storedUser = localStorage.getItem("supersmartx_user");
+        const storedUser = localStorage.getItem("supersmart_user");
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
@@ -60,13 +60,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Create mock user
       const mockUser: User = {
         id: "user_" + Math.random().toString(36).substr(2, 9),
-        name: "Smartmeet User",
+        name: "Supersmart User",
         email,
         apiKey: apiKey || process.env.NEXT_PUBLIC_DEFAULT_API_KEY || ""
       };
 
       // Store user in localStorage
-      localStorage.setItem("supersmartx_user", JSON.stringify(mockUser));
+      localStorage.setItem("supersmart_user", JSON.stringify(mockUser));
       setUser(mockUser);
 
       return true;
@@ -80,14 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     // Clear user data
-    localStorage.removeItem("supersmartx_user");
+    localStorage.removeItem("supersmart_user");
     setUser(null);
   };
 
   const updateApiKey = (apiKey: string) => {
     if (user) {
       const updatedUser = { ...user, apiKey };
-      localStorage.setItem("supersmartx_user", JSON.stringify(updatedUser));
+      localStorage.setItem("supersmart_user", JSON.stringify(updatedUser));
       setUser(updatedUser);
     }
   };

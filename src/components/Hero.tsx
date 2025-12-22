@@ -9,7 +9,11 @@ import { useAuth } from "@/context/AuthContext"
 export default function Hero() {
   const { isAuthenticated } = useAuth()
   const [browser, setBrowser] = useState<BrowserKey>("other")
-  useEffect(() => { setBrowser(detectBrowser()) }, [])
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      setBrowser(detectBrowser())
+    })
+  }, [])
 
   const extensionUrl = useMemo(() => {
     switch (browser) {
@@ -44,7 +48,7 @@ export default function Hero() {
           <div className="flex flex-col gap-8 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-400 w-fit shadow-sm">
               <span className="flex h-2 w-2 rounded-full bg-brand-via animate-ping" />
-              {PRODUCT_NAME} • AI MEETING INTELLIGENCE
+              {PRODUCT_NAME} • AUDIO-TO-CODE PIPELINE
             </div>
             
             <div className="space-y-4">

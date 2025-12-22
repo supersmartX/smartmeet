@@ -29,7 +29,7 @@ export default function CTA() {
                 variant="primary" 
                 className="w-full sm:w-auto h-14 px-10 bg-brand-gradient text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-glow hover:scale-105 transition-all"
               >
-                Get Started Now — It's Free
+                Get Started Now {'\u2014'} It{'s'} Free
               </Button>
               <Button 
                 href="/#pricing" 

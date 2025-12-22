@@ -12,15 +12,15 @@ export default function Footer() {
               <div className="relative w-8 h-8">
                 <Image
                   src="/logoX.png"
-                  alt="Smartmeet Logo"
+                  alt="Supersmart Logo"
                   fill
                   className="object-contain"
                 />
               </div>
-              <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Smartmeet</span>
+              <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
-              Transforming raw meeting audio into actionable intelligence with state-of-the-art AI.
+              Transforming raw audio into working code with a sophisticated AI pipeline.
             </p>
           </div>
           
@@ -54,7 +54,7 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">
-            © {currentYear} Smartmeet AI. All rights reserved.
+            © {currentYear} Supersmart AI. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">

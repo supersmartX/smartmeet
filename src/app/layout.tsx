@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Smartmeet AI",
-  description: "AI-powered meeting recording and analysis platform",
+  title: "Supersmart AI",
+  description: "AI-Powered Audio-to-Code Pipeline",
   icons: { icon: "/favicon.ico" },
 };
 

@@ -49,14 +49,14 @@ export default function LoginPage() {
           <div className="relative w-14 h-14 group-hover:rotate-6 transition-transform">
             <Image
               src="/logoX.png"
-              alt="Smartmeet Logo"
+              alt="Supersmart Logo"
               fill
               className="object-contain"
             />
           </div>
           <div className="flex flex-col text-left">
-            <span className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Smartmeet</span>
-            <span className="text-[10px] font-black text-brand-via uppercase tracking-[0.2em] -mt-1">AI Pipeline</span>
+            <span className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
+            <span className="text-[10px] font-black text-brand-via uppercase tracking-[0.2em] -mt-1">Audio-to-Code</span>
           </div>
         </Link>
         <h2 className="text-4xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight mb-2">

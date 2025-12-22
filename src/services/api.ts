@@ -1,10 +1,10 @@
 /**
- * SupersmartX API Service
+ * Supersmart API Service
  * Handles all communication with the backend API
  */
 
 // Configuration - will be replaced with actual AWS URL when provided
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.supersmartx.com";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.supersmart.ai";
 const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_DEFAULT_API_KEY || "";
 
 interface ApiResponse<T> {
