@@ -5,7 +5,6 @@
 
 // Configuration - will be replaced with actual AWS URL when provided
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.supersmart.ai";
-const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_DEFAULT_API_KEY || "";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -84,7 +83,7 @@ async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   data?: FormData | Record<string, unknown>,
-  apiKey: string = DEFAULT_API_KEY
+  apiKey: string = ""
 ): Promise<ApiResponse<T>> {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -156,7 +155,7 @@ export async function audioToCode(
  */
 export async function transcribeAudio(
   file: File,
-  apiKey: string = DEFAULT_API_KEY
+  apiKey: string = ""
 ): Promise<ApiResponse<TranscriptionResponse>> {
   const formData = new FormData();
   formData.append("file", file);
@@ -176,7 +175,7 @@ export async function summarizeText(
 ): Promise<ApiResponse<SummaryResponse>> {
   return makeApiRequest<SummaryResponse>("/summarize", "POST", {
     transcript: text,
-    api_key: options.api_key || DEFAULT_API_KEY,
+    api_key: options.api_key || "",
     provider: options.provider || "GPT-4"
   });
 }
@@ -194,7 +193,7 @@ export async function generateCode(
   return makeApiRequest<CodeGenerationResponse>("/generate-code", "POST", {
     task,
     provider: options.provider || "openai",
-    api_key: options.api_key || DEFAULT_API_KEY
+    api_key: options.api_key || ""
   });
 }
 
@@ -211,7 +210,7 @@ export async function testCode(
   return makeApiRequest<TestResponse>("/test-code", "POST", {
     code,
     provider: options.provider || "local",
-    api_key: options.api_key || DEFAULT_API_KEY
+    api_key: options.api_key || ""
   });
 }
 
