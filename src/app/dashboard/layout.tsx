@@ -29,7 +29,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const { data: session } = useSession()
   const user = session?.user
-  const logout = () => signOut()
+  const logout = () => signOut({ callbackUrl: "/" })
   const sidebarRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
 

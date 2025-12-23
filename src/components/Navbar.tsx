@@ -109,7 +109,7 @@ export default function Navbar() {
                 </Link>
                 <button 
                   onClick={() => {
-                    signOut()
+                    signOut({ callbackUrl: "/" })
                     setIsMenuOpen(false)
                   }}
                   className="text-xs font-black text-red-600 py-2 text-left uppercase tracking-widest"
