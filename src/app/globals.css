@@ -3,9 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #0f0f11;
-  --brand-from: #3aa0ff;
-  --brand-via: #6c6cff;
-  --brand-to: #ff3aa3;
+  --brand-from: #2563eb;
+  --brand-via: #7c3aed;
+  --brand-to: #db2777;
 }
 
 @theme inline {
@@ -13,6 +13,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --animate-shimmer: shimmer 8s infinite linear;
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -34,11 +44,11 @@
 }
 
 @utility shadow-glow {
-  box-shadow: 0 10px 40px rgba(98, 166, 255, 0.25), 0 10px 60px rgba(255, 58, 163, 0.15);
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.25), 0 10px 60px rgba(219, 39, 119, 0.15);
 }
 
 @utility shadow-glow-lg {
-  box-shadow: 0 20px 60px rgba(98, 166, 255, 0.35), 0 20px 80px rgba(255, 58, 163, 0.25);
+  box-shadow: 0 20px 60px rgba(37, 99, 235, 0.35), 0 20px 80px rgba(219, 39, 119, 0.25);
 }
 
 @utility container {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { useAuth } from "@/context/AuthContext"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
 
 import { highlightText } from "@/utils/text"
@@ -29,7 +29,8 @@ import {
 type EditorTab = "transcript" | "summary" | "code" | "tests" | "docs"
 
 export default function RecordingDetailPage() {
-  const { user } = useAuth()
+  const { data: session } = useSession()
+  const user = session?.user
   const [activeTab, setActiveTab] = useState<EditorTab>("transcript")
   const [prompt, setPrompt] = useState("")
   const [searchQuery, setSearchQuery] = useState("")

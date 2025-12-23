@@ -17,10 +17,13 @@ export default function Footer() {
                   className="object-contain"
                 />
               </div>
-              <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
+              <div className="flex flex-col">
+                <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
+                <span className="text-[8px] font-black text-brand-via uppercase tracking-widest -mt-1">Public Beta</span>
+              </div>
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
-              Transforming raw audio into working code with a sophisticated AI pipeline.
+              Transforming raw audio into clear, actionable intelligence with a sophisticated AI pipeline. Join the future of collaboration.
             </p>
           </div>
           

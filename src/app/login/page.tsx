@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,7 +18,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   
-  const { login } = useAuth();
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,11 +31,16 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const success = await login(formData.email, formData.password, formData.apiKey);
-      if (success) {
-        router.push("/dashboard");
-      } else {
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
         setError("Invalid email or password. Please try again.");
+      } else {
+        router.push("/dashboard");
       }
     } catch (err) {
       setError("An error occurred during authentication. Please try again.");

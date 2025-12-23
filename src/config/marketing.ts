@@ -1,21 +1,25 @@
 export const PRODUCT_NAME = "Supersmart"
-export const HEADLINE = "Your Voice, Transformed into Working Code"
-export const SUBHEADLINE = "Supersmart records your audio and automatically generates summaries, code, and documentation using an AI-powered pipeline."
+export const HEADLINE = "Turn Your Conversations into Clear Actions"
+export const SUBHEADLINE = "Plan smarter agendas, capture decisions, and turn meetings into actions."
 export const FEATURES = [
   {
-    title: "🎤 Audio Capture",
-    description: "Seamlessly capture live audio and transcribe it using high-performance STT models like Faster-Whisper.",
+    icon: "🎤",
+    title: "Intelligent Capture",
+    description: "Seamlessly capture live audio and transcribe it with high precision using neural processing.",
   },
   {
-    title: "🔁 Automated Pipeline",
-    description: "Complete workflow: Audio → Transcription → Summarization → Code Generation → Automated Testing.",
+    icon: "🔁",
+    title: "Decision Engine",
+    description: "Automatically extract key decisions, action items, and project milestones from your discussions.",
   },
   {
-    title: "💻 Code Generation",
-    description: "Instantly transform meeting discussions or voice prompts into high-quality code across multiple LLM providers.",
+    icon: "📋",
+    title: "Smart Agendas",
+    description: "Generate structured agendas and summaries that keep your team aligned and focused.",
   },
   {
-    title: "📋 IDE-Style Experience",
-    description: "A professional, developer-grade interface for managing your generated code and AI-powered documentation.",
+    icon: "⚡",
+    title: "Action Workflows",
+    description: "Instantly transform meeting points into tasks and documentation for your existing workflows.",
   },
 ]

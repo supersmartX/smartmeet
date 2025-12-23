@@ -11,16 +11,16 @@ export default function CTA() {
           
           <div className="relative flex flex-col items-center text-center gap-8 max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 rounded-full bg-brand-via/10 border border-brand-via/20 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-brand-via">
-              Join 2,000+ Teams
+              Limited Beta Now Open
             </div>
             
             <h2 className="text-3xl sm:text-4xl lg:text-6xl font-black tracking-tight text-white leading-tight">
-              Ready to <span className="text-transparent bg-clip-text bg-brand-gradient">Automate</span> Your Meeting Intelligence?
+              Shape the Future of <span className="text-transparent bg-clip-text bg-brand-gradient">AI Meetings</span>
             </h2>
             
             <p className="text-lg text-zinc-400 font-medium leading-relaxed">
-              Start transcribing and analyzing your meetings for free today. 
-              No credit card required. Cancel anytime.
+              Join 2,000+ early adopters who are already automating their documentation 
+              and code generation. Get lifetime beta benefits today.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">

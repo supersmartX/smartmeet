@@ -4,11 +4,11 @@ import Button from "@/components/Button"
 
 const plans = [
   {
-    name: "Free",
+    name: "Beta Free",
     price: "$0",
-    description: "Perfect for individuals starting with AI-powered meetings.",
+    description: "Experience the core pipeline during our beta period.",
     features: [
-      "3 recordings per month",
+      "5 recordings per month (Beta bonus)",
       "Standard AI Transcription",
       "Basic Summary generation",
       "Python code generation",
@@ -18,10 +18,10 @@ const plans = [
     variant: "secondary" as const,
   },
   {
-    name: "Pro",
-    price: "$19",
+    name: "Beta Pro",
+    price: "$9",
     period: "/month",
-    description: "For professionals who need unlimited insights.",
+    description: "Full power for early adopters. 50% off for life.",
     features: [
       "Unlimited recordings",
       "Advanced AI Pipeline (GPT-4/Claude)",
@@ -35,16 +35,15 @@ const plans = [
     popular: true,
   },
   {
-    name: "Team",
-    price: "$49",
-    period: "/month",
-    description: "Collaborative features for engineering teams.",
+    name: "Enterprise",
+    price: "Custom",
+    description: "Tailored solutions for large engineering teams.",
     features: [
       "Everything in Pro",
-      "Up to 5 team members",
+      "Unlimited team members",
       "Shared recording workspace",
-      "Team-wide project history",
-      "Dedicated support",
+      "On-premise deployment options",
+      "SLA & Dedicated support",
     ],
     cta: "Contact Sales",
     variant: "secondary" as const,
@@ -60,11 +59,10 @@ export default function Pricing() {
             Pricing
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-zinc-900 dark:text-zinc-100 mb-6">
-            Simple, <span className="text-transparent bg-clip-text bg-brand-gradient">Predictable</span> Plans
+            Beta Launch <span className="text-transparent bg-clip-text bg-brand-gradient">Early Access</span>
           </h2>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
-            Choose the intelligence level that fits your meeting volume. 
-            Scale as your team grows.
+            Join our beta and get exclusive early-bird pricing. Help us shape the future of AI meeting intelligence.
           </p>
         </div>
 

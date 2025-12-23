@@ -2,13 +2,15 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
-import { useAuth } from "@/context/AuthContext"
+import { useSession, signOut } from "next-auth/react"
 import { ModeToggle } from "@/components/ModeToggle"
 import { Menu, X, Sparkles } from "lucide-react"
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { isAuthenticated, user, logout } = useAuth()
+  const { data: session, status } = useSession()
+  const isAuthenticated = status === "authenticated"
+  const user = session?.user
   
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-black/80 backdrop-blur-xl">
@@ -24,8 +26,11 @@ export default function Navbar() {
             />
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
-            <span className="text-[10px] font-black text-brand-via uppercase tracking-[0.2em] -mt-1">Audio-to-Code</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
+              <span className="px-1.5 py-0.5 bg-brand-via/10 text-brand-via text-[8px] font-black uppercase tracking-widest rounded-md border border-brand-via/20">BETA</span>
+            </div>
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] -mt-1">Meeting Intelligence</span>
           </div>
         </Link>
         
@@ -42,7 +47,7 @@ export default function Navbar() {
             <ModeToggle />
             {isAuthenticated ? (
               <div className="flex items-center gap-4">
-                <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">Hi, {user?.name.split(' ')[0]}</span>
+                <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">Hi, {user?.name?.split(' ')[0] || 'User'}</span>
                 <Link href="/dashboard" className="px-6 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-black rounded-xl hover:scale-105 transition-all shadow-xl shadow-black/10">
                   DASHBOARD
                 </Link>
@@ -104,7 +109,7 @@ export default function Navbar() {
                 </Link>
                 <button 
                   onClick={() => {
-                    logout()
+                    signOut()
                     setIsMenuOpen(false)
                   }}
                   className="text-xs font-black text-red-600 py-2 text-left uppercase tracking-widest"

@@ -1,15 +1,17 @@
 "use client"
 
-import { useAuth } from "@/context/AuthContext"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { highlightText } from "@/utils/text"
-import { mockRecordings } from "@/data/mock"
 import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
 import { audioToCode } from "@/services/api"
+import { getMeetings } from "@/actions/meeting"
 
 export default function RecordingsPage() {
-  const { user } = useAuth()
+  const { data: session } = useSession()
+  const user = session?.user
+  const [recordings, setRecordings] = useState<any[]>([])
   const [filter, setFilter] = useState("all meetings")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -17,6 +19,14 @@ export default function RecordingsPage() {
   const [showToast, setShowToast] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const fetchMeetings = async () => {
+      const data = await getMeetings()
+      setRecordings(data)
+    }
+    fetchMeetings()
+  }, [])
 
   const handleNewRecording = () => {
     fileInputRef.current?.click()
@@ -45,7 +55,7 @@ export default function RecordingsPage() {
     }
   }
 
-  const filteredRecordings = mockRecordings.filter(rec => {
+  const filteredRecordings = recordings.filter(rec => {
     const matchesSearch = rec.title.toLowerCase().includes(searchQuery.toLowerCase())
     if (filter === "all meetings") return matchesSearch
     if (filter === "recent") {

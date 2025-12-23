@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Sidebar from "@/components/dashboard/Sidebar"
 import { ModeToggle } from "@/components/ModeToggle"
-import { ProtectedRoute, useAuth } from "@/context/AuthContext"
+import { useSession, signOut } from "next-auth/react"
 import { 
   Menu, Layout, FileVideo, Settings, Search, Cpu, Globe, 
   CheckCircle2, Wifi, HelpCircle, LogOut, User, ChevronDown,
@@ -22,7 +22,9 @@ export default function DashboardLayout({
   const [isResizing, setIsResizing] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const { data: session } = useSession()
+  const user = session?.user
+  const logout = () => signOut()
   const sidebarRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
 
@@ -63,8 +65,7 @@ export default function DashboardLayout({
   }, [resize, stopResizing])
 
   return (
-    <ProtectedRoute>
-      <div className={`flex flex-col h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 overflow-hidden ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
+    <div className={`flex flex-col h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 overflow-hidden ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Editor-style Activity Bar (Narrow Left Strip) */}
           <aside className="hidden lg:flex w-16 flex-col items-center py-4 bg-zinc-100 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 shrink-0 z-50">
@@ -177,11 +178,11 @@ export default function DashboardLayout({
                       className="flex items-center gap-2 pl-1 group cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 h-8 px-2 rounded-lg transition-colors"
                     >
                       <div className="w-6 h-6 rounded bg-brand-gradient shadow-glow flex items-center justify-center text-[8px] text-white font-bold border border-white dark:border-zinc-800 shrink-0 group-hover:scale-105 transition-transform">
-                        {user?.name?.substring(0, 2).toUpperCase() || 'JD'}
+                        {user?.name?.substring(0, 2).toUpperCase() || 'US'}
                       </div>
                       <div className="hidden md:flex flex-col items-start leading-none">
                         <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">
-                          {user?.name || 'John Doe'}
+                          {user?.name || 'User'}
                         </span>
                         <span className="text-[8px] text-emerald-500 font-bold uppercase tracking-wider">Online</span>
                       </div>
@@ -248,6 +249,5 @@ export default function DashboardLayout({
           </div>
         </footer>
       </div>
-    </ProtectedRoute>
   )
 }

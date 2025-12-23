@@ -1,17 +1,27 @@
 "use client"
 
-import { useAuth } from "@/context/AuthContext"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { highlightText } from "@/utils/text"
-import { mockRecordings, mockStats } from "@/data/mock"
+import { mockStats } from "@/data/mock"
 import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, Calendar, HardDrive, Users } from "lucide-react"
+import { getMeetings } from "@/actions/meeting"
 
 export default function DashboardPage() {
-  const { user } = useAuth()
-  const [recordings, setRecordings] = useState(mockRecordings)
+  const { data: session } = useSession()
+  const user = session?.user
+  const [recordings, setRecordings] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [showToast, setShowToast] = useState(false)
+
+  useEffect(() => {
+    const fetchMeetings = async () => {
+      const data = await getMeetings()
+      setRecordings(data)
+    }
+    fetchMeetings()
+  }, [])
 
   const handleNewMeeting = () => {
     setShowToast(true)

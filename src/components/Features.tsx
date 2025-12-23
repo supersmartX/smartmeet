@@ -13,13 +13,12 @@ export default function Features() {
             Supercharge Your <span className="text-transparent bg-clip-text bg-brand-gradient">Meeting Workflow</span>
           </h2>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
-            Everything you need to turn raw meeting audio into actionable intelligence, 
-            automated documentation, and developer-ready code.
+            Plan smarter agendas, capture decisions, and turn meetings into actions.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((f, i) => (
-            <FeatureCard key={f.title} title={f.title} description={f.description} index={i} />
+            <FeatureCard key={f.title} title={f.title} description={f.description} icon={f.icon} index={i} />
           ))}
         </div>
       </div>

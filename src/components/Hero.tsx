@@ -3,14 +3,32 @@ import Button from "@/components/Button"
 import { PRODUCT_NAME, HEADLINE, SUBHEADLINE } from "@/config/marketing"
 import { useState } from "react"
 import Image from "next/image"
-import { useAuth } from "@/context/AuthContext"
+import { useSession } from "next-auth/react"
 import { useExtensionDetection } from "@/hooks/useExtensionDetection"
+import { 
+  Mic, 
+  MessageSquareText, 
+  Sparkles, 
+  Code2, 
+  CheckCircle2, 
+  ChevronRight,
+  ArrowRight
+} from "lucide-react"
 
 export default function Hero() {
-  const { isAuthenticated } = useAuth()
+  const { status } = useSession()
+  const isAuthenticated = status === "authenticated"
   const { extensionUrl, browserName } = useExtensionDetection()
   const [imgError, setImgError] = useState(false)
   
+  const pipelineSteps = [
+    { icon: Mic, label: "Capture", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+    { icon: MessageSquareText, label: "Transcription", color: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
+    { icon: Sparkles, label: "Analysis", color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+    { icon: Code2, label: "Decisions", color: "text-pink-500", bg: "bg-pink-500/10", border: "border-pink-500/20" },
+    { icon: CheckCircle2, label: "Actions", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" }
+  ]
+
   return (
     <section className="relative pt-20 pb-16 sm:pt-32 sm:pb-24 overflow-hidden">
       {/* Background Orbs */}
@@ -24,7 +42,7 @@ export default function Hero() {
           <div className="flex flex-col gap-8 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-400 w-fit shadow-sm">
               <span className="flex h-2 w-2 rounded-full bg-brand-via animate-ping" />
-              {PRODUCT_NAME} • AUDIO-TO-CODE PIPELINE
+              {PRODUCT_NAME} • AI MEETING INTELLIGENCE
             </div>
             
             <div className="space-y-4">
@@ -44,10 +62,9 @@ export default function Hero() {
               {extensionUrl && extensionUrl !== "#" ? (
                 <Button
                   href={extensionUrl}
-                  variant="primary"
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto h-14 px-8 text-xs font-black uppercase tracking-widest rounded-2xl bg-brand-gradient shadow-glow hover:scale-105 transition-all"
+                  variant="primary"
+                  className="w-full sm:w-auto"
                 >
                   Add to {browserName}
                 </Button>
@@ -55,45 +72,55 @@ export default function Hero() {
               <Button
                 href={isAuthenticated ? "/dashboard" : "/login"}
                 variant={extensionUrl && extensionUrl !== "#" ? "secondary" : "primary"}
-                className={`w-full sm:w-auto h-14 px-8 text-xs font-black uppercase tracking-widest rounded-2xl border-2 transition-all ${
-                  extensionUrl && extensionUrl !== "#" 
-                    ? "border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900" 
-                    : "bg-brand-gradient text-white border-transparent shadow-glow hover:scale-105"
-                }`}
+                className="w-full sm:w-auto"
               >
                 {isAuthenticated ? "Go to Dashboard" : "Get Started Free"}
               </Button>
             </div>
 
-            <div className="p-6 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Live Processing Pipeline</p>
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/30" />
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs sm:text-sm overflow-x-auto pb-2 custom-scrollbar gap-4">
-                {[
-                  { icon: "🎤", label: "Audio", color: "from-blue-500" },
-                  { icon: "🗣️", label: "STT", color: "from-indigo-500" },
-                  { icon: "📝", label: "Summary", color: "from-purple-500" },
-                  { icon: "💻", label: "Code", color: "from-pink-500" },
-                  { icon: "✅", label: "Test", color: "from-emerald-500" }
-                ].map((item, i, arr) => (
-                  <div key={item.label} className="flex items-center gap-4 shrink-0">
-                    <div className="flex flex-col items-center gap-2 group">
-                      <div className={`w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform`}>
-                        {item.icon}
-                      </div>
-                      <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{item.label}</span>
-                    </div>
-                    {i < arr.length - 1 && (
-                      <div className="h-[2px] w-8 bg-zinc-100 dark:bg-zinc-800 rounded-full" />
-                    )}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-brand-primary via-brand-via to-brand-primary rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+              <div className="relative p-8 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl rounded-[2rem] border border-zinc-200/50 dark:border-zinc-800/50 shadow-2xl overflow-hidden">
+                {/* Background Flow Animation */}
+                <div className="absolute top-1/2 left-0 w-full h-px bg-zinc-100 dark:bg-zinc-800 -translate-y-1/2" />
+                <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand-via/50 to-transparent -translate-y-1/2 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+
+                <div className="flex items-center justify-between mb-8 relative">
+                  <div>
+                    <h3 className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-[0.3em] mb-1">Processing Pipeline</h3>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Real-time Audio to Intelligence</p>
                   </div>
-                ))}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Live System</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-5 gap-4 relative">
+                  {pipelineSteps.map((step, i) => (
+                    <div key={step.label} className="flex flex-col items-center gap-3 group/step">
+                      <div className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${step.bg} ${step.border} border flex items-center justify-center transition-all duration-500 group-hover/step:scale-110 group-hover/step:shadow-lg group-hover/step:shadow-brand-via/10`}>
+                        <step.icon className={`w-6 h-6 sm:w-7 sm:h-7 ${step.color} transition-transform duration-500 group-hover/step:rotate-12`} />
+                        
+                        {/* Connecting Arrow (except last) */}
+                        {i < pipelineSteps.length - 1 && (
+                          <div className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 hidden sm:block">
+                            <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 animate-pulse" />
+                          </div>
+                        )}
+                        
+                        {/* Active Step Indicator */}
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-white dark:bg-zinc-900 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/step:opacity-100 transition-opacity">
+                          <div className={`w-1.5 h-1.5 rounded-full ${step.color.replace('text-', 'bg-')} animate-ping`} />
+                        </div>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <p className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight group-hover/step:text-brand-via transition-colors">{step.label}</p>
+                        <div className="h-1 w-0 bg-brand-via mx-auto rounded-full group-hover/step:w-full transition-all duration-300" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

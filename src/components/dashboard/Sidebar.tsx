@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useAuth } from "@/context/AuthContext"
+import { useSession, signOut } from "next-auth/react"
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -53,7 +53,9 @@ const workspaceItems: WorkspaceItem[] = [
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const { data: session } = useSession()
+  const user = session?.user
+  const logout = () => signOut()
   const [openFolders, setOpenFolders] = useState<string[]>(["ACTIVE SESSIONS", "SUPERSMART"])
 
   const toggleFolder = (name: string) => {
