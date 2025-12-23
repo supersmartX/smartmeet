@@ -3,13 +3,13 @@
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Suspense } from "react"
 import { highlightText } from "@/utils/text"
 import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
 import { audioToCode } from "@/services/api"
 import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle } from "@/actions/meeting"
 
-export default function RecordingsPage() {
+function RecordingsContent() {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
   const user = session?.user
@@ -465,5 +465,20 @@ export default function RecordingsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function RecordingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center min-h-screen bg-zinc-50 dark:bg-black">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-brand-via animate-spin" />
+          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Loading recordings...</p>
+        </div>
+      </div>
+    }>
+      <RecordingsContent />
+    </Suspense>
   )
 }
