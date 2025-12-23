@@ -79,12 +79,24 @@ function handleApiError<T>(error: unknown): ApiResponse<T> {
 /**
  * Make authenticated API request
  */
+let lastRequestTime = 0;
+const RATE_LIMIT_MS = 1000; // 1 request per second
+
 async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   data?: FormData | Record<string, unknown>,
   apiKey: string = ""
 ): Promise<ApiResponse<T>> {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+
+  if (timeSinceLastRequest < RATE_LIMIT_MS) {
+    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_MS - timeSinceLastRequest));
+  }
+
+  lastRequestTime = Date.now();
+
   try {
     const url = `${API_BASE_URL}${endpoint}`;
     const headers: Record<string, string> = {
