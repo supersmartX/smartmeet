@@ -1,38 +1,14 @@
 "use client"
 import Button from "@/components/Button"
-import { detectBrowser, CHROME_WEB_STORE_URL, EDGE_ADDONS_URL, FIREFOX_AMO_URL, BrowserKey } from "@/config/extension"
 import { PRODUCT_NAME, HEADLINE, SUBHEADLINE } from "@/config/marketing"
-import { useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import { useAuth } from "@/context/AuthContext"
+import { useExtensionDetection } from "@/hooks/useExtensionDetection"
 
 export default function Hero() {
   const { isAuthenticated } = useAuth()
-  const [browser, setBrowser] = useState<BrowserKey>("other")
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      setBrowser(detectBrowser())
-    })
-  }, [])
-
-  const extensionUrl = useMemo(() => {
-    switch (browser) {
-      case "chrome": return CHROME_WEB_STORE_URL
-      case "edge": return EDGE_ADDONS_URL
-      case "firefox": return FIREFOX_AMO_URL
-      default: return null
-    }
-  }, [browser])
-
-  const browserName = useMemo(() => {
-    switch (browser) {
-      case "chrome": return "Chrome"
-      case "edge": return "Edge"
-      case "firefox": return "Firefox"
-      default: return ""
-    }
-  }, [browser])
-
+  const { extensionUrl, browserName } = useExtensionDetection()
   const [imgError, setImgError] = useState(false)
   
   return (
