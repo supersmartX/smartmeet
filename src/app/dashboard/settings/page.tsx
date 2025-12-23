@@ -24,13 +24,22 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [provider, setProvider] = useState("openai")
 
   useEffect(() => {
     async function loadApiKey() {
-      const key = await getUserApiKey()
-      if (key) setApiKey(key)
-      setIsLoading(false)
+      try {
+        setIsLoading(true)
+        setError(null)
+        const key = await getUserApiKey()
+        if (key) setApiKey(key)
+      } catch (err) {
+        console.error("Failed to load API key:", err)
+        setError("Failed to load settings. Please refresh the page.")
+      } finally {
+        setIsLoading(false)
+      }
     }
     loadApiKey()
   }, [])
@@ -57,7 +66,32 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 text-brand-via animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-6 h-6 text-brand-via animate-spin" />
+          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Loading secure settings...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[400px] p-8">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
+          <div className="w-16 h-16 rounded-[24px] bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
+            <Shield className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-2">Configuration Error</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">{error}</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-black/10"
+          >
+            Retry Loading
+          </button>
+        </div>
       </div>
     )
   }

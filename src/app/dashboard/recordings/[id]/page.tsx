@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
@@ -35,6 +35,7 @@ export default function RecordingDetailPage() {
   const user = session?.user
   const [meeting, setMeeting] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<EditorTab>("transcript")
   const [prompt, setPrompt] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -47,14 +48,26 @@ export default function RecordingDetailPage() {
   
   useEffect(() => {
     const fetchMeeting = async () => {
-      if (params.id) {
-        const data = await getMeetingById(params.id as string)
-        setMeeting(data)
-        if (data?.code) {
-          setIsLogicGenerated(true)
+      try {
+        setIsLoading(true)
+        setError(null)
+        if (params.id) {
+          const data = await getMeetingById(params.id as string)
+          if (!data) {
+            setError("Meeting not found.")
+          } else {
+            setMeeting(data)
+            if (data?.code) {
+              setIsLogicGenerated(true)
+            }
+          }
         }
+      } catch (err) {
+        console.error("Fetch meeting error:", err)
+        setError("Failed to load meeting details. Please try again.")
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
     fetchMeeting()
   }, [params.id])
@@ -94,13 +107,13 @@ export default function RecordingDetailPage() {
     }
   }, [resize, stopResizing])
 
-  const tabs: { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[] = [
+  const tabs = useMemo(() => [
     { id: "transcript", label: "Transcript", icon: MessageSquare, ext: "" },
     { id: "summary", label: "AI Summary", icon: Sparkles, ext: "" },
     { id: "code", label: "Meeting Logic", icon: Code, ext: "", hidden: !isLogicGenerated },
     { id: "tests", label: "Compliance", icon: CheckCircle2, ext: "", hidden: !isLogicGenerated },
     { id: "docs", label: "Documentation", icon: FileText, ext: "", hidden: !isLogicGenerated },
-  ]
+  ], [isLogicGenerated]) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
 
   const [terminalTab, setTerminalTab] = useState<"chat" | "context">("chat")
 
@@ -205,15 +218,43 @@ export default function RecordingDetailPage() {
     )
   }
 
-  if (!meeting) {
+  if (error || !meeting) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-black">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
-            <ShieldCheck className="w-6 h-6 text-rose-500" />
+      <div className="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-black p-8">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
+          <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center border transition-all ${
+            error ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+          }`}>
+            <ShieldCheck className="w-8 h-8" />
           </div>
-          <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Session not found or access denied</p>
-          <Link href="/dashboard" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest hover:text-brand-via transition-colors">Return to Dashboard</Link>
+          <div>
+            <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-2">
+              {error ? "Analysis Failed" : "Session not found"}
+            </h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">
+              {error || "We couldn't find the recording you're looking for. It might have been deleted or you don't have permission to view it."}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 w-full">
+            {error && (
+              <button 
+                onClick={() => window.location.reload()}
+                className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-black/10"
+              >
+                Try Re-analyzing
+              </button>
+            )}
+            <Link 
+              href="/dashboard" 
+              className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-center ${
+                error 
+                  ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200' 
+                  : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:scale-[1.02] shadow-xl shadow-black/10'
+              }`}
+            >
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -222,14 +263,14 @@ export default function RecordingDetailPage() {
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden ${isResizing ? 'cursor-row-resize select-none' : ''}`}>
       {/* Editor Header / Breadcrumbs (Local) */}
-      <div className="h-10 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-            <Link href="/dashboard" className="hover:text-brand-via transition-colors">smartmeet</Link>
-            <ChevronRight className="w-3 h-3" />
-            <Link href="/dashboard/recordings" className="hover:text-brand-via transition-colors">recordings</Link>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-zinc-900 dark:text-zinc-100">Meeting Analysis</span>
+      <div className="h-auto min-h-10 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 shrink-0 gap-3">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest overflow-hidden">
+            <Link href="/dashboard" className="hover:text-brand-via transition-colors shrink-0">smartmeet</Link>
+            <ChevronRight className="w-3 h-3 shrink-0" />
+            <Link href="/dashboard/recordings" className="hover:text-brand-via transition-colors shrink-0">recordings</Link>
+            <ChevronRight className="w-3 h-3 shrink-0" />
+            <span className="text-zinc-900 dark:text-zinc-100 truncate">Meeting Analysis</span>
           </div>
           
           <div className="hidden xl:flex items-center gap-6 ml-6 pl-6 border-l border-zinc-200 dark:border-zinc-800">
@@ -300,7 +341,7 @@ export default function RecordingDetailPage() {
         <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-950">
           {/* Search bar for transcript */}
           {activeTab === "transcript" && (
-            <div className="px-8 py-4 border-b border-zinc-100 dark:border-zinc-900 sticky top-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-10">
+            <div className="px-4 sm:px-8 py-4 border-b border-zinc-100 dark:border-zinc-900 sticky top-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-10">
               <div className="relative max-w-md group">
                 <input
                   placeholder="Search in transcript..."
@@ -313,7 +354,7 @@ export default function RecordingDetailPage() {
             </div>
           )}
 
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             {activeTab === "transcript" && (
               <div className="space-y-8 max-w-3xl">
                 {meeting?.transcripts?.length > 0 ? (
@@ -361,7 +402,7 @@ export default function RecordingDetailPage() {
 
                 <div className="space-y-6">
                   {meeting?.transcripts?.length > 0 ? (
-                    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-8 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
+                    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-brand-via/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand-via/10 transition-all" />
                       
                       <p className="text-lg text-zinc-900 dark:text-zinc-100 font-bold leading-tight mb-8">
@@ -398,30 +439,22 @@ export default function RecordingDetailPage() {
                       </div>
 
                       {isTechnicalMeeting && !isLogicGenerated && (
-                        <div className="bg-zinc-900 dark:bg-white border border-zinc-800 dark:border-zinc-200 rounded-[24px] p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl shadow-brand-via/20">
+                        <div className="bg-zinc-900 dark:bg-white border border-zinc-800 dark:border-zinc-200 rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl shadow-brand-via/20">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-brand-via/20 flex items-center justify-center shrink-0">
-                              <Code className="w-6 h-6 text-brand-via" />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-brand-via/20 flex items-center justify-center shrink-0">
+                              <Code className="w-5 h-5 sm:w-6 sm:h-6 text-brand-via" />
                             </div>
                             <div>
-                              <h4 className="text-sm font-black text-white dark:text-zinc-900 uppercase tracking-tight">Technical Context Detected</h4>
-                              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-widest mt-1">Generate logic & compliance reports</p>
+                              <h4 className="text-xs sm:text-sm font-black text-white dark:text-zinc-900 uppercase tracking-tight">Technical Context Detected</h4>
+                              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-widest mt-1 text-center sm:text-left">Generate logic & compliance reports</p>
                             </div>
                           </div>
                           <button 
                             onClick={handleGenerateLogic}
                             disabled={isGeneratingLogic}
-                            className="w-full sm:w-auto bg-brand-gradient text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 disabled:scale-100"
+                            className="w-full sm:w-auto px-6 py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
                           >
-                            {isGeneratingLogic ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" /> GENERATING...
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="w-4 h-4" /> GENERATE LOGIC
-                              </>
-                            )}
+                            {isGeneratingLogic ? "Generating..." : "Generate Logic"}
                           </button>
                         </div>
                       )}
@@ -468,9 +501,9 @@ export default function RecordingDetailPage() {
                       Verified Logic
                     </div>
                   )}
-                  <div className="bg-zinc-900 rounded-[32px] p-8 border border-zinc-800 shadow-2xl overflow-hidden relative group">
+                  <div className="bg-zinc-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-zinc-800 shadow-2xl overflow-hidden relative group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand-via/5 rounded-full -mr-32 -mt-32 blur-[100px]" />
-                    <pre className="text-xs md:text-sm font-mono text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar relative z-10">
+                    <pre className="text-[10px] sm:text-xs md:text-sm font-mono text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar relative z-10">
                       <code>
                         {meeting?.code || "// No logic code was generated for this meeting context."}
                       </code>

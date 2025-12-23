@@ -16,16 +16,27 @@ export default function DashboardPage() {
   const [recordings, setRecordings] = useState<any[]>([])
   const [stats, setStats] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showToast, setShowToast] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
-      const [meetingsData, statsData] = await Promise.all([
-        getMeetings(),
-        getDashboardStats()
-      ])
-      setRecordings(meetingsData)
-      if (statsData) setStats(statsData)
+      try {
+        setIsLoading(true)
+        setError(null)
+        const [meetingsData, statsData] = await Promise.all([
+          getMeetings(),
+          getDashboardStats()
+        ])
+        setRecordings(meetingsData)
+        if (statsData) setStats(statsData)
+      } catch (err) {
+        console.error("Dashboard fetch error:", err)
+        setError("Failed to load dashboard data. Please try again.")
+      } finally {
+        setIsLoading(false)
+      }
     }
     fetchData()
   }, [])
@@ -97,8 +108,41 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {error ? (
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 p-6 rounded-2xl flex flex-col items-center gap-4 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-400">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-red-900 dark:text-red-100">Loading Error</h3>
+            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-100 dark:border-zinc-800 animate-pulse">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl" />
+                <div className="w-12 h-4 bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="w-16 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-lg" />
+                <div className="w-24 h-4 bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {mappedStats.map((stat, i) => (
           <Link key={i} href={stat.href} className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-brand-via/30 transition-all group">
             <div className="flex items-center justify-between mb-4">
@@ -155,7 +199,9 @@ export default function DashboardPage() {
                               </Link>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-xs text-zinc-500 dark:text-zinc-400 font-bold">{renderHighlightedText(recording.date, searchQuery)}</td>
+                        <td className="px-6 py-4 text-xs text-zinc-500 dark:text-zinc-400 font-bold">
+                          {renderHighlightedText(recording.date instanceof Date ? recording.date.toLocaleDateString() : String(recording.date), searchQuery)}
+                        </td>
                         <td className="hidden md:table-cell px-6 py-4">
                           <div className="flex items-center gap-1.5">
                             <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-zinc-800">
@@ -166,7 +212,7 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                              recording.status === "Processing" 
+                              recording.status?.toUpperCase() === "PROCESSING" 
                               ? "bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50" 
                               : "bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50"
                           }`}>
@@ -262,6 +308,8 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </div>
-  )
+    </>
+  )}
+</div>
+)
 }

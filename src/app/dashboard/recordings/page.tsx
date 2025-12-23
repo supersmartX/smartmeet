@@ -17,6 +17,8 @@ export default function RecordingsPage() {
   const [filter, setFilter] = useState("all meetings")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -28,8 +30,17 @@ export default function RecordingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchMeetings = async () => {
-    const data = await getMeetings()
-    setRecordings(data)
+    try {
+      setIsLoading(true)
+      setError(null)
+      const data = await getMeetings()
+      setRecordings(data)
+    } catch (err) {
+      console.error("Fetch meetings error:", err)
+      setError("Failed to load recordings. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleRename = async (id: string) => {
@@ -150,7 +161,7 @@ export default function RecordingsPage() {
       const recordingDate = new Date(rec.date)
       return matchesSearch && recordingDate >= sevenDaysAgo
     }
-    if (filter === "action items") return matchesSearch && rec.status === "Completed" // Simplified for now
+    if (filter === "action items") return matchesSearch && rec.status?.toUpperCase() === "COMPLETED" // Simplified for now
     return matchesSearch
   })
 
@@ -170,16 +181,16 @@ export default function RecordingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full min-h-full flex flex-col gap-8 bg-zinc-50 dark:bg-black">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight mb-1">My Recordings</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium uppercase tracking-widest text-[10px]">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full min-h-full flex flex-col gap-6 sm:gap-8 bg-zinc-50 dark:bg-black">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="text-center sm:text-left">
+          <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight mb-1">My Recordings</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-medium uppercase tracking-widest">
             Manage and organize your meeting history
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 min-w-[300px] group">
+        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="relative flex-1 sm:min-w-[300px] group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 group-focus-within:text-brand-via transition-colors" />
                 <input 
                     type="text" 
@@ -193,7 +204,7 @@ export default function RecordingsPage() {
                 <button 
                   onClick={handleNewRecording}
                   disabled={isUploading}
-                  className="px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 sm:flex-none px-6 sm:px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                     {isUploading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -229,52 +240,101 @@ export default function RecordingsPage() {
         ))}
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-200 dark:border-zinc-800 shadow-xl shadow-black/5 flex-1 flex flex-col min-h-[400px] relative overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar pb-32 -mb-32">
-          <table className="w-full text-left border-collapse min-w-[500px] md:min-w-[800px] mb-32">
+      <div className="bg-white dark:bg-zinc-900 rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-zinc-800 shadow-xl shadow-black/5 flex-1 flex flex-col min-h-[400px] relative overflow-hidden">
+        {error ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/20 flex items-center justify-center text-red-600 dark:text-red-400">
+              <Video className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Failed to load recordings</h3>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">{error}</p>
+            </div>
+            <button 
+              onClick={() => fetchMeetings()}
+              className="px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] transition-all"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : isLoading ? (
+          <div className="flex-1 flex flex-col p-8 gap-6">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center justify-between animate-pulse border-b border-zinc-50 dark:border-zinc-800 pb-6 last:border-0">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl" />
+                  <div className="flex flex-col gap-2">
+                    <div className="w-48 h-5 bg-zinc-100 dark:bg-zinc-800 rounded-lg" />
+                    <div className="w-24 h-4 bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+                  </div>
+                </div>
+                <div className="hidden sm:block w-32 h-4 bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+                <div className="w-20 h-6 bg-zinc-100 dark:bg-zinc-800 rounded-full" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-full">
             <thead>
               <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] first:rounded-tl-[32px]">Meeting Name</th>
-                <th className="px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
+                <th className="px-4 sm:px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Meeting Name</th>
+                <th className="hidden sm:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
                 <th className="hidden md:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Duration</th>
                 <th className="hidden lg:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Participants</th>
-                <th className="px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Status</th>
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right last:rounded-tr-[32px]">Action</th>
+                <th className="hidden sm:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Status</th>
+                <th className="px-4 sm:px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {filteredRecordings.length > 0 ? (
                 filteredRecordings.map((recording) => (
                   <tr key={recording.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group">
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-5">
-                          <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm shrink-0">
-                              {recording.status === "Processing" ? (
-                                <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+                    <td className="px-4 sm:px-8 py-4 sm:py-6">
+                      <div className="flex items-center gap-3 sm:gap-5">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm shrink-0">
+                              {recording.status?.toUpperCase() === "PROCESSING" ? (
+                                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 animate-spin" />
                               ) : (
-                                <Video className="w-5 h-5 text-brand-via" />
+                                <Video className="w-4 h-4 sm:w-5 sm:h-5 text-brand-via" />
                               )}
                           </div>
-                          {editingId === recording.id ? (
-                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                               <input
-                                 type="text"
-                                 value={editTitle}
-                                 onChange={(e) => setEditTitle(e.target.value)}
-                                 onKeyDown={(e) => e.key === 'Enter' && handleRename(recording.id)}
-                                 onBlur={() => !isRenaming && setEditingId(null)}
-                                 autoFocus
-                                 className="bg-white dark:bg-zinc-900 border border-brand-via rounded-lg px-3 py-1.5 text-sm font-bold w-full focus:outline-none focus:ring-2 focus:ring-brand-via/20 text-zinc-900 dark:text-zinc-100"
-                               />
-                             </div>
-                           ) : (
-                            <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-base truncate">
-                                {renderHighlightedText(recording.title, searchQuery)}
-                            </Link>
-                          )}
+                          <div className="flex flex-col min-w-0">
+                            {editingId === recording.id ? (
+                               <div className="flex items-center gap-2 flex-1 min-w-0">
+                                 <input
+                                   type="text"
+                                   value={editTitle}
+                                   onChange={(e) => setEditTitle(e.target.value)}
+                                   onKeyDown={(e) => e.key === 'Enter' && handleRename(recording.id)}
+                                   onBlur={() => !isRenaming && setEditingId(null)}
+                                   autoFocus
+                                   className="bg-white dark:bg-zinc-900 border border-brand-via rounded-lg px-3 py-1.5 text-sm font-bold w-full focus:outline-none focus:ring-2 focus:ring-brand-via/20 text-zinc-900 dark:text-zinc-100"
+                                 />
+                               </div>
+                             ) : (
+                              <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-sm sm:text-base truncate">
+                                  {renderHighlightedText(recording.title, searchQuery)}
+                              </Link>
+                            )}
+                            <div className="flex items-center gap-2 mt-1 sm:hidden">
+                               <span className="text-[10px] text-zinc-500 font-bold">
+                                 {recording.date instanceof Date ? recording.date.toLocaleDateString() : String(recording.date)}
+                               </span>
+                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
+                                  recording.status?.toUpperCase() === "PROCESSING" 
+                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500" 
+                                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-500"
+                               }`}>
+                                 {recording.status}
+                               </span>
+                            </div>
+                          </div>
                       </div>
                     </td>
-                    <td className="px-6 py-6 text-sm text-zinc-600 dark:text-zinc-400 font-bold">{renderHighlightedText(recording.date, searchQuery)}</td>
+                    <td className="hidden sm:table-cell px-6 py-6 text-sm text-zinc-600 dark:text-zinc-400 font-bold">
+                      {renderHighlightedText(recording.date instanceof Date ? recording.date.toLocaleDateString() : String(recording.date), searchQuery)}
+                    </td>
                     <td className="hidden md:table-cell px-6 py-6 text-sm text-zinc-600 dark:text-zinc-400 font-bold">{recording.duration}</td>
                     <td className="hidden lg:table-cell px-6 py-6">
                         <div className="flex items-center gap-1.5">
@@ -284,20 +344,20 @@ export default function RecordingsPage() {
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Members</span>
                         </div>
                     </td>
-                    <td className="px-6 py-6">
+                    <td className="hidden sm:table-cell px-6 py-6">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                          recording.status === "Processing" 
+                          recording.status?.toUpperCase() === "PROCESSING" 
                           ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500" 
                           : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-500"
                       }`}>
                         {recording.status}
                       </span>
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-4 sm:px-8 py-4 sm:py-6 text-right">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2">
                         <Link 
                           href={`/dashboard/recordings/${recording.id}`}
-                          className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[9px] font-black uppercase tracking-widest rounded-lg hover:scale-105 transition-all"
+                          className="hidden sm:inline-block px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[9px] font-black uppercase tracking-widest rounded-lg hover:scale-105 transition-all"
                         >
                           Open
                         </Link>
@@ -313,6 +373,12 @@ export default function RecordingsPage() {
                             <>
                               <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
                               <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <Link 
+                                  href={`/dashboard/recordings/${recording.id}`}
+                                  className="sm:hidden w-full px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors block"
+                                >
+                                  Open
+                                </Link>
                                 <button 
                                   onClick={() => startEditing(recording)}
                                   className="w-full px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
@@ -364,18 +430,20 @@ export default function RecordingsPage() {
               )}
             </tbody>
           </table>
-        </div>
+          </div>
+        )
+      }
       </div>
       
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-4">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 py-4">
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center sm:text-left">
           Showing {filteredRecordings.length > 0 ? `1-${filteredRecordings.length}` : '0'} of {filteredRecordings.length} recordings
         </p>
-        <div className="flex gap-3">
-            <button className="px-6 py-2.5 border-2 border-zinc-100 dark:border-zinc-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 disabled:opacity-50 flex items-center gap-2" disabled>
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+            <button className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 border-2 border-zinc-100 dark:border-zinc-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 disabled:opacity-50 flex items-center justify-center gap-2" disabled>
               <ChevronLeft className="w-4 h-4" /> Previous
             </button>
-            <button className="px-6 py-2.5 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all flex items-center gap-2">
+            <button className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all flex items-center justify-center gap-2">
               Next <ChevronRight className="w-4 h-4" />
             </button>
         </div>
