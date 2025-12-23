@@ -34,7 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // In a real app, this would check with your backend
         // For now, we'll use localStorage for demo purposes
         const storedUser = localStorage.getItem("supersmart_user");
-        if (storedUser) {
+        const storedToken = sessionStorage.getItem("supersmart_token");
+        if (storedUser && storedToken) {
+          // Validate token with backend before setting user
           setUser(JSON.parse(storedUser));
         }
       } catch (error) {
