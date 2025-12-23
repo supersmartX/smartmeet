@@ -170,7 +170,7 @@ export default function RecordingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full min-h-full flex flex-col gap-8">
+    <div className="p-8 max-w-7xl mx-auto w-full min-h-full flex flex-col gap-8 bg-zinc-50 dark:bg-black">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight mb-1">My Recordings</h1>
@@ -179,35 +179,37 @@ export default function RecordingsPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative group">
+            <div className="relative flex-1 min-w-[300px] group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 group-focus-within:text-brand-via transition-colors" />
                 <input 
                     type="text" 
                     placeholder="Search recordings..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-11 pr-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-brand-via/10 focus:border-brand-via w-full sm:w-72 transition-all shadow-sm"
+                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-brand-via/10 focus:border-brand-via transition-all shadow-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                 />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand-via transition-colors" />
             </div>
-            <button 
-              onClick={handleNewRecording}
-              disabled={isUploading}
-              className="bg-brand-gradient text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 disabled:scale-100"
-            >
-                {isUploading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4" />
-                )}
-                {isUploading ? "UPLOADING..." : "NEW RECORDING"}
-            </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              className="hidden" 
-              accept="audio/*,video/*"
-            />
+            <div className="flex items-center gap-3">
+                <button 
+                  onClick={handleNewRecording}
+                  disabled={isUploading}
+                  className="px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                    {isUploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                    <span>{isUploading ? "UPLOADING..." : "NEW RECORDING"}</span>
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  className="hidden" 
+                  accept="audio/*,video/*"
+                />
+            </div>
         </div>
       </header>
 
@@ -254,18 +256,18 @@ export default function RecordingsPage() {
                               )}
                           </div>
                           {editingId === recording.id ? (
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <input
-                                type="text"
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleRename(recording.id)}
-                                onBlur={() => !isRenaming && setEditingId(null)}
-                                autoFocus
-                                className="bg-white dark:bg-zinc-800 border border-brand-via rounded-lg px-3 py-1.5 text-sm font-bold w-full focus:outline-none focus:ring-2 focus:ring-brand-via/20"
-                              />
-                            </div>
-                          ) : (
+                             <div className="flex items-center gap-2 flex-1 min-w-0">
+                               <input
+                                 type="text"
+                                 value={editTitle}
+                                 onChange={(e) => setEditTitle(e.target.value)}
+                                 onKeyDown={(e) => e.key === 'Enter' && handleRename(recording.id)}
+                                 onBlur={() => !isRenaming && setEditingId(null)}
+                                 autoFocus
+                                 className="bg-white dark:bg-zinc-900 border border-brand-via rounded-lg px-3 py-1.5 text-sm font-bold w-full focus:outline-none focus:ring-2 focus:ring-brand-via/20 text-zinc-900 dark:text-zinc-100"
+                               />
+                             </div>
+                           ) : (
                             <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-base truncate">
                                 {renderHighlightedText(recording.title, searchQuery)}
                             </Link>
