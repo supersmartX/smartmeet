@@ -4,28 +4,34 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useState, useMemo, useEffect } from "react"
 import { highlightText } from "@/utils/text"
-import { mockStats } from "@/data/mock"
 import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, Calendar, HardDrive, Users } from "lucide-react"
-import { getMeetings } from "@/actions/meeting"
+import { getMeetings, getDashboardStats } from "@/actions/meeting"
+
+import { useRouter } from "next/navigation"
 
 export default function DashboardPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const user = session?.user
   const [recordings, setRecordings] = useState<any[]>([])
+  const [stats, setStats] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [showToast, setShowToast] = useState(false)
 
   useEffect(() => {
-    const fetchMeetings = async () => {
-      const data = await getMeetings()
-      setRecordings(data)
+    const fetchData = async () => {
+      const [meetingsData, statsData] = await Promise.all([
+        getMeetings(),
+        getDashboardStats()
+      ])
+      setRecordings(meetingsData)
+      if (statsData) setStats(statsData)
     }
-    fetchMeetings()
+    fetchData()
   }, [])
 
   const handleNewMeeting = () => {
-    setShowToast(true)
-    setTimeout(() => setShowToast(false), 3000)
+    router.push("/dashboard/recordings?action=upload")
   }
 
   const filteredRecordings = useMemo(() =>
@@ -49,13 +55,15 @@ export default function DashboardPage() {
     });
   }
 
-  const stats = mockStats.map(stat => ({
-    ...stat,
-    icon: stat.icon === "Video" ? Video : 
-          stat.icon === "Sparkles" ? Sparkles : 
-          stat.icon === "Zap" ? Zap : 
-          stat.icon === "ShieldCheck" ? ShieldCheck : Video
-  }));
+  const mappedStats = useMemo(() => {
+    return stats.map(stat => ({
+      ...stat,
+      icon: stat.icon === "Video" ? Video : 
+            stat.icon === "Sparkles" ? Sparkles : 
+            stat.icon === "Zap" ? Zap : 
+            stat.icon === "ShieldCheck" ? ShieldCheck : Video
+    }));
+  }, [stats]);
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-8 animate-in fade-in duration-700">
@@ -91,7 +99,7 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
+        {mappedStats.map((stat, i) => (
           <Link key={i} href={stat.href} className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-brand-via/30 transition-all group">
             <div className="flex items-center justify-between mb-4">
               <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>

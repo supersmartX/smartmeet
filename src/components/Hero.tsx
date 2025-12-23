@@ -1,7 +1,6 @@
 "use client"
 import Button from "@/components/Button"
 import { PRODUCT_NAME, HEADLINE, SUBHEADLINE } from "@/config/marketing"
-import { useState } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { useExtensionDetection } from "@/hooks/useExtensionDetection"
@@ -19,7 +18,6 @@ export default function Hero() {
   const { status } = useSession()
   const isAuthenticated = status === "authenticated"
   const { extensionUrl, browserName } = useExtensionDetection()
-  const [imgError, setImgError] = useState(false)
   
   const pipelineSteps = [
     { icon: Mic, label: "Capture", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
@@ -145,36 +143,25 @@ export default function Hero() {
           <div className="relative lg:block hidden">
             <div className="absolute -inset-4 bg-brand-gradient opacity-20 blur-3xl rounded-[4rem] animate-pulse" />
             <div className="relative bg-white dark:bg-zinc-950 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden aspect-[4/3] group">
-              {!imgError ? (
-                <Image
-                  src="/dashboard-preview.png"
-                  alt="Smartmeet Dashboard"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700"
-                  onError={() => setImgError(true)}
-                  priority
-                />
-              ) : (
-                <div className="w-full h-full bg-zinc-50 dark:bg-zinc-900 flex flex-col items-center justify-center p-12 text-center gap-6">
-                  <div className="relative w-24 h-24 animate-bounce">
-                    <Image
-                      src="/logoX.png"
-                      alt="Smartmeet Logo"
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">AI Meeting Intelligence</p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium max-w-xs">Transcribe, summarize, and extract actionable insights automatically.</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 w-full max-w-sm mt-4">
-                    <div className="h-12 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
-                    <div className="h-12 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
-                    <div className="h-24 col-span-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
-                  </div>
+              <div className="w-full h-full bg-zinc-50 dark:bg-zinc-900 flex flex-col items-center justify-center p-12 text-center gap-6">
+                <div className="relative w-24 h-24 animate-bounce">
+                  <Image
+                    src="/logoX.png"
+                    alt="Supersmart Logo"
+                    fill
+                    className="object-contain"
+                  />
                 </div>
-              )}
+                <div className="space-y-2">
+                  <p className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">AI Meeting Intelligence</p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium max-w-xs">Transcribe, summarize, and extract actionable insights automatically.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 w-full max-w-sm mt-4">
+                  <div className="h-12 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
+                  <div className="h-12 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
+                  <div className="h-24 col-span-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
+                </div>
+              </div>
               {/* Overlay elements for more "expert" look */}
               <div className="absolute top-6 right-6 p-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow-xl rounded-2xl border border-zinc-200 dark:border-zinc-800 animate-in fade-in slide-in-from-right-8 duration-1000">
                 <div className="flex items-center gap-3">

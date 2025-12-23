@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Key, 
   Shield, 
@@ -13,27 +13,53 @@ import {
   Save,
   Server,
   Cpu,
-  RefreshCcw
+  RefreshCcw,
+  Loader2
 } from "lucide-react"
+import { getUserApiKey, updateUserApiKey } from "@/actions/meeting"
 
 export default function SettingsPage() {
-  const [apiKey, setApiKey] = useState("sk-••••••••••••••••••••••••••••••••")
+  const [apiKey, setApiKey] = useState("")
   const [showKey, setShowKey] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [provider, setProvider] = useState("openai")
 
+  useEffect(() => {
+    async function loadApiKey() {
+      const key = await getUserApiKey()
+      if (key) setApiKey(key)
+      setIsLoading(false)
+    }
+    loadApiKey()
+  }, [])
+
   const handleCopy = () => {
-    navigator.clipboard.writeText("sk-sample-api-key-for-demonstration")
+    if (!apiKey) return
+    navigator.clipboard.writeText(apiKey)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true)
-    setTimeout(() => {
+    try {
+      await updateUserApiKey(apiKey)
+      // Show success state if needed
+    } catch (error) {
+      console.error("Failed to save API key:", error)
+    } finally {
       setIsSaving(false)
-    }, 1500)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-6 h-6 text-brand-via animate-spin" />
+      </div>
+    )
   }
 
   return (

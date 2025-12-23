@@ -21,6 +21,11 @@ export default function DashboardLayout({
   const [sidebarWidth, setSidebarWidth] = useState(240)
   const [isResizing, setIsResizing] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   const pathname = usePathname()
   const { data: session } = useSession()
   const user = session?.user
@@ -101,7 +106,7 @@ export default function DashboardLayout({
           {/* Sidebar (Workspace) */}
           <div 
             className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 lg:z-20 flex`}
-            style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? sidebarWidth : undefined }}
+            style={{ width: isMounted && typeof window !== 'undefined' && window.innerWidth >= 1024 ? sidebarWidth : undefined }}
           >
             <Sidebar onClose={() => setIsSidebarOpen(false)} />
             

@@ -3,9 +3,10 @@
 import { useState, useCallback, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 
 import { highlightText } from "@/utils/text"
-import { mockTranscript, mockCode, mockTests, type TestResult } from "@/data/mock"
+import { getMeetingById, updateMeetingCode } from "@/actions/meeting"
 import { 
   Clock, 
   Users, 
@@ -30,7 +31,10 @@ type EditorTab = "transcript" | "summary" | "code" | "tests" | "docs"
 
 export default function RecordingDetailPage() {
   const { data: session } = useSession()
+  const params = useParams()
   const user = session?.user
+  const [meeting, setMeeting] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<EditorTab>("transcript")
   const [prompt, setPrompt] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -41,10 +45,24 @@ export default function RecordingDetailPage() {
   const [isLogicGenerated, setIsLogicGenerated] = useState(false)
   const [isGeneratingLogic, setIsGeneratingLogic] = useState(false)
   
+  useEffect(() => {
+    const fetchMeeting = async () => {
+      if (params.id) {
+        const data = await getMeetingById(params.id as string)
+        setMeeting(data)
+        if (data?.code) {
+          setIsLogicGenerated(true)
+        }
+      }
+      setIsLoading(false)
+    }
+    fetchMeeting()
+  }, [params.id])
+
   // Check if meeting is technical based on keywords
-  const isTechnicalMeeting = mockTranscript.some(item => 
+  const isTechnicalMeeting = meeting?.transcripts?.some((item: any) => 
     /api|cache|latency|database|testing|backend|frontend|pipeline|logic|code|deploy/i.test(item.text)
-  )
+  ) || false
 
   // Terminal Resize Logic
   const [terminalHeight, setTerminalHeight] = useState(192) // 48 * 4
@@ -86,13 +104,22 @@ export default function RecordingDetailPage() {
 
   const [terminalTab, setTerminalTab] = useState<"chat" | "context">("chat")
 
-  const handleGenerateLogic = () => {
+  const handleGenerateLogic = async () => {
     setIsGeneratingLogic(true)
-    setTimeout(() => {
+    
+    // Mock code generation logic
+    const mockCode = `// Generated Meeting Logic for: ${meeting?.title}\n\n/**\n * Key Decisions & Business Logic extracted from discussion\n */\n\nfunction processMeetingOutcome() {\n  const decisions = [\n    "Adopt new authentication provider",\n    "Implement Redis for session caching",\n    "Migrate to Prisma ORM v6"\n  ];\n\n  return decisions.map(d => ({\n    task: d,\n    priority: "High",\n    status: "TODO"\n  }));\n}\n\n// Action Items Count: ${meeting?.actionItems?.length || 0}`
+
+    try {
+      await updateMeetingCode(params.id as string, mockCode)
+      setMeeting((prev: any) => ({ ...prev, code: mockCode }))
       setIsLogicGenerated(true)
       setIsGeneratingLogic(false)
       setActiveTab("code")
-    }, 2000)
+    } catch (error) {
+      console.error("Failed to generate logic:", error)
+      setIsGeneratingLogic(false)
+    }
   }
 
   useEffect(() => {
@@ -111,7 +138,7 @@ export default function RecordingDetailPage() {
     localStorage.setItem("smartmeet_active_tab", tabId)
   }
 
-  const filteredTranscript = mockTranscript.filter((item: { speaker: string, text: string }) => 
+  const filteredTranscript = (meeting?.transcripts || []).filter((item: { speaker: string, text: string }) => 
     item.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.speaker.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -158,9 +185,38 @@ export default function RecordingDetailPage() {
   const [copyStatus, setCopyStatus] = useState("Copy Code")
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(mockCode)
-    setCopyStatus("Copied!")
-    setTimeout(() => setCopyStatus("Copy Code"), 2000)
+    if (meeting?.code) {
+      navigator.clipboard.writeText(meeting.code)
+      setCopyStatus("Copied!")
+      setTimeout(() => setCopyStatus("Copy Code"), 2000)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-black">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
+            <Loader2 className="w-6 h-6 text-brand-via animate-spin" />
+          </div>
+          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Loading session intelligence...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!meeting) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-black">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+            <ShieldCheck className="w-6 h-6 text-rose-500" />
+          </div>
+          <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Session not found or access denied</p>
+          <Link href="/dashboard" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest hover:text-brand-via transition-colors">Return to Dashboard</Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -260,8 +316,8 @@ export default function RecordingDetailPage() {
           <div className="p-8">
             {activeTab === "transcript" && (
               <div className="space-y-8 max-w-3xl">
-                {filteredTranscript.length > 0 ? (
-                  filteredTranscript.map((item, i) => (
+                {meeting?.transcripts?.length > 0 ? (
+                  filteredTranscript.map((item: any, i: number) => (
                     <div key={i} className="flex gap-4 group">
                       <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800 group-hover:border-brand-via transition-colors">
                         {item.speaker[0]}
@@ -304,7 +360,7 @@ export default function RecordingDetailPage() {
                 </div>
 
                 <div className="space-y-6">
-                  {mockTranscript.length > 0 ? (
+                  {meeting?.transcripts?.length > 0 ? (
                     <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-8 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-brand-via/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand-via/10 transition-all" />
                       
@@ -312,8 +368,33 @@ export default function RecordingDetailPage() {
                         The AI analysis for this meeting is complete. You can find the key points and technical context below.
                       </p>
 
-                      <div className="grid grid-cols-1 gap-4 mb-8">
-                        {/* Summary points would be rendered here when available */}
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Analysis Status</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-1.5 h-1.5 rounded-full ${meeting?.transcripts?.length > 0 ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">{meeting?.transcripts?.length > 0 ? 'Ready' : 'Processing'}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Key Discussion points</div>
+                        
+                      {meeting?.transcripts?.length > 0 ? (
+                        meeting.transcripts.slice(0, 3).map((item: any, i: number) => (
+                          <div key={i} className="flex gap-3 group/item cursor-pointer">
+                            <div className="w-6 h-6 rounded-lg bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shrink-0 group-hover/item:border-brand-via transition-colors">
+                              <MessageSquare className="w-3 h-3 text-zinc-400" />
+                            </div>
+                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight font-medium group-hover/item:text-zinc-900 dark:group-hover/item:text-zinc-100 transition-colors line-clamp-2">
+                              {item.text}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="grid grid-cols-1 gap-4 mb-8">
+                          {/* Summary points would be rendered here when available */}
+                        </div>
+                      )}
                       </div>
 
                       {isTechnicalMeeting && !isLogicGenerated && (
@@ -361,120 +442,82 @@ export default function RecordingDetailPage() {
             )}
 
             {activeTab === "code" && (
-              <div className="animate-in fade-in duration-500">
-                <div className="flex items-center justify-between mb-4 px-2">
-                  <div className="flex items-center gap-2">
-                    <Code className="w-4 h-4 text-brand-via" />
-                    <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Generated Logic</h3>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
+                      <Code className="w-5 h-5 text-brand-via" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Meeting Logic</h2>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Extracted Pseudo-code</p>
+                    </div>
                   </div>
-                  {isLogicGenerated && mockCode && (
-                    <button 
-                      onClick={handleCopyCode}
-                      className="flex items-center gap-2 text-[10px] font-bold text-brand-via hover:underline uppercase tracking-widest"
-                    >
-                      <Copy className={`w-3 h-3 ${copyStatus === "Copied!" ? "animate-bounce" : ""}`} /> {copyStatus}
-                    </button>
-                  )}
+                  <button 
+                    onClick={handleCopyCode}
+                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    {copyStatus}
+                  </button>
                 </div>
-                {isLogicGenerated ? (
-                  <div className="bg-[#1e1e1e] rounded-xl p-6 font-mono text-sm leading-relaxed overflow-x-auto border border-white/5 shadow-2xl">
-                    <pre className="text-zinc-300">
-                      {mockCode || "// No logic code was generated for this meeting context."}
+
+                <div className="relative">
+                  {isLogicGenerated && meeting?.code && (
+                    <div className="absolute -top-3 -right-3 px-3 py-1 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg z-10 animate-bounce">
+                      Verified Logic
+                    </div>
+                  )}
+                  <div className="bg-zinc-900 rounded-[32px] p-8 border border-zinc-800 shadow-2xl overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-via/5 rounded-full -mr-32 -mt-32 blur-[100px]" />
+                    <pre className="text-xs md:text-sm font-mono text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar relative z-10">
+                      <code>
+                        {meeting?.code || "// No logic code was generated for this meeting context."}
+                      </code>
                     </pre>
                   </div>
-                ) : (
-                  <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
-                    <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                      <Code className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
-                    </div>
-                    <div className="max-w-xs">
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">No Logic Generated</h3>
-                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">The technical logic for this meeting has not been generated yet.</p>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             )}
 
             {activeTab === "tests" && (
-              <div className="animate-in fade-in duration-500 max-w-3xl">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                      <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Compliance & Tests</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Automated Validation Reports</p>
-                    </div>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
+                    <CheckCircle2 className="w-5 h-5 text-brand-via" />
                   </div>
-                  {mockTests.length > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Health Score</span>
-                      <span className="text-sm font-black text-emerald-600">92%</span>
-                    </div>
-                  )}
+                  <div>
+                    <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Compliance & Testing</h2>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Automated Validation</p>
+                  </div>
                 </div>
 
-                {mockTests.length > 0 ? (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                      <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2 block">Security Checks</span>
-                        <div className="flex items-end justify-between">
-                          <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">14/14</span>
-                          <span className="text-[10px] font-bold text-emerald-500">Passed</span>
-                        </div>
-                      </div>
-                      <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2 block">Performance Metrics</span>
-                        <div className="flex items-end justify-between">
-                          <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">3/4</span>
-                          <span className="text-[10px] font-bold text-amber-500">1 Warning</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3">
-                      {mockTests.map((test: TestResult, i: number) => (
-                        <div key={i} className="flex items-center justify-between p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 group hover:border-brand-via/30 transition-all shadow-sm">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                              test.status === "passed" 
-                                ? "bg-emerald-500/10 text-emerald-500" 
-                                : "bg-red-500/10 text-red-500"
-                            }`}>
-                              {test.status === "passed" ? <CheckCircle2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                {meeting?.actionItems?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {meeting.actionItems.map((test: any, i: number) => (
+                      <div key={i} className="bg-white dark:bg-zinc-900 p-6 rounded-[24px] border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 transition-all group relative overflow-hidden">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{test.name}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tight">{test.duration}</span>
-                                <span className="w-1 h-1 rounded-full bg-zinc-200" />
-                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tight">Level: Critical</span>
-                              </div>
-                            </div>
+                            <span className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Action Item {i + 1}</span>
                           </div>
-                          <div className="flex items-center gap-4">
-                            {test.error && (
-                              <span className="text-[9px] font-black text-red-500 bg-red-500/10 px-3 py-1 rounded-full uppercase tracking-widest border border-red-500/20">{test.error}</span>
-                            )}
-                            <button className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
-                              <ChevronRight className="w-4 h-4 text-zinc-400" />
-                            </button>
-                          </div>
+                          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">Identified</span>
                         </div>
-                      ))}
-                    </div>
-                  </>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-2">{test.content}</h4>
+                        <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">Assigned/Status: {test.status || 'Pending'}</p>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
                     <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
                       <ShieldCheck className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
                     </div>
                     <div className="max-w-xs">
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">No Compliance Data</h3>
-                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">Automated compliance checks will appear here once the meeting logic is finalized.</p>
+                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">No Action Items</h3>
+                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">No specific action items or compliance tasks were identified in this meeting.</p>
                     </div>
                   </div>
                 )}
@@ -527,7 +570,7 @@ export default function RecordingDetailPage() {
                   </div>
                   <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                      Hello {user?.name}! {mockTranscript.length > 0 ? "I've analyzed the transcript. You can ask me anything about the meeting discussions, blockers, or next steps." : "The transcript is still being processed. Once it's ready, I can help you analyze the meeting content."}
+                      Hello {user?.name}! {meeting?.transcripts?.length > 0 ? "I've analyzed the transcript. You can ask me anything about the meeting discussions, blockers, or next steps." : "The transcript is still being processed. Once it's ready, I can help you analyze the meeting content."}
                     </p>
                   </div>
                 </div>
@@ -591,7 +634,7 @@ export default function RecordingDetailPage() {
                   <div className="space-y-2">
                     {['Transcription', 'Diarization', 'Context Extraction', 'Logic Generation'].map((step, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${mockTranscript.length > 0 ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                        <div className={`w-1.5 h-1.5 rounded-full ${meeting?.transcripts?.length > 0 ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
                         <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{step}</span>
                       </div>
                     ))}
@@ -600,8 +643,8 @@ export default function RecordingDetailPage() {
                 <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
                   <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Top Participants</h4>
                   <div className="space-y-3">
-                    {mockTranscript.length > 0 ? (
-                      mockTranscript.slice(0, 3).map((item, i) => (
+                    {meeting?.transcripts?.length > 0 ? (
+                      meeting.transcripts.slice(0, 3).map((item: any, i: number) => (
                         <div key={i} className="flex items-center justify-between">
                           <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{item.speaker}</span>
                           <span className="text-[10px] font-bold text-zinc-400">Analyzing...</span>

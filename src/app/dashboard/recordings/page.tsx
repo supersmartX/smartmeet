@@ -2,53 +2,138 @@
 
 import { useSession } from "next-auth/react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { highlightText } from "@/utils/text"
 import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
 import { audioToCode } from "@/services/api"
-import { getMeetings } from "@/actions/meeting"
+import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle } from "@/actions/meeting"
 
 export default function RecordingsPage() {
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const user = session?.user
   const [recordings, setRecordings] = useState<any[]>([])
   const [filter, setFilter] = useState("all meetings")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState("")
   const [showToast, setShowToast] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    const fetchMeetings = async () => {
-      const data = await getMeetings()
-      setRecordings(data)
+  const fetchMeetings = async () => {
+    const data = await getMeetings()
+    setRecordings(data)
+  }
+
+  const handleRename = async (id: string) => {
+    if (!editTitle.trim()) return
+    setIsRenaming(true)
+    try {
+      await updateMeetingTitle(id, editTitle)
+      await fetchMeetings()
+      setEditingId(null)
+    } catch (error) {
+      console.error("Rename error:", error)
+      alert("Failed to rename recording.")
+    } finally {
+      setIsRenaming(false)
     }
+  }
+
+  const startEditing = (recording: any) => {
+    setEditingId(recording.id)
+    setEditTitle(recording.title)
+    setActiveMenu(null)
+  }
+
+  useEffect(() => {
     fetchMeetings()
   }, [])
 
+  useEffect(() => {
+    if (searchParams.get("action") === "upload") {
+      handleNewRecording()
+    }
+  }, [searchParams])
+
   const handleNewRecording = () => {
     fileInputRef.current?.click()
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this recording?")) return
+    
+    setIsDeleting(true)
+    setActiveMenu(null)
+    try {
+      await deleteMeeting(id)
+      await fetchMeetings()
+    } catch (error) {
+      console.error("Delete error:", error)
+      alert("Failed to delete recording.")
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // File size limit: 50MB
+    const MAX_FILE_SIZE = 50 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      alert("File is too large. Maximum size is 50MB.")
+      return
+    }
+
     setIsUploading(true)
     setShowToast(true)
+    setUploadStatus("Uploading...")
 
     try {
+      // Get audio duration
+      const duration = await new Promise<string>((resolve) => {
+        const audio = new Audio()
+        audio.src = URL.createObjectURL(file)
+        audio.onloadedmetadata = () => {
+          const minutes = Math.floor(audio.duration / 60)
+          const seconds = Math.floor(audio.duration % 60)
+          resolve(`${minutes}:${seconds.toString().padStart(2, '0')}`)
+          URL.revokeObjectURL(audio.src)
+        }
+        audio.onerror = () => resolve("0:00")
+      })
+
+      // 1. Create the meeting record in the database
+      const newMeeting = await createMeeting({
+        title: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
+        duration: duration
+      })
+
+      setUploadStatus("Processing with AI...")
+
+      // 2. Start the AI pipeline
       const response = await audioToCode(file)
+      
       if (response.success) {
-        // In a real app, we would redirect to the new recording page or refresh the list
-        console.log("Pipeline complete:", response.data)
+        setUploadStatus("Analysis complete!")
+        // Refresh the list to show the new meeting
+        await fetchMeetings()
       } else {
         console.error("Pipeline failed:", response.error)
+        setUploadStatus("AI processing failed, but recording saved.")
       }
     } catch (error) {
       console.error("Upload error:", error)
+      setUploadStatus("Upload failed.")
     } finally {
       setIsUploading(false)
       setTimeout(() => setShowToast(false), 5000)
@@ -126,7 +211,7 @@ export default function RecordingsPage() {
         </div>
       </header>
 
-      <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-1 overflow-x-auto custom-scrollbar">
+      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-1 overflow-x-auto custom-scrollbar">
         {["All Meetings", "Recent", "Action Items"].map((tab) => (
             <button 
                 key={tab}
@@ -142,35 +227,49 @@ export default function RecordingsPage() {
         ))}
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800 shadow-xl shadow-black/5 flex-1 flex flex-col min-h-0">
-        <div className="overflow-x-auto custom-scrollbar overflow-y-hidden">
-          <table className="w-full text-left border-collapse min-w-[500px] md:min-w-[800px]">
+      <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-200 dark:border-zinc-800 shadow-xl shadow-black/5 flex-1 flex flex-col min-h-[400px] relative overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar pb-32 -mb-32">
+          <table className="w-full text-left border-collapse min-w-[500px] md:min-w-[800px] mb-32">
             <thead>
-              <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Meeting Name</th>
+              <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">
+                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] first:rounded-tl-[32px]">Meeting Name</th>
                 <th className="px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
                 <th className="hidden md:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Duration</th>
                 <th className="hidden lg:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Participants</th>
                 <th className="px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Status</th>
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Action</th>
+                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right last:rounded-tr-[32px]">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {filteredRecordings.length > 0 ? (
                 filteredRecordings.map((recording) => (
                   <tr key={recording.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group">
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-5">
-                          <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                          <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm shrink-0">
                               {recording.status === "Processing" ? (
                                 <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
                               ) : (
                                 <Video className="w-5 h-5 text-brand-via" />
                               )}
                           </div>
-                          <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-base">
-                              {renderHighlightedText(recording.title, searchQuery)}
-                          </Link>
+                          {editingId === recording.id ? (
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <input
+                                type="text"
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleRename(recording.id)}
+                                onBlur={() => !isRenaming && setEditingId(null)}
+                                autoFocus
+                                className="bg-white dark:bg-zinc-800 border border-brand-via rounded-lg px-3 py-1.5 text-sm font-bold w-full focus:outline-none focus:ring-2 focus:ring-brand-via/20"
+                              />
+                            </div>
+                          ) : (
+                            <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-base truncate">
+                                {renderHighlightedText(recording.title, searchQuery)}
+                            </Link>
+                          )}
                       </div>
                     </td>
                     <td className="px-6 py-6 text-sm text-zinc-600 dark:text-zinc-400 font-bold">{renderHighlightedText(recording.date, searchQuery)}</td>
@@ -200,7 +299,7 @@ export default function RecordingsPage() {
                         >
                           Open
                         </Link>
-                        <div className="relative">
+                        <div className={`relative ${activeMenu === recording.id ? 'z-50' : ''}`}>
                           <button 
                             onClick={() => setActiveMenu(activeMenu === recording.id ? null : recording.id)}
                             className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
@@ -210,13 +309,28 @@ export default function RecordingsPage() {
                           
                           {activeMenu === recording.id && (
                             <>
-                              <div className="fixed inset-0 z-10" onClick={() => setActiveMenu(null)} />
-                              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-2xl z-20 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <button className="w-full px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Rename</button>
-                                <button className="w-full px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Download</button>
-                                <button className="w-full px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Share</button>
+                              <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
+                              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <button 
+                                  onClick={() => startEditing(recording)}
+                                  className="w-full px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                  Rename
+                                </button>
+                                <button className="w-full px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                                  Download
+                                </button>
+                                <button className="w-full px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                                  Share
+                                </button>
                                 <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800 my-1" />
-                                <button className="w-full px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">Delete</button>
+                                <button 
+                                  onClick={() => handleDelete(recording.id)}
+                                  className="w-full px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
+                                  disabled={isDeleting}
+                                >
+                                  {isDeleting ? "Deleting..." : "Delete"}
+                                </button>
                               </div>
                             </>
                           )}
@@ -275,7 +389,7 @@ export default function RecordingsPage() {
               <Sparkles className="w-4 h-4 text-brand-via" />
             )}
             <span className="text-[10px] font-black uppercase tracking-widest">
-              {isUploading ? "Recording pipeline is initializing..." : "Processing complete! Check back soon."}
+              {uploadStatus}
             </span>
           </div>
         </div>

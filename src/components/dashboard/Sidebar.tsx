@@ -56,7 +56,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { data: session } = useSession()
   const user = session?.user
   const logout = () => signOut()
-  const [openFolders, setOpenFolders] = useState<string[]>(["ACTIVE SESSIONS", "SUPERSMART"])
+  const [openFolders, setOpenFolders] = useState<string[]>(["SMARTMEET", "ACTIVE SESSIONS"])
 
   const toggleFolder = (name: string) => {
     setOpenFolders(prev =>
@@ -138,30 +138,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             Active Sessions
           </button>
           {openFolders.includes("ACTIVE SESSIONS") && (
-            <div className="mt-0.5">
-              <Link
-                href="/dashboard/recordings/1"
-                className={`flex items-center gap-2 px-6 py-1 text-[13px] transition-colors relative group ${
-                  pathname === "/dashboard/recordings/1"
-                    ? "text-brand-via bg-brand-via/5 border-r-2 border-brand-via"
-                    : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-900"
-                }`}
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 absolute left-2 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                <FileText className="w-4 h-4" />
-                <span className="truncate">Active Transcript</span>
-              </Link>
-              <Link
-                href="/dashboard/recordings/1"
-                className={`flex items-center gap-2 px-6 py-1 text-[13px] transition-colors ${
-                  pathname === "/dashboard/recordings/1"
-                    ? "text-zinc-900 dark:text-zinc-100 bg-zinc-200/50 dark:bg-zinc-800/50"
-                    : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-900"
-                }`}
-              >
-                <Video className="w-4 h-4" />
-                <span className="truncate">Meeting Recording</span>
-              </Link>
+            <div className="mt-0.5 px-6 py-2">
+              <p className="text-[10px] text-zinc-500 font-medium italic">No active sessions</p>
             </div>
           )}
         </div>

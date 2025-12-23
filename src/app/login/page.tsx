@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Mail, Lock, User, Key, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { signUp } from "@/actions/auth";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signup");
@@ -31,19 +32,35 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError("Invalid email or password. Please try again.");
+      if (mode === "signup") {
+        await signUp(formData);
+        // After signup, sign in automatically
+        const result = await signIn("credentials", {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
+        if (result?.error) {
+          setError("Account created, but failed to sign in automatically. Please sign in manually.");
+          setMode("signin");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
-        router.push("/dashboard");
+        const result = await signIn("credentials", {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          setError("Invalid email or password. Please try again.");
+        } else {
+          router.push("/dashboard");
+        }
       }
-    } catch (err) {
-      setError("An error occurred during authentication. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
