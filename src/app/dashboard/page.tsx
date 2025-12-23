@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, CheckCircle2 } from "lucide-react"
 
 const mockRecordings = [
@@ -25,8 +25,10 @@ export default function DashboardPage() {
     setTimeout(() => setShowToast(false), 3000)
   }
 
-  const filteredRecordings = recordings.filter(rec => 
-    rec.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRecordings = useMemo(() =>
+    recordings.filter(rec =>
+      rec.title.toLowerCase().includes(searchQuery.toLowerCase())
+    ), [recordings, searchQuery]
   )
 
   const highlightText = (text: string, query: string) => {
