@@ -4,15 +4,13 @@ import { useState, useCallback, useEffect } from "react"
 import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 
-import { generateCode, testCode } from "@/services/api"
+import { highlightText } from "@/utils/text"
+import { mockTranscript, mockCode, mockTests, type TestResult } from "@/data/mock"
 import { 
-  Mic, 
   Clock, 
   Users, 
-  Download, 
   Share2, 
   Search, 
-  ArrowLeft, 
   Sparkles, 
   Send,
   FileText,
@@ -21,58 +19,10 @@ import {
   CheckCircle2,
   ChevronRight,
   Copy,
-  GripHorizontal,
   Loader2,
   Zap,
   ShieldCheck
 } from "lucide-react"
-
-/* ----------------------------- DATA ------------------------------ */
-
-const mockTranscript = [
-  {
-    speaker: "Ehsan",
-    time: "10:03",
-    text: "Let’s review sprint progress and identify blockers before we finalize the AI pipeline."
-  },
-  {
-    speaker: "Ava",
-    time: "10:04",
-    text: "The Meeting Details screen is ready. I want to validate transcript-to-comment interactions."
-  },
-  {
-    speaker: "Harry",
-    time: "10:06",
-    text: "Transcript search API works locally, but latency increases under heavy load. I’m testing caching."
-  },
-  {
-    speaker: "Mary",
-    time: "10:09",
-    text: "User testing showed strong preference for a minimal layout. Some requested a compact mode."
-  }
-]
-
-const mockCode = `def get_transcript_with_cache(recording_id: str):
-    """
-    Proposed caching solution for search latency issues
-    identified during Dec 22nd Standup.
-    """
-    cache_key = f"transcript_{recording_id}"
-    cached_data = redis_client.get(cache_key)
-    
-    if cached_data:
-        return json.loads(cached_data)
-        
-    transcript = db.fetch_transcript(recording_id)
-    redis_client.setex(cache_key, 3600, json.dumps(transcript))
-    return transcript`
-
-const mockTests = [
-  { name: "Cache Hit Latency", status: "passed", duration: "12ms" },
-  { name: "DB Fallback Logic", status: "passed", duration: "145ms" },
-  { name: "Search Index Consistency", status: "passed", duration: "89ms" },
-  { name: "API Rate Limiting", status: "failed", duration: "0ms", error: "429 Too Many Requests" }
-]
 
 /* --------------------------- COMPONENT ---------------------------- */
 
@@ -89,7 +39,6 @@ export default function RecordingDetailPage() {
   // Logic Generation State
   const [isLogicGenerated, setIsLogicGenerated] = useState(false)
   const [isGeneratingLogic, setIsGeneratingLogic] = useState(false)
-  const [generatedCode, setGeneratedCode] = useState(mockCode)
   
   // Check if meeting is technical based on keywords
   const isTechnicalMeeting = mockTranscript.some(item => 
@@ -166,22 +115,19 @@ export default function RecordingDetailPage() {
     item.speaker.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text
-    const parts = text.split(new RegExp(`(${query})`, 'gi'))
-    return (
-      <>
-        {parts.map((part, i) => 
-          part.toLowerCase() === query.toLowerCase() ? (
-            <mark key={i} className="bg-brand-via/20 text-brand-via rounded-sm px-0.5 border-b border-brand-via/30">
-              {part}
-            </mark>
-          ) : (
-            part
-          )
-        )}
-      </>
-    )
+  const renderHighlightedText = (text: string, query: string) => {
+    const parts = highlightText(text, query);
+    return parts.map((part, i) => {
+      if (typeof part === 'string') {
+        return <span key={i}>{part}</span>;
+      } else {
+        return (
+          <mark key={i} className="bg-brand-via/20 text-brand-via rounded-sm px-0.5 border-b border-brand-via/30">
+            {part.match}
+          </mark>
+        );
+      }
+    });
   }
 
   const handleAskAI = (e: React.FormEvent) => {
@@ -192,25 +138,20 @@ export default function RecordingDetailPage() {
     setAnswer(null)
     
     const timer = setTimeout(() => {
-      setAnswer(`Based on the transcript, the main blockers discussed were search latency and QA sign-off. Harry is currently testing caching to resolve the latency issues.`)
+      setAnswer(`I've analyzed the transcript and summary. Based on the current meeting data, there are no specific blockers or action items detected yet. How else can I help?`)
       setIsAnswering(false)
     }, 1500)
     return () => clearTimeout(timer)
   }
 
-  const suggestions = [
-    "What were the main blockers?",
-    "Summarize Harry's technical proposal",
-    "What are the next steps for QA?",
-    "Identify all action items"
-  ]
+  const suggestions: string[] = []
 
   const journeySteps = [
-    { label: "Captured", status: "completed" },
-    { label: "Transcribed", status: "completed" },
-    { label: "AI Summary", status: "completed" },
-    { label: "Logic", status: isLogicGenerated ? "completed" : "pending" },
-    { label: "Documentation", status: isLogicGenerated ? "completed" : "pending" },
+    { label: "Captured", status: "completed" as const },
+    { label: "Transcribed", status: "completed" as const },
+    { label: "AI Summary", status: "completed" as const },
+    { label: "Logic", status: isLogicGenerated ? ("completed" as const) : ("pending" as const) },
+    { label: "Documentation", status: isLogicGenerated ? ("completed" as const) : ("pending" as const) },
   ]
 
   const [copyStatus, setCopyStatus] = useState("Copy Code")
@@ -231,7 +172,7 @@ export default function RecordingDetailPage() {
             <ChevronRight className="w-3 h-3" />
             <Link href="/dashboard/recordings" className="hover:text-brand-via transition-colors">recordings</Link>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-zinc-900 dark:text-zinc-100">Product Team Standup</span>
+            <span className="text-zinc-900 dark:text-zinc-100">Meeting Analysis</span>
           </div>
           
           <div className="hidden xl:flex items-center gap-6 ml-6 pl-6 border-l border-zinc-200 dark:border-zinc-800">
@@ -264,8 +205,8 @@ export default function RecordingDetailPage() {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400">
-            <Clock className="w-3 h-3" /> 18m
-            <Users className="w-3 h-3 ml-2" /> 9
+            <Clock className="w-3 h-3" /> --m
+            <Users className="w-3 h-3 ml-2" /> --
           </div>
           <div className="h-4 w-[1px] bg-zinc-200 dark:border-zinc-800" />
           <button className="text-[10px] font-bold text-brand-via hover:underline uppercase tracking-widest flex items-center gap-1.5">
@@ -318,22 +259,34 @@ export default function RecordingDetailPage() {
           <div className="p-8">
             {activeTab === "transcript" && (
               <div className="space-y-8 max-w-3xl">
-                {filteredTranscript.map((item, i) => (
-                  <div key={i} className="flex gap-4 group">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800 group-hover:border-brand-via transition-colors">
-                      {item.speaker[0]}
+                {filteredTranscript.length > 0 ? (
+                  filteredTranscript.map((item, i) => (
+                    <div key={i} className="flex gap-4 group">
+                      <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800 group-hover:border-brand-via transition-colors">
+                        {item.speaker[0]}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{renderHighlightedText(item.speaker, searchQuery)}</span>
+                          <span className="text-[10px] text-zinc-400 font-medium">{item.time}</span>
+                        </div>
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                          {renderHighlightedText(item.text, searchQuery)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800">
+                      <MessageSquare className="w-6 h-6 text-zinc-300 dark:text-zinc-600" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{highlightText(item.speaker, searchQuery)}</span>
-                        <span className="text-[10px] text-zinc-400 font-medium">{item.time}</span>
-                      </div>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                        {highlightText(item.text, searchQuery)}
-                      </p>
+                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-1">No transcript available</h3>
+                      <p className="text-[10px] text-zinc-500 font-medium">The transcript for this meeting is currently being processed.</p>
                     </div>
                   </div>
-                ))}
+                )}
               </div>
             )}
 
@@ -350,61 +303,58 @@ export default function RecordingDetailPage() {
                 </div>
 
                 <div className="space-y-6">
-                  <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-8 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-via/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand-via/10 transition-all" />
-                    
-                    <p className="text-lg text-zinc-900 dark:text-zinc-100 font-bold leading-tight mb-8">
-                      The team discussed the upcoming AI pipeline finalization and identified several key blockers in the backend latency.
-                    </p>
+                  {mockTranscript.length > 0 ? (
+                    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-8 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-brand-via/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand-via/10 transition-all" />
+                      
+                      <p className="text-lg text-zinc-900 dark:text-zinc-100 font-bold leading-tight mb-8">
+                        The AI analysis for this meeting is complete. You can find the key points and technical context below.
+                      </p>
 
-                    <div className="grid grid-cols-1 gap-4 mb-8">
-                      {[
-                        { title: "Backend", desc: "Deployment is pending final QA sign-off.", icon: ShieldCheck },
-                        { title: "Search", desc: "Latency issues identified in local testing, caching solution proposed.", icon: Zap },
-                        { title: "UI/UX", desc: "Minimal layout preferred by test users, compact mode requested.", icon: MessageSquare }
-                      ].map((item, i) => (
-                        <div key={i} className="flex gap-4 p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 transition-all group/item">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center shrink-0 group-hover/item:scale-110 transition-transform">
-                            {/* I need to make sure these icons are imported */}
-                            <item.icon className="w-4 h-4 text-brand-via" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-brand-via mb-1">{item.title}</span>
-                            <span className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">{item.desc}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {isTechnicalMeeting && !isLogicGenerated && (
-                      <div className="bg-zinc-900 dark:bg-white border border-zinc-800 dark:border-zinc-200 rounded-[24px] p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl shadow-brand-via/20">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-brand-via/20 flex items-center justify-center shrink-0">
-                            <Code className="w-6 h-6 text-brand-via" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-black text-white dark:text-zinc-900 uppercase tracking-tight">Technical Context Detected</h4>
-                            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-widest mt-1">Generate logic & compliance reports</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={handleGenerateLogic}
-                          disabled={isGeneratingLogic}
-                          className="w-full sm:w-auto bg-brand-gradient text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 disabled:scale-100"
-                        >
-                          {isGeneratingLogic ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" /> GENERATING...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-4 h-4" /> GENERATE LOGIC
-                            </>
-                          )}
-                        </button>
+                      <div className="grid grid-cols-1 gap-4 mb-8">
+                        {/* Summary points would be rendered here when available */}
                       </div>
-                    )}
-                  </div>
+
+                      {isTechnicalMeeting && !isLogicGenerated && (
+                        <div className="bg-zinc-900 dark:bg-white border border-zinc-800 dark:border-zinc-200 rounded-[24px] p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl shadow-brand-via/20">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-brand-via/20 flex items-center justify-center shrink-0">
+                              <Code className="w-6 h-6 text-brand-via" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-black text-white dark:text-zinc-900 uppercase tracking-tight">Technical Context Detected</h4>
+                              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-widest mt-1">Generate logic & compliance reports</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={handleGenerateLogic}
+                            disabled={isGeneratingLogic}
+                            className="w-full sm:w-auto bg-brand-gradient text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 disabled:scale-100"
+                          >
+                            {isGeneratingLogic ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" /> GENERATING...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4" /> GENERATE LOGIC
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
+                      <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                        <Sparkles className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
+                      </div>
+                      <div className="max-w-xs">
+                        <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">Generating Summary</h3>
+                        <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">Our AI is analyzing your meeting audio to generate an executive summary. This usually takes 1-2 minutes.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -416,18 +366,32 @@ export default function RecordingDetailPage() {
                     <Code className="w-4 h-4 text-brand-via" />
                     <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Generated Logic</h3>
                   </div>
-                  <button 
-                    onClick={handleCopyCode}
-                    className="flex items-center gap-2 text-[10px] font-bold text-brand-via hover:underline uppercase tracking-widest"
-                  >
-                    <Copy className={`w-3 h-3 ${copyStatus === "Copied!" ? "animate-bounce" : ""}`} /> {copyStatus}
-                  </button>
+                  {isLogicGenerated && mockCode && (
+                    <button 
+                      onClick={handleCopyCode}
+                      className="flex items-center gap-2 text-[10px] font-bold text-brand-via hover:underline uppercase tracking-widest"
+                    >
+                      <Copy className={`w-3 h-3 ${copyStatus === "Copied!" ? "animate-bounce" : ""}`} /> {copyStatus}
+                    </button>
+                  )}
                 </div>
-                <div className="bg-[#1e1e1e] rounded-xl p-6 font-mono text-sm leading-relaxed overflow-x-auto border border-white/5 shadow-2xl">
-                  <pre className="text-zinc-300">
-                    {generatedCode}
-                  </pre>
-                </div>
+                {isLogicGenerated ? (
+                  <div className="bg-[#1e1e1e] rounded-xl p-6 font-mono text-sm leading-relaxed overflow-x-auto border border-white/5 shadow-2xl">
+                    <pre className="text-zinc-300">
+                      {mockCode || "// No logic code was generated for this meeting context."}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
+                    <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                      <Code className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
+                    </div>
+                    <div className="max-w-xs">
+                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">No Logic Generated</h3>
+                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">The technical logic for this meeting has not been generated yet.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -443,60 +407,76 @@ export default function RecordingDetailPage() {
                       <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Automated Validation Reports</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Health Score</span>
-                    <span className="text-sm font-black text-emerald-600">92%</span>
-                  </div>
+                  {mockTests.length > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Health Score</span>
+                      <span className="text-sm font-black text-emerald-600">92%</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                  <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2 block">Security Checks</span>
-                    <div className="flex items-end justify-between">
-                      <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">14/14</span>
-                      <span className="text-[10px] font-bold text-emerald-500">Passed</span>
-                    </div>
-                  </div>
-                  <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2 block">Performance Metrics</span>
-                    <div className="flex items-end justify-between">
-                      <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">3/4</span>
-                      <span className="text-[10px] font-bold text-amber-500">1 Warning</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-3">
-                  {mockTests.map((test, i) => (
-                    <div key={i} className="flex items-center justify-between p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 group hover:border-brand-via/30 transition-all shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          test.status === "passed" 
-                            ? "bg-emerald-500/10 text-emerald-500" 
-                            : "bg-red-500/10 text-red-500"
-                        }`}>
-                          {test.status === "passed" ? <CheckCircle2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                {mockTests.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                      <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2 block">Security Checks</span>
+                        <div className="flex items-end justify-between">
+                          <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">14/14</span>
+                          <span className="text-[10px] font-bold text-emerald-500">Passed</span>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{test.name}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tight">{test.duration}</span>
-                            <span className="w-1 h-1 rounded-full bg-zinc-200" />
-                            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tight">Level: Critical</span>
+                      </div>
+                      <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2 block">Performance Metrics</span>
+                        <div className="flex items-end justify-between">
+                          <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">3/4</span>
+                          <span className="text-[10px] font-bold text-amber-500">1 Warning</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                      {mockTests.map((test: TestResult, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 group hover:border-brand-via/30 transition-all shadow-sm">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                              test.status === "passed" 
+                                ? "bg-emerald-500/10 text-emerald-500" 
+                                : "bg-red-500/10 text-red-500"
+                            }`}>
+                              {test.status === "passed" ? <CheckCircle2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{test.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tight">{test.duration}</span>
+                                <span className="w-1 h-1 rounded-full bg-zinc-200" />
+                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tight">Level: Critical</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            {test.error && (
+                              <span className="text-[9px] font-black text-red-500 bg-red-500/10 px-3 py-1 rounded-full uppercase tracking-widest border border-red-500/20">{test.error}</span>
+                            )}
+                            <button className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+                              <ChevronRight className="w-4 h-4 text-zinc-400" />
+                            </button>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {test.error && (
-                          <span className="text-[9px] font-black text-red-500 bg-red-500/10 px-3 py-1 rounded-full uppercase tracking-widest border border-red-500/20">{test.error}</span>
-                        )}
-                        <button className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
-                          <ChevronRight className="w-4 h-4 text-zinc-400" />
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
+                    <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                      <ShieldCheck className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
+                    </div>
+                    <div className="max-w-xs">
+                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">No Compliance Data</h3>
+                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">Automated compliance checks will appear here once the meeting logic is finalized.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -546,7 +526,7 @@ export default function RecordingDetailPage() {
                   </div>
                   <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                      Hello {user?.name}! I've analyzed the transcript. You can ask me anything about the meeting discussions, blockers, or next steps.
+                      Hello {user?.name}! {mockTranscript.length > 0 ? "I've analyzed the transcript. You can ask me anything about the meeting discussions, blockers, or next steps." : "The transcript is still being processed. Once it's ready, I can help you analyze the meeting content."}
                     </p>
                   </div>
                 </div>
@@ -568,7 +548,7 @@ export default function RecordingDetailPage() {
                   </div>
                 )}
                 
-                {!answer && !isAnswering && (
+                {!answer && !isAnswering && suggestions.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
                     {suggestions.map((s, i) => (
                       <button 
@@ -593,15 +573,15 @@ export default function RecordingDetailPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-[10px] font-bold text-zinc-500 uppercase">Latency Avg</span>
-                      <span className="text-[10px] font-black text-emerald-500">124ms</span>
+                      <span className="text-[10px] font-black text-zinc-400">--ms</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[10px] font-bold text-zinc-500 uppercase">Sentiment</span>
-                      <span className="text-[10px] font-black text-brand-via">Neutral</span>
+                      <span className="text-[10px] font-black text-zinc-400">Analysis Pending</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[10px] font-bold text-zinc-500 uppercase">Keywords</span>
-                      <span className="text-[10px] font-black text-zinc-900 dark:text-zinc-100">14 Detected</span>
+                      <span className="text-[10px] font-black text-zinc-400">0 Detected</span>
                     </div>
                   </div>
                 </div>
@@ -610,7 +590,7 @@ export default function RecordingDetailPage() {
                   <div className="space-y-2">
                     {['Transcription', 'Diarization', 'Context Extraction', 'Logic Generation'].map((step, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <div className={`w-1.5 h-1.5 rounded-full ${mockTranscript.length > 0 ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
                         <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{step}</span>
                       </div>
                     ))}
@@ -619,12 +599,16 @@ export default function RecordingDetailPage() {
                 <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
                   <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Top Participants</h4>
                   <div className="space-y-3">
-                    {mockTranscript.slice(0, 3).map((item, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{item.speaker}</span>
-                        <span className="text-[10px] font-bold text-zinc-400">{20 + i*10}% talk time</span>
-                      </div>
-                    ))}
+                    {mockTranscript.length > 0 ? (
+                      mockTranscript.slice(0, 3).map((item, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{item.speaker}</span>
+                          <span className="text-[10px] font-bold text-zinc-400">Analyzing...</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-zinc-500 font-medium">No participant data available yet.</p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -7,7 +7,6 @@ import { ModeToggle } from "@/components/ModeToggle"
 import { Menu, X, Sparkles } from "lucide-react"
 
 export default function Navbar() {
-  const [error, setError] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isAuthenticated, user, logout } = useAuth()
   

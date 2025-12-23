@@ -3,16 +3,9 @@
 import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 import { useState, useMemo } from "react"
-import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, CheckCircle2 } from "lucide-react"
-
-const mockRecordings = [
-  { id: "1", title: "Product Team Standup", date: "Dec 22, 2025", duration: "18m", status: "Completed", participants: 9 },
-  { id: "2", title: "AI Pipeline Discussion", date: "Dec 21, 2025", duration: "45m", status: "Completed", participants: 4 },
-  { id: "3", title: "Q1 Strategy Planning", date: "Dec 20, 2025", duration: "1h 12m", status: "Completed", participants: 6 },
-  { id: "4", title: "Design Review: Mobile App", date: "Dec 19, 2025", duration: "32m", status: "Processing", participants: 3 },
-  { id: "5", title: "Client Discovery Call", date: "Dec 18, 2025", duration: "58m", status: "Completed", participants: 2 },
-  { id: "6", title: "Weekly All-Hands", date: "Dec 15, 2025", duration: "42m", status: "Completed", participants: 24 },
-]
+import { highlightText } from "@/utils/text"
+import { mockRecordings, mockStats } from "@/data/mock"
+import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, Calendar, HardDrive, Users } from "lucide-react"
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -31,30 +24,28 @@ export default function DashboardPage() {
     ), [recordings, searchQuery]
   )
 
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text
-    const parts = text.split(new RegExp(`(${query})`, 'gi'))
-    return (
-      <>
-        {parts.map((part, i) => 
-          part.toLowerCase() === query.toLowerCase() ? (
-            <mark key={i} className="bg-brand-via/20 text-brand-via rounded-sm px-0.5 border-b border-brand-via/30">
-              {part}
-            </mark>
-          ) : (
-            part
-          )
-        )}
-      </>
-    )
+  const renderHighlightedText = (text: string, query: string) => {
+    const parts = highlightText(text, query);
+    return parts.map((part, i) => {
+      if (typeof part === 'string') {
+        return <span key={i}>{part}</span>;
+      } else {
+        return (
+          <mark key={i} className="bg-brand-via/20 text-brand-via rounded-sm px-0.5 border-b border-brand-via/30">
+            {part.match}
+          </mark>
+        );
+      }
+    });
   }
 
-  const stats = [
-    { label: "Total Meetings", value: "24", icon: Video, color: "text-brand-via", bg: "bg-brand-via/10", trend: "+12%", href: "/dashboard/recordings" },
-    { label: "AI Insights", value: "142", icon: Sparkles, color: "text-amber-500", bg: "bg-amber-500/10", trend: "+28%", href: "/dashboard/recordings?filter=action+items" },
-    { label: "Time Saved", value: "12.5h", icon: Zap, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "Elite", href: "/dashboard/recordings" },
-    { label: "Compliance Score", value: "98%", icon: ShieldCheck, color: "text-blue-500", bg: "bg-blue-500/10", trend: "Stable", href: "/dashboard/recordings" },
-  ]
+  const stats = mockStats.map(stat => ({
+    ...stat,
+    icon: stat.icon === "Video" ? Video : 
+          stat.icon === "Sparkles" ? Sparkles : 
+          stat.icon === "Zap" ? Zap : 
+          stat.icon === "ShieldCheck" ? ShieldCheck : Video
+  }));
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-8 animate-in fade-in duration-700">
@@ -63,10 +54,9 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Workspace Overview</h1>
-            <span className="px-2 py-0.5 rounded-full bg-brand-via/10 text-brand-via text-[8px] font-black uppercase tracking-widest border border-brand-via/20">Pro Plan</span>
           </div>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">
-            Welcome back, {user?.name}. Your AI pipeline analyzed <span className="text-zinc-900 dark:text-zinc-100 font-bold">4 meetings</span> today.
+            Welcome back, {user?.name}. Your AI pipeline analyzed <span className="text-zinc-900 dark:text-zinc-100 font-bold">{recordings.length} meetings</span> today.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -111,8 +101,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Recent Activity / Meetings */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Recent Activity / Meetings */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-[0.2em]">Recent Meetings</h2>
@@ -143,18 +133,17 @@ export default function DashboardPage() {
                                   <Video className="w-5 h-5 text-brand-via" />
                               </div>
                               <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-sm truncate max-w-[200px]">
-                                  {highlightText(recording.title, searchQuery)}
+                                  {renderHighlightedText(recording.title, searchQuery)}
                               </Link>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-xs text-zinc-500 dark:text-zinc-400 font-bold">{highlightText(recording.date, searchQuery)}</td>
+                        <td className="px-6 py-4 text-xs text-zinc-500 dark:text-zinc-400 font-bold">{renderHighlightedText(recording.date, searchQuery)}</td>
                         <td className="hidden md:table-cell px-6 py-4">
-                          <div className="flex -space-x-1.5">
-                            {[...Array(3)].map((_, i) => (
-                              <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden">
-                                <img src={`https://i.pravatar.cc/100?img=${i + 20 + parseInt(recording.id)}`} className="w-full h-full object-cover shadow-sm" />
-                              </div>
-                            ))}
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-zinc-800">
+                              <span className="text-[10px] font-black text-zinc-500">{recording.participants}</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Members</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -203,71 +192,46 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* User Journey / Recommended Actions */}
-        <div className="flex flex-col gap-4">
-          <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-[0.2em]">Next Actions</h2>
-          <div className="bg-zinc-900 dark:bg-white p-6 rounded-3xl shadow-2xl shadow-brand-via/20 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-via/20 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand-via/30 transition-all" />
-            <Sparkles className="w-8 h-8 text-brand-via mb-4" />
-            <h3 className="text-white dark:text-zinc-900 font-black text-lg leading-tight mb-2">Technical Blockers Detected</h3>
-            <p className="text-zinc-400 dark:text-zinc-500 text-xs font-medium mb-6">
-              Your last meeting (Product Team Standup) contains 3 high-priority technical blockers.
-            </p>
-            <Link 
-              href="/dashboard/recordings/1"
-              className="w-full py-3 bg-brand-via text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 transition-all"
-            >
-              Review Now <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+        {/* Sidebar Sections */}
+        <div className="flex flex-col gap-8">
+          {/* Upcoming Meetings */}
+          <section className="flex flex-col gap-4">
+            <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-[0.2em]">Upcoming</h2>
+            <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center text-center py-10">
+              <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center mb-4">
+                <Calendar className="w-6 h-6 text-zinc-300 dark:text-zinc-600" />
+              </div>
+              <p className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-1">No scheduled meetings</p>
+              <p className="text-[10px] text-zinc-500 font-medium max-w-[140px]">Connect your calendar to sync upcoming sessions.</p>
+              <Link href="/dashboard/integrations" className="mt-4 text-[9px] font-black text-brand-via uppercase tracking-widest hover:underline">Connect Calendar</Link>
+            </div>
+          </section>
 
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">User Journey Map</h4>
-              <span className="text-[10px] font-bold text-brand-via bg-brand-via/10 px-2 py-0.5 rounded">75% Complete</span>
-            </div>
-            
-            <div className="relative flex flex-col gap-6">
-              {/* Vertical line connecting steps */}
-              <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-zinc-100 dark:bg-zinc-800" />
-              
-              {[
-                { label: "Onboarding", desc: "Account setup & profile", status: "completed", date: "Dec 10" },
-                { label: "Connect Calendar", desc: "Sync with Google/Outlook", status: "completed", date: "Dec 11" },
-                { label: "First AI Analysis", desc: "Logic extraction from call", status: "completed", date: "Today" },
-                { label: "Team Collaboration", desc: "Invite teammates to workspace", status: "pending", date: "Next" }
-              ].map((step, i) => (
-                <div key={i} className="relative flex gap-4 group">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border-4 border-white dark:border-zinc-900 z-10 transition-all ${
-                    step.status === 'completed' 
-                      ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]' 
-                      : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-800 text-zinc-400'
-                  }`}>
-                    {step.status === 'completed' ? (
-                      <CheckCircle2 className="w-3 h-3" />
-                    ) : (
-                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-0.5 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-black ${step.status === 'completed' ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'}`}>
-                        {step.label}
-                      </span>
-                      <span className="text-[9px] font-bold text-zinc-400 uppercase">{step.date}</span>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-500 font-medium leading-tight">
-                      {step.desc}
-                    </p>
-                  </div>
+          {/* Storage / Usage */}
+          <section className="flex flex-col gap-4">
+            <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-[0.2em]">Workspace</h2>
+            <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                  <HardDrive className="w-4 h-4 text-zinc-500" />
                 </div>
-              ))}
+                <div>
+                  <p className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Storage Used</p>
+                  <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-tight">0.0 GB of 5 GB</p>
+                </div>
+              </div>
+              <div className="h-1.5 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden mb-6">
+                <div className="h-full bg-brand-via rounded-full" style={{ width: '2%' }} />
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t border-zinc-50 dark:border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5 text-zinc-400" />
+                  <span className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">1 Member</span>
+                </div>
+                <Link href="/dashboard/team" className="text-[9px] font-black text-brand-via uppercase tracking-widest hover:underline">Manage Team</Link>
+              </div>
             </div>
-            
-            <button className="w-full py-3 border border-zinc-200 dark:border-zinc-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all">
-              View Full Roadmap
-            </button>
-          </div>
+          </section>
         </div>
       </div>
 

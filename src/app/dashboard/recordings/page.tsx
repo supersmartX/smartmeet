@@ -3,17 +3,10 @@
 import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 import { useState, useRef } from "react"
+import { highlightText } from "@/utils/text"
+import { mockRecordings } from "@/data/mock"
 import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
 import { audioToCode } from "@/services/api"
-
-const mockRecordings = [
-  { id: "1", title: "Product Team Standup", date: "Dec 22, 2025", duration: "18m", status: "Completed", participants: 9 },
-  { id: "2", title: "AI Pipeline Discussion", date: "Dec 21, 2025", duration: "45m", status: "Completed", participants: 4 },
-  { id: "3", title: "Q1 Strategy Planning", date: "Dec 20, 2025", duration: "1h 12m", status: "Completed", participants: 6 },
-  { id: "4", title: "Design Review: Mobile App", date: "Dec 19, 2025", duration: "32m", status: "Processing", participants: 3 },
-  { id: "5", title: "Client Discovery Call", date: "Dec 18, 2025", duration: "58m", status: "Completed", participants: 2 },
-  { id: "6", title: "Weekly All-Hands", date: "Dec 15, 2025", duration: "42m", status: "Completed", participants: 24 },
-]
 
 export default function RecordingsPage() {
   const { user } = useAuth()
@@ -55,27 +48,30 @@ export default function RecordingsPage() {
   const filteredRecordings = mockRecordings.filter(rec => {
     const matchesSearch = rec.title.toLowerCase().includes(searchQuery.toLowerCase())
     if (filter === "all meetings") return matchesSearch
-    if (filter === "recent") return matchesSearch && (rec.date.includes("Dec 22") || rec.date.includes("Dec 21"))
-    if (filter === "action items") return matchesSearch && (rec.participants > 5 || rec.status === "Processing") // Mock logic for action items
+    if (filter === "recent") {
+      // Logic for recent: meetings from the last 7 days
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      const recordingDate = new Date(rec.date)
+      return matchesSearch && recordingDate >= sevenDaysAgo
+    }
+    if (filter === "action items") return matchesSearch && rec.status === "Completed" // Simplified for now
     return matchesSearch
   })
 
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text
-    const parts = text.split(new RegExp(`(${query})`, 'gi'))
-    return (
-      <>
-        {parts.map((part, i) => 
-          part.toLowerCase() === query.toLowerCase() ? (
-            <mark key={i} className="bg-brand-via/20 text-brand-via rounded-sm px-0.5 border-b border-brand-via/30">
-              {part}
-            </mark>
-          ) : (
-            part
-          )
-        )}
-      </>
-    )
+  const renderHighlightedText = (text: string, query: string) => {
+    const parts = highlightText(text, query);
+    return parts.map((part, i) => {
+      if (typeof part === 'string') {
+        return <span key={i}>{part}</span>;
+      } else {
+        return (
+          <mark key={i} className="bg-brand-via/20 text-brand-via rounded-sm px-0.5 border-b border-brand-via/30">
+            {part.match}
+          </mark>
+        );
+      }
+    });
   }
 
   return (
@@ -163,25 +159,19 @@ export default function RecordingsPage() {
                               )}
                           </div>
                           <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-base">
-                              {highlightText(recording.title, searchQuery)}
+                              {renderHighlightedText(recording.title, searchQuery)}
                           </Link>
                       </div>
                     </td>
-                    <td className="px-6 py-6 text-sm text-zinc-600 dark:text-zinc-400 font-bold">{highlightText(recording.date, searchQuery)}</td>
+                    <td className="px-6 py-6 text-sm text-zinc-600 dark:text-zinc-400 font-bold">{renderHighlightedText(recording.date, searchQuery)}</td>
                     <td className="hidden md:table-cell px-6 py-6 text-sm text-zinc-600 dark:text-zinc-400 font-bold">{recording.duration}</td>
                     <td className="hidden lg:table-cell px-6 py-6">
-                      <div className="flex -space-x-2">
-                        {[...Array(Math.min(recording.participants, 4))].map((_, i) => (
-                          <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-                            <img src={`https://i.pravatar.cc/100?img=${i + 20 + parseInt(recording.id)}`} alt="Meeting participant" className="w-full h-full rounded-full object-cover" />
-                          </div>
-                        ))}
-                        {recording.participants > 4 && (
-                          <div className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-                            +{recording.participants - 4}
-                          </div>
-                        )}
-                      </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-zinc-800">
+                                <span className="text-xs font-black text-zinc-500">{recording.participants}</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Members</span>
+                        </div>
                     </td>
                     <td className="px-6 py-6">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
@@ -252,7 +242,9 @@ export default function RecordingsPage() {
       </div>
       
       <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-4">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Showing 1-6 of 12 recordings</p>
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+          Showing {filteredRecordings.length > 0 ? `1-${filteredRecordings.length}` : '0'} of {filteredRecordings.length} recordings
+        </p>
         <div className="flex gap-3">
             <button className="px-6 py-2.5 border-2 border-zinc-100 dark:border-zinc-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 disabled:opacity-50 flex items-center gap-2" disabled>
               <ChevronLeft className="w-4 h-4" /> Previous

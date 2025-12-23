@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Loader2, ShieldAlert } from "lucide-react";
 
@@ -59,10 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Create mock user
+      // Create user
       const mockUser: User = {
         id: "user_" + Math.random().toString(36).substr(2, 9),
-        name: "Supersmart User",
+        name: email.split("@")[0], // Use email prefix as name
         email,
         apiKey: apiKey || process.env.NEXT_PUBLIC_DEFAULT_API_KEY || ""
       };
@@ -94,17 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const value = useMemo(() => ({
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    logout,
+    updateApiKey,
+  }), [user, isLoading, login, logout, updateApiKey]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        logout,
-        updateApiKey,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

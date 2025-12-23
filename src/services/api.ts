@@ -66,14 +66,14 @@ function handleApiError<T>(error: unknown): ApiResponse<T> {
       success: false,
       error: error.message,
       message: "API request failed"
-    } as ApiResponse<T>;
+    };
   }
 
   return {
     success: false,
     error: "Unknown error occurred",
     message: "API request failed"
-  } as ApiResponse<T>;
+  };
 }
 
 /**
