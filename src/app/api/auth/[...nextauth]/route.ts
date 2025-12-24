@@ -15,6 +15,11 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            authorization: {
+              params: {
+                redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/callback/google`,
+              },
+            },
           }),
         ]
       : []),
@@ -23,6 +28,11 @@ export const authOptions: NextAuthOptions = {
           GitHubProvider({
             clientId: process.env.GITHUB_ID,
             clientSecret: process.env.GITHUB_SECRET,
+            authorization: {
+              params: {
+                redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/callback/github`,
+              },
+            },
           }),
         ]
       : []),
@@ -73,7 +83,7 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev-only",
   callbacks: {
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (token && session.user) {
         (session.user as any).id = token.sub;
       }
