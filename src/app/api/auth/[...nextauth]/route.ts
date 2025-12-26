@@ -69,6 +69,10 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Incorrect password");
           }
 
+          if (!user.emailVerified) {
+            throw new Error("Email not verified. Please check your inbox for a verification link.");
+          }
+
           return user;
         } catch (error) {
           console.error("Auth authorize error:", error);
@@ -81,24 +85,37 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login", // Redirect back to login on error
   },
-  debug: true, // Enable debug for better logs
+  debug: false, // Enable debug for better logs
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev-only",
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+        }
+      }
+      return token;
+    },
     async session({ session, token }: { session: Session; token: JWT }) {
       if (token?.sub && session.user) {
-        // Extend the session user object with the user ID
+        // Extend the session user object with the user ID and role
         const extendedUser = {
           ...session.user,
           id: token.sub,
+          role: token.role,
         };
         session.user = extendedUser;
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
+    async redirect({ baseUrl }) {
       console.log("baseUrl in redirect callback:", baseUrl);
       // Always redirect to the dashboard after login
       return baseUrl + '/dashboard';

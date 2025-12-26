@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from 'uuid';
+import { sendVerificationEmail } from "@/lib/mail";
 
 interface SignUpFormData {
   name: string;
@@ -42,8 +44,14 @@ export async function signUp(formData: SignUpFormData) {
       email,
       password: hashedPassword,
       apiKey: apiKey || null,
+      verificationToken: uuidv4(),
+      emailVerified: null,
     },
   });
+
+  if (user.email && user.verificationToken) {
+    await sendVerificationEmail(user.email, user.verificationToken);
+  }
 
   return { success: true, user: { id: user.id, name: user.name, email: user.email } };
 }

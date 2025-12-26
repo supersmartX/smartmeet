@@ -43,14 +43,22 @@ model User {
   name          String?
   email         String?   @unique
   emailVerified DateTime?
+  verificationToken String? @unique
   image         String?
   password      String?
   apiKey        String?
+  role          UserRole  @default(MEMBER)
   accounts      Account[]
   sessions      Session[]
   meetings      Meeting[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+  VIEWER
 }
 
 model VerificationToken {
