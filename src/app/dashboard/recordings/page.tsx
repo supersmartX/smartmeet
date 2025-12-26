@@ -118,6 +118,11 @@ function RecordingsContent() {
       return
     }
 
+    if (!user?.id) {
+      alert("You must be logged in to upload recordings.")
+      return
+    }
+
     setIsUploading(true)
     setShowToast(true)
     setUploadStatus("Uploading...")
@@ -126,11 +131,15 @@ function RecordingsContent() {
       // 1. Upload to Supabase Storage
       const fileExt = file.name.split('.').pop()
       const fileName = `${uuidv4()}.${fileExt}`
-      const filePath = `${user?.id}/${fileName}`
+      const filePath = `${user.id}/${fileName}`
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('recordings')
-        .upload(filePath, file)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type
+        })
 
       if (uploadError) {
         throw new Error(`Upload failed: ${uploadError.message}`)
