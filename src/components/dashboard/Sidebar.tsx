@@ -3,15 +3,15 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
-import { 
-  ChevronRight, 
-  ChevronDown, 
-  Folder, 
-  FileText, 
-  Code, 
-  FileCode, 
-  FileJson, 
-  Video, 
+import {
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  FileText,
+  Code,
+  FileCode,
+  FileJson,
+  Video,
   LogOut,
   Settings,
   Layout,
@@ -22,13 +22,14 @@ import {
   Bell
 } from "lucide-react"
 import { useState } from "react"
+import { LucideIcon } from "lucide-react"
 
 interface WorkspaceItem {
   name: string;
   type?: string;
   children?: WorkspaceItem[];
   href?: string;
-  icon?: any;
+  icon?: LucideIcon;
   upcoming?: boolean;
 }
 

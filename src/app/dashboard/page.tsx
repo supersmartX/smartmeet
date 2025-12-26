@@ -9,12 +9,32 @@ import { getMeetings, getDashboardStats } from "@/actions/meeting"
 
 import { useRouter } from "next/navigation"
 
+interface Meeting {
+  id: string;
+  title: string;
+  date: Date;
+  duration?: string;
+  participants?: number;
+  status: string;
+  userId: string;
+}
+
+interface DashboardStat {
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
+  bg: string;
+  trend: string;
+  href: string;
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user
-  const [recordings, setRecordings] = useState<any[]>([])
-  const [stats, setStats] = useState<any[]>([])
+  const [recordings, setRecordings] = useState<Meeting[]>([])
+  const [stats, setStats] = useState<DashboardStat[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

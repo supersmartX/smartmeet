@@ -9,11 +9,21 @@ import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2
 import { audioToCode } from "@/services/api"
 import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle } from "@/actions/meeting"
 
+interface Meeting {
+  id: string;
+  title: string;
+  date: Date;
+  duration?: string;
+  participants?: number;
+  status: string;
+  userId: string;
+}
+
 function RecordingsContent() {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
   const user = session?.user
-  const [recordings, setRecordings] = useState<any[]>([])
+  const [recordings, setRecordings] = useState<Meeting[]>([])
   const [filter, setFilter] = useState("all meetings")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -58,7 +68,7 @@ function RecordingsContent() {
     }
   }
 
-  const startEditing = (recording: any) => {
+  const startEditing = (recording: Meeting) => {
     setEditingId(recording.id)
     setEditTitle(recording.title)
     setActiveMenu(null)
@@ -416,7 +426,7 @@ function RecordingsContent() {
                       </div>
                       <div className="max-w-[240px]">
                         <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-1">No recordings found</h3>
-                        <p className="text-xs text-zinc-500 font-medium">Try adjusting your search or filters to find what you're looking for.</p>
+                        <p className="text-xs text-zinc-500 font-medium">Try adjusting your search or filters to find what you&apos;re looking for.</p>
                       </div>
                       <button 
                         onClick={() => {setSearchQuery(""); setFilter("all meetings")}}

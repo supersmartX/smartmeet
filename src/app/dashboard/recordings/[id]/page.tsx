@@ -33,7 +33,40 @@ export default function RecordingDetailPage() {
   const { data: session } = useSession()
   const params = useParams()
   const user = session?.user
-  const [meeting, setMeeting] = useState<any>(null)
+  interface Meeting {
+    id: string;
+    title: string;
+    date: Date;
+    duration?: string;
+    participants?: number;
+    status: string;
+    userId: string;
+    code?: string;
+    transcripts: Transcript[];
+    summary?: Summary;
+    actionItems: ActionItem[];
+  }
+
+  interface Transcript {
+    id: string;
+    speaker: string;
+    time: string;
+    text: string;
+  }
+
+  interface Summary {
+    id: string;
+    content: string;
+  }
+
+  interface ActionItem {
+    id: string;
+    title: string;
+    status: string;
+    content?: string;
+  }
+
+  const [meeting, setMeeting] = useState<Meeting | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<EditorTab>("transcript")
@@ -41,7 +74,7 @@ export default function RecordingDetailPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isAnswering, setIsAnswering] = useState(false)
   const [answer, setAnswer] = useState<string | null>(null)
-  
+
   // Logic Generation State
   const [isLogicGenerated, setIsLogicGenerated] = useState(false)
   const [isGeneratingLogic, setIsGeneratingLogic] = useState(false)
@@ -73,7 +106,7 @@ export default function RecordingDetailPage() {
   }, [params.id])
 
   // Check if meeting is technical based on keywords
-  const isTechnicalMeeting = meeting?.transcripts?.some((item: any) => 
+  const isTechnicalMeeting = meeting?.transcripts?.some((item: Transcript) => 
     /api|cache|latency|database|testing|backend|frontend|pipeline|logic|code|deploy/i.test(item.text)
   ) || false
 
@@ -125,7 +158,7 @@ export default function RecordingDetailPage() {
 
     try {
       await updateMeetingCode(params.id as string, mockCode)
-      setMeeting((prev: any) => ({ ...prev, code: mockCode }))
+      setMeeting((prev: Meeting | null) => prev ? { ...prev, code: mockCode } : null)
       setIsLogicGenerated(true)
       setIsGeneratingLogic(false)
       setActiveTab("code")
@@ -151,7 +184,7 @@ export default function RecordingDetailPage() {
     localStorage.setItem("smartmeet_active_tab", tabId)
   }
 
-  const filteredTranscript = (meeting?.transcripts || []).filter((item: { speaker: string, text: string }) => 
+  const filteredTranscript = (meeting?.transcripts || []).filter((item: Transcript) =>
     item.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.speaker.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -358,7 +391,7 @@ export default function RecordingDetailPage() {
             {activeTab === "transcript" && (
               <div className="space-y-8 max-w-3xl">
                 {meeting?.transcripts?.length > 0 ? (
-                  filteredTranscript.map((item: any, i: number) => (
+                  filteredTranscript.map((item: Transcript, i: number) => (
                     <div key={i} className="flex gap-4 group">
                       <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800 group-hover:border-brand-via transition-colors">
                         {item.speaker[0]}
@@ -421,7 +454,7 @@ export default function RecordingDetailPage() {
                         <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Key Discussion points</div>
                         
                       {meeting?.transcripts?.length > 0 ? (
-                        meeting.transcripts.slice(0, 3).map((item: any, i: number) => (
+                        meeting.transcripts.slice(0, 3).map((item: Transcript, i: number) => (
                           <div key={i} className="flex gap-3 group/item cursor-pointer">
                             <div className="w-6 h-6 rounded-lg bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shrink-0 group-hover/item:border-brand-via transition-colors">
                               <MessageSquare className="w-3 h-3 text-zinc-400" />
@@ -527,7 +560,7 @@ export default function RecordingDetailPage() {
 
                 {meeting?.actionItems?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {meeting.actionItems.map((test: any, i: number) => (
+                    {meeting.actionItems.map((test: ActionItem, i: number) => (
                       <div key={i} className="bg-white dark:bg-zinc-900 p-6 rounded-[24px] border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 transition-all group relative overflow-hidden">
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-2">
@@ -615,7 +648,7 @@ export default function RecordingDetailPage() {
                     </div>
                     <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 shadow-sm">
                       <p className="text-xs text-zinc-900 dark:text-zinc-100 leading-relaxed font-medium italic">
-                        "{prompt}"
+                        &quot;{prompt}&quot;
                       </p>
                       <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-3" />
                       <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
@@ -677,7 +710,7 @@ export default function RecordingDetailPage() {
                   <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Top Participants</h4>
                   <div className="space-y-3">
                     {meeting?.transcripts?.length > 0 ? (
-                      meeting.transcripts.slice(0, 3).map((item: any, i: number) => (
+                      meeting.transcripts.slice(0, 3).map((item: Transcript, i: number) => (
                         <div key={i} className="flex items-center justify-between">
                           <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{item.speaker}</span>
                           <span className="text-[10px] font-bold text-zinc-400">Analyzing...</span>

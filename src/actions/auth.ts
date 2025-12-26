@@ -3,7 +3,23 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export async function signUp(formData: any) {
+interface SignUpFormData {
+  name: string;
+  email: string;
+  password: string;
+  apiKey?: string;
+}
+
+interface SignUpResult {
+  success: boolean;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export async function signUp(formData: SignUpFormData) {
   const { name, email, password, apiKey } = formData;
 
   if (!name || !email || !password) {

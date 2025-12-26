@@ -5,10 +5,12 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, Session } from "next-auth";
+import { JWT } from "next-auth/jwt";
+import { Adapter } from "next-auth/adapters";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
@@ -83,9 +85,14 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev-only",
   callbacks: {
-    async session({ session, token }: { session: any; token: any }) {
-      if (token && session.user) {
-        (session.user as any).id = token.sub;
+    async session({ session, token }: { session: Session; token: JWT }) {
+      if (token?.sub && session.user) {
+        // Extend the session user object with the user ID
+        const extendedUser = {
+          ...session.user,
+          id: token.sub,
+        };
+        session.user = extendedUser;
       }
       return session;
     },

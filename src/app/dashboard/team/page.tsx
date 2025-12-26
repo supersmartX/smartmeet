@@ -13,7 +13,7 @@ export default function TeamPage() {
             <span className="px-2 py-0.5 bg-brand-via/10 text-brand-via text-[10px] font-black uppercase tracking-widest rounded-md">Upcoming</span>
           </div>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">
-            Manage your organization's members and their access levels.
+            Manage your organization&apos;s members and their access levels.
           </p>
         </div>
         <button className="bg-zinc-100 dark:bg-zinc-800 text-zinc-400 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-2 shrink-0">
@@ -28,7 +28,7 @@ export default function TeamPage() {
         </div>
         <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-2">No Team Members Yet</h2>
         <p className="text-zinc-500 dark:text-zinc-400 max-w-sm font-medium text-sm leading-relaxed mb-8">
-          You're currently working in your personal workspace. Invite colleagues to collaborate on meeting insights and automated documentation.
+          You&apos;re currently working in your personal workspace. Invite colleagues to collaborate on meeting insights and automated documentation.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800">

@@ -1,4 +1,5 @@
 import Button from "@/components/Button"
+import Image from "next/image"
 
 export default function CTA() {
   return (
@@ -8,43 +9,43 @@ export default function CTA() {
           {/* Background effects */}
           <div className="absolute top-0 right-0 w-1/2 h-full bg-brand-gradient opacity-20 blur-[100px] -z-10" />
           <div className="absolute bottom-0 left-0 w-1/3 h-1/2 bg-brand-primary/10 blur-[80px] -z-10" />
-          
+
           <div className="relative flex flex-col items-center text-center gap-8 max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 rounded-full bg-brand-via/10 border border-brand-via/20 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-brand-via">
               Limited Beta Now Open
             </div>
-            
+
             <h2 className="text-3xl sm:text-4xl lg:text-6xl font-black tracking-tight text-white leading-tight">
               Shape the Future of <span className="text-transparent bg-clip-text bg-brand-gradient">AI Meetings</span>
             </h2>
-            
+
             <p className="text-lg text-zinc-400 font-medium leading-relaxed">
-              Join 2,000+ early adopters who are already automating their documentation 
+              Join 2,000+ early adopters who are already automating their documentation
               and code generation. Get lifetime beta benefits today.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-              <Button 
-                href="/login" 
-                variant="primary" 
+              <Button
+                href="/login"
+                variant="primary"
                 className="w-full sm:w-auto h-14 px-10 bg-brand-gradient text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-glow hover:scale-105 transition-all"
               >
                 Get Started Now {'\u2014'} It{'s'} Free
               </Button>
-              <Button 
-                href="/#pricing" 
-                variant="secondary" 
+              <Button
+                href="/#pricing"
+                variant="secondary"
                 className="w-full sm:w-auto h-14 px-10 bg-white/5 text-white border border-white/10 text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-white/10 transition-all"
               >
                 View Pricing
               </Button>
             </div>
-            
+
             <div className="flex items-center gap-6 pt-4">
               <div className="flex -space-x-3">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="w-10 h-10 rounded-full border-2 border-zinc-900 bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
-                    <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" />
+                    <Image src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" width={40} height={40} className="rounded-full" />
                   </div>
                 ))}
                 <div className="w-10 h-10 rounded-full border-2 border-zinc-900 bg-brand-gradient flex items-center justify-center text-[10px] font-bold text-white">

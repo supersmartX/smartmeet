@@ -3,12 +3,12 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import Image from "next/image"
 import Sidebar from "@/components/dashboard/Sidebar"
 import { ModeToggle } from "@/components/ModeToggle"
 import { useSession, signOut } from "next-auth/react"
-import { 
-  Menu, Layout, FileVideo, Settings, Search, Cpu, Globe, 
-  CheckCircle2, Wifi, HelpCircle, LogOut, User, ChevronDown,
+import {
+  Menu, Layout, FileVideo, Settings, Search, HelpCircle, LogOut, ChevronDown,
   Bell, Command
 } from "lucide-react"
 
@@ -21,16 +21,12 @@ export default function DashboardLayout({
   const [sidebarWidth, setSidebarWidth] = useState(240)
   const [isResizing, setIsResizing] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
+  const [isMounted, setIsMounted] = useState(true)
   const pathname = usePathname()
   const { data: session } = useSession()
   const user = session?.user
   const logout = () => signOut({ callbackUrl: "/" })
-  const sidebarRef = useRef<HTMLDivElement>(null)
+  
   const profileRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -75,7 +71,7 @@ export default function DashboardLayout({
           {/* Editor-style Activity Bar (Narrow Left Strip) */}
           <aside className="hidden lg:flex w-16 flex-col items-center py-4 bg-zinc-100 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 shrink-0 z-50">
             <div className="w-10 h-10 mb-8 relative">
-              <img src="/logoX.png" alt="Logo" className="object-contain" />
+              <Image src="/logoX.png" alt="Logo" width={40} height={40} className="object-contain" />
             </div>
             <div className="flex flex-col gap-4 flex-1">
               <Link href="/dashboard" className={`p-3 rounded-xl transition-all ${pathname === "/dashboard" ? "text-brand-via bg-brand-via/5" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-900"}`}>
@@ -205,7 +201,6 @@ export default function DashboardLayout({
                           className="flex items-center gap-2 px-3 py-2 text-[11px] font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                           onClick={() => setIsProfileOpen(false)}
                         >
-                          <User className="w-3.5 h-3.5" />
                           Profile Settings
                         </Link>
                         <button 
@@ -234,21 +229,17 @@ export default function DashboardLayout({
         <footer className="h-6 bg-brand-via dark:bg-zinc-900 border-t border-brand-via/20 dark:border-zinc-800 flex items-center justify-between px-3 text-[10px] text-white/90 dark:text-zinc-400 font-medium z-50">
           <div className="flex items-center gap-4 h-full">
             <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer">
-              <Globe className="w-3 h-3" />
               <span>supersmartx.ai</span>
             </div>
             <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer text-emerald-300">
-              <CheckCircle2 className="w-3 h-3" />
               <span>Pipeline: Stable</span>
             </div>
           </div>
           <div className="flex items-center gap-4 h-full">
             <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer">
-              <Cpu className="w-3 h-3" />
               <span>AI Engine: 4.0-Turbo</span>
             </div>
             <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer">
-              <Wifi className="w-3 h-3" />
               <span>Latency: 24ms</span>
             </div>
           </div>

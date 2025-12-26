@@ -6,6 +6,69 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/crypto";
 
+interface DashboardStat {
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
+  bg: string;
+  trend: string;
+  href: string;
+}
+
+interface Meeting {
+  id: string;
+  title: string;
+  date: Date;
+  duration?: string;
+  participants?: number;
+  status: string;
+  userId: string;
+  code?: string;
+}
+
+interface MeetingWithRelations extends Meeting {
+  transcripts: Transcript[];
+  summary?: Summary;
+  actionItems: ActionItem[];
+}
+
+interface Transcript {
+  id: string;
+  speaker: string;
+  time: string;
+  text: string;
+  meetingId: string;
+}
+
+interface Summary {
+  id: string;
+  content: string;
+  meetingId: string;
+}
+
+interface ActionItem {
+  id: string;
+  title: string;
+  status: string;
+  meetingId: string;
+}
+
+interface UserWithMeetings {
+  id: string;
+  email: string;
+  _count: {
+    meetings: number;
+  };
+  meetings: Array<{
+    id: string;
+    _count: {
+      actionItems: number;
+    };
+    summary?: Summary;
+  }>;
+}
+
 export async function getDashboardStats() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
@@ -25,60 +88,60 @@ export async function getDashboardStats() {
         select: { meetings: true },
       },
     },
-  });
+  }) as UserWithMeetings | null;
 
   if (!user) return null;
 
   const totalMeetings = user._count.meetings;
-  const aiInsightsCount = user.meetings.reduce((acc: number, meeting: any) => {
+  const aiInsightsCount = user.meetings.reduce((acc: number, meeting) => {
     return acc + (meeting._count?.actionItems ?? 0) + (meeting.summary ? 1 : 0);
   }, 0);
 
   // Heuristic: Each meeting saves ~30 mins of manual note taking/reviewing
   const timeSavedHours = (totalMeetings * 0.5).toFixed(1);
 
-  const complianceScore = totalMeetings > 0 
-    ? Math.round((user.meetings.filter((m: any) => m.summary || m._count.actionItems > 0).length / totalMeetings) * 100)
+  const complianceScore = totalMeetings > 0
+    ? Math.round((user.meetings.filter((m) => m.summary || m._count.actionItems > 0).length / totalMeetings) * 100)
     : 0;
 
   return [
-    { 
-      label: "Total Meetings", 
-      value: totalMeetings.toString(), 
-      icon: "Video", 
-      color: "text-brand-via", 
-      bg: "bg-brand-via/10", 
-      trend: "+12%", 
-      href: "/dashboard/recordings" 
+    {
+      label: "Total Meetings",
+      value: totalMeetings.toString(),
+      icon: "Video",
+      color: "text-brand-via",
+      bg: "bg-brand-via/10",
+      trend: "+12%",
+      href: "/dashboard/recordings"
     },
-    { 
-      label: "AI Insights", 
-      value: aiInsightsCount.toString(), 
-      icon: "Sparkles", 
-      color: "text-amber-500", 
-      bg: "bg-amber-500/10", 
-      trend: aiInsightsCount > 0 ? "+5%" : "0%", 
-      href: "/dashboard/recordings?filter=action+items" 
+    {
+      label: "AI Insights",
+      value: aiInsightsCount.toString(),
+      icon: "Sparkles",
+      color: "text-amber-500",
+      bg: "bg-amber-500/10",
+      trend: aiInsightsCount > 0 ? "+5%" : "0%",
+      href: "/dashboard/recordings?filter=action+items"
     },
-    { 
-      label: "Time Saved", 
-      value: `${timeSavedHours}h`, 
-      icon: "Zap", 
-      color: "text-emerald-500", 
-      bg: "bg-emerald-500/10", 
-      trend: "+18%", 
-      href: "/dashboard/recordings" 
+    {
+      label: "Time Saved",
+      value: `${timeSavedHours}h`,
+      icon: "Zap",
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10",
+      trend: "+18%",
+      href: "/dashboard/recordings"
     },
-    { 
-      label: "Compliance Score", 
-      value: `${complianceScore}%`, 
-      icon: "ShieldCheck", 
-      color: "text-blue-500", 
-      bg: "bg-blue-500/10", 
-      trend: complianceScore > 90 ? "Stable" : "Improving", 
-      href: "/dashboard/recordings" 
+    {
+      label: "Compliance Score",
+      value: `${complianceScore}%`,
+      icon: "ShieldCheck",
+      color: "text-blue-500",
+      bg: "bg-blue-500/10",
+      trend: complianceScore > 90 ? "Stable" : "Improving",
+      href: "/dashboard/recordings"
     },
-  ];
+  ] as DashboardStat[];
 }
 
 export async function getMeetings() {
@@ -92,7 +155,7 @@ export async function getMeetings() {
     orderBy: {
       date: "desc",
     },
-  });
+  }) as Meeting[];
 }
 
 export async function getMeetingById(id: string) {
@@ -109,7 +172,7 @@ export async function getMeetingById(id: string) {
       summary: true,
       actionItems: true,
     },
-  });
+  }) as MeetingWithRelations | null;
 }
 
 export async function updateUserApiKey(apiKey: string) {
@@ -134,15 +197,21 @@ export async function getUserApiKey() {
   });
 
   if (!user?.apiKey) return null;
-  
+
   return decrypt(user.apiKey);
 }
 
-export async function createMeeting(data: { title: string; duration?: string; code?: string }) {
+interface CreateMeetingData {
+  title: string;
+  duration?: string;
+  code?: string;
+}
+
+export async function createMeeting(data: CreateMeetingData) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
-  const meeting = await (prisma.meeting as any).create({
+  const meeting = await prisma.meeting.create({
     data: {
       title: data.title,
       duration: data.duration || "0:00",
@@ -189,7 +258,7 @@ export async function updateMeetingCode(id: string, code: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
-  return await (prisma.meeting as any).update({
+  return await prisma.meeting.update({
     where: {
       id,
       user: { email: session.user.email },

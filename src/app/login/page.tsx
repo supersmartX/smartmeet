@@ -68,8 +68,9 @@ export default function LoginPage() {
           router.push("/dashboard");
         }
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred. Please try again.");
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || "An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

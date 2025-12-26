@@ -1,8 +1,15 @@
 "use client"
-import { Mic, Cpu, FileCode2, ArrowRight } from "lucide-react"
+import { Mic, Cpu, FileCode2, ArrowRight, LucideIcon } from "lucide-react"
+
+interface Step {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  color: string;
+}
 
 export default function HowItWorks() {
-  const steps = [
+  const steps: Step[] = [
     {
       icon: Mic,
       title: "Record or Upload",
@@ -34,7 +41,7 @@ export default function HowItWorks() {
             From Voice to <span className="text-transparent bg-clip-text bg-brand-gradient">Clear Action</span> in Minutes
           </h2>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
-            We've simplified the bridge between verbal discussions and concrete project results.
+            We&apos;ve simplified the bridge between verbal discussions and concrete project results.
           </p>
         </div>
 
