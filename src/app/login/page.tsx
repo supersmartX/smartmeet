@@ -248,7 +248,7 @@ export default function LoginPage() {
               <div className={`grid gap-4 ${Object.values(providers).filter(p => p.id !== "credentials").length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
                 {providers.google && (
                   <button
-                    onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                    onClick={() => signIn("google", { callbackUrl: `${window.location.origin}/dashboard` })}
                     className="flex items-center justify-center gap-3 py-4 px-4 rounded-2xl border-2 border-zinc-50 dark:border-zinc-800 hover:border-brand-via transition-all bg-zinc-50/50 dark:bg-zinc-950 group"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -279,7 +279,7 @@ export default function LoginPage() {
 
                 {providers.github && (
                   <button
-                    onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
+                    onClick={() => signIn("github", { callbackUrl: `${window.location.origin}/dashboard` })}
                     className="flex items-center justify-center gap-3 py-4 px-4 rounded-2xl border-2 border-zinc-50 dark:border-zinc-800 hover:border-brand-via transition-all bg-zinc-50/50 dark:bg-zinc-950 group"
                   >
                     <Github className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
