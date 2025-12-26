@@ -21,12 +21,17 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             authorization: {
               params: {
-                redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/callback/google`,
+                redirect_uri: (() => {
+                  const uri = `${process.env.NEXTAUTH_URL}/api/auth/callback/google`;
+                  console.log("Google redirect_uri:", uri);
+                  return uri;
+                })(),
               },
             },
           }),
         ]
-      : []),
+      : []
+    ),
     ...(process.env.GITHUB_ID && process.env.GITHUB_SECRET
       ? [
           GitHubProvider({
@@ -34,12 +39,17 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GITHUB_SECRET,
             authorization: {
               params: {
-                redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/callback/github`,
+                redirect_uri: (() => {
+                  const uri = `${process.env.NEXTAUTH_URL}/api/auth/callback/github`;
+                  console.log("GitHub redirect_uri:", uri);
+                  return uri;
+                })(),
               },
             },
           }),
         ]
-      : []),
+      : []
+    ),
     CredentialsProvider({
       name: "credentials",
       credentials: {
