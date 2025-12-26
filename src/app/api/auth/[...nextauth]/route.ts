@@ -9,6 +9,8 @@ import { NextAuthOptions, Session } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import { Adapter } from "next-auth/adapters";
 
+console.log("NEXTAUTH_URL from process.env:", process.env.NEXTAUTH_URL);
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
