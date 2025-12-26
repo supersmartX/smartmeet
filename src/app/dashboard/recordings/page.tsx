@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, Suspense } from "react"
 import { highlightText } from "@/utils/text"
 import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
 import { audioToCode } from "@/services/api"
-import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle } from "@/actions/meeting"
+import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl } from "@/actions/meeting"
 import { supabase } from "@/lib/supabase"
 import { v4 as uuidv4 } from "uuid"
 
@@ -128,14 +128,13 @@ function RecordingsContent() {
     setUploadStatus("Uploading...")
 
     try {
-      // 1. Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${uuidv4()}.${fileExt}`
-      const filePath = `private/${user.id}/${fileName}`
+      // 1. Get signed upload URL from server
+      const { signedUrl, path, token } = await createSignedUploadUrl(file.name, file.type)
 
+      // 2. Upload directly to Supabase using the signed URL
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('recordings')
-        .upload(filePath, file, {
+        .uploadToSignedUrl(path, token, file, {
           cacheControl: '3600',
           upsert: false,
           contentType: file.type
@@ -145,14 +144,14 @@ function RecordingsContent() {
         throw new Error(`Upload failed: ${uploadError.message}`)
       }
 
-      // Get public URL
+      // 3. Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('recordings')
-        .getPublicUrl(filePath)
+        .getPublicUrl(path)
 
       setUploadStatus("Processing audio...")
 
-      // 2. Get audio duration
+      // 4. Get audio duration
       const duration = await new Promise<string>((resolve) => {
         const audio = new Audio()
         audio.src = URL.createObjectURL(file)

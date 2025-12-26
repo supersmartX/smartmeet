@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/crypto";
+import { supabaseAdmin } from "@/lib/supabase";
+import { v4 as uuidv4 } from "uuid";
 
 interface DashboardStat {
   label: string;
@@ -268,4 +270,33 @@ export async function updateMeetingCode(id: string, code: string) {
     },
     data: { code },
   });
+}
+
+export async function createSignedUploadUrl(fileName: string, fileType: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+
+  if (!user) throw new Error("User not found");
+  if (!supabaseAdmin) throw new Error("Supabase Admin not configured");
+
+  const fileExt = fileName.split('.').pop();
+  const uniqueFileName = `${uuidv4()}.${fileExt}`;
+  const filePath = `private/${user.id}/${uniqueFileName}`;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from('recordings')
+    .createSignedUploadUrl(filePath);
+
+  if (error) throw new Error(error.message);
+
+  return {
+    signedUrl: data.signedUrl,
+    path: filePath,
+    token: data.token
+  };
 }
