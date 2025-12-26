@@ -99,6 +99,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
+      console.log("baseUrl in redirect callback:", baseUrl);
       // Always redirect to the dashboard after login
       return baseUrl + '/dashboard';
     },
