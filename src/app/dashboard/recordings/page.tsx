@@ -131,7 +131,7 @@ function RecordingsContent() {
       // 1. Upload to Supabase Storage
       const fileExt = file.name.split('.').pop()
       const fileName = `${uuidv4()}.${fileExt}`
-      const filePath = `${user.id}/${fileName}`
+      const filePath = `private/${user.id}/${fileName}`
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('recordings')
