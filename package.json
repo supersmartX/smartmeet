@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
-    "@prisma/client": "^7.2.0",
+    "@prisma/client": "6.19.1",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "lucide-react": "^0.562.0",
@@ -29,7 +29,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
-    "prisma": "^7.2.0",
+    "prisma": "6.19.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
