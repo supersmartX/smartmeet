@@ -10,6 +10,7 @@ import { getMeetingById, updateMeetingCode } from "@/actions/meeting"
 import { 
   Clock, 
   Users, 
+  Video,
   Share2, 
   Search, 
   Sparkles, 
@@ -42,6 +43,7 @@ export default function RecordingDetailPage() {
     status: string;
     userId: string;
     code?: string;
+    audioUrl?: string;
     transcripts: Transcript[];
     summary?: Summary;
     actionItems: ActionItem[];
@@ -368,6 +370,21 @@ export default function RecordingDetailPage() {
           )
         })}
       </div>
+
+      {/* Audio Player */}
+      {meeting?.audioUrl && (
+        <div className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 py-2 flex items-center gap-4 shrink-0 overflow-hidden">
+          <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+            <Video className="w-4 h-4 shrink-0" />
+            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Recording</span>
+          </div>
+          <audio 
+            src={meeting.audioUrl} 
+            controls 
+            className="h-8 flex-1 max-w-2xl filter dark:invert opacity-80 hover:opacity-100 transition-opacity"
+          />
+        </div>
+      )}
 
       {/* Editor Main Content Area */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">

@@ -8,6 +8,8 @@ import { highlightText } from "@/utils/text"
 import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
 import { audioToCode } from "@/services/api"
 import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle } from "@/actions/meeting"
+import { supabase } from "@/lib/supabase"
+import { v4 as uuidv4 } from "uuid"
 
 interface Meeting {
   id: string;
@@ -17,6 +19,7 @@ interface Meeting {
   participants?: number;
   status: string;
   userId: string;
+  audioUrl?: string;
 }
 
 function RecordingsContent() {
@@ -120,7 +123,27 @@ function RecordingsContent() {
     setUploadStatus("Uploading...")
 
     try {
-      // Get audio duration
+      // 1. Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${uuidv4()}.${fileExt}`
+      const filePath = `${user?.id}/${fileName}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('recordings')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`)
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('recordings')
+        .getPublicUrl(filePath)
+
+      setUploadStatus("Processing audio...")
+
+      // 2. Get audio duration
       const duration = await new Promise<string>((resolve) => {
         const audio = new Audio()
         audio.src = URL.createObjectURL(file)
@@ -133,15 +156,16 @@ function RecordingsContent() {
         audio.onerror = () => resolve("0:00")
       })
 
-      // 1. Create the meeting record in the database
+      // 3. Create the meeting record in the database
       const newMeeting = await createMeeting({
         title: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
-        duration: duration
+        duration: duration,
+        audioUrl: publicUrl
       })
 
       setUploadStatus("Processing with AI...")
 
-      // 2. Start the AI pipeline
+      // 4. Start the AI pipeline
       const response = await audioToCode(file)
       
       if (response.success) {

@@ -19,15 +19,6 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            authorization: {
-              params: {
-                redirect_uri: (() => {
-                  const uri = `${process.env.NEXTAUTH_URL}/api/auth/callback/google`;
-                  console.log("Google redirect_uri:", uri);
-                  return uri;
-                })(),
-              },
-            },
           }),
         ]
       : []
@@ -37,15 +28,6 @@ export const authOptions: NextAuthOptions = {
           GitHubProvider({
             clientId: process.env.GITHUB_ID,
             clientSecret: process.env.GITHUB_SECRET,
-            authorization: {
-              params: {
-                redirect_uri: (() => {
-                  const uri = `${process.env.NEXTAUTH_URL}/api/auth/callback/github`;
-                  console.log("GitHub redirect_uri:", uri);
-                  return uri;
-                })(),
-              },
-            },
           }),
         ]
       : []
@@ -125,10 +107,13 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async redirect({ baseUrl }) {
-      console.log("baseUrl in redirect callback:", baseUrl);
-      // Always redirect to the dashboard after login
-      return baseUrl + '/dashboard';
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      // Default to dashboard
+      return `${baseUrl}/dashboard`;
     },
   },
 };

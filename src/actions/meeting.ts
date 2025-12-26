@@ -25,6 +25,7 @@ interface Meeting {
   status: string;
   userId: string;
   code?: string;
+  audioUrl?: string;
 }
 
 interface MeetingWithRelations extends Meeting {
@@ -205,6 +206,7 @@ interface CreateMeetingData {
   title: string;
   duration?: string;
   code?: string;
+  audioUrl?: string;
 }
 
 export async function createMeeting(data: CreateMeetingData) {
@@ -217,6 +219,7 @@ export async function createMeeting(data: CreateMeetingData) {
       duration: data.duration || "0:00",
       status: "PROCESSING",
       code: data.code,
+      audioUrl: data.audioUrl,
       user: { connect: { email: session.user.email } },
     },
   });
