@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { signIn, getProviders, ClientSafeProvider } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Mail, Lock, User, Key, ArrowRight, Loader2, Sparkles, Github, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { signUp } from "@/actions/auth";
 
-export default function LoginPage() {
+function LoginContent() {
   const [mode, setMode] = useState<"signin" | "signup">("signup");
   const [providers, setProviders] = useState<Record<string, ClientSafeProvider> | null>(null);
   const [formData, setFormData] = useState({
@@ -32,6 +32,16 @@ export default function LoginPage() {
   const isPasswordStrong = passwordRequirements.length && passwordRequirements.number && passwordRequirements.special;
   
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "OAuthAccountNotLinked") {
+      setError("This email is already associated with another login method. Please sign in using your original method.");
+    } else if (errorParam) {
+      setError("An authentication error occurred. Please try again.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -360,5 +370,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-via" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

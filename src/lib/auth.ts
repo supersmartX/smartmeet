@@ -21,10 +21,12 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: googleId || "",
       clientSecret: googleSecret || "",
+      allowDangerousEmailAccountLinking: true,
     }),
     GitHubProvider({
       clientId: githubId || "",
       clientSecret: githubSecret || "",
+      allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
       name: "credentials",
