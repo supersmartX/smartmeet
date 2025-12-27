@@ -195,19 +195,27 @@ export async function updateUserApiKey(apiKey: string, preferredProvider?: strin
 
   if (!user) throw new Error("User not found");
 
-  const encryptedKey = apiKey ? encrypt(apiKey) : undefined;
+          const encryptedKey = apiKey ? encrypt(apiKey) : undefined;
 
-  const data: any = {};
-  if (encryptedKey !== undefined) data.apiKey = encryptedKey;
-  if (preferredProvider) data.preferredProvider = preferredProvider;
-  if (preferredModel) data.preferredModel = preferredModel;
-  if (allowedIps !== undefined) data.allowedIps = allowedIps;
-  data.lastUsedAt = new Date();
+          const data: {
+            apiKey?: string;
+            preferredProvider?: string;
+            preferredModel?: string;
+            allowedIps?: string;
+            lastUsedAt: Date;
+          } = {
+            lastUsedAt: new Date()
+          };
 
-  const updatedUser = await (prisma.user.update as any)({
-    where: { email: session.user.email },
-    data,
-  });
+          if (encryptedKey !== undefined) data.apiKey = encryptedKey;
+          if (preferredProvider) data.preferredProvider = preferredProvider;
+          if (preferredModel) data.preferredModel = preferredModel;
+          if (allowedIps !== undefined) data.allowedIps = allowedIps;
+
+          const updatedUser = await prisma.user.update({
+            where: { email: session.user.email },
+            data,
+          });
 
   // Log the security event
   await logSecurityEvent(
@@ -226,7 +234,7 @@ export async function getUserSettings() {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    select: { 
+    select: {
       apiKey: true,
       preferredProvider: true,
       preferredModel: true,
@@ -236,15 +244,15 @@ export async function getUserSettings() {
       email: true,
       image: true,
       mfaEnabled: true
-    } as any,
+    },
   });
 
   if (!user) return null;
 
   return {
     ...user,
-    apiKey: (user as any).apiKey ? decrypt((user as any).apiKey as string) : null,
-    allowedIps: (user as any).allowedIps || ""
+    apiKey: user.apiKey ? decrypt(user.apiKey) : null,
+    allowedIps: user.allowedIps || ""
   };
 }
 
@@ -316,7 +324,7 @@ export async function updateMeetingCode(id: string, code: string) {
   });
 }
 
-export async function createSignedUploadUrl(fileName: string, _fileType: string) {
+export async function createSignedUploadUrl(fileName: string, fileType: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
@@ -351,10 +359,10 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
 
   try {
     // 1. Get the user's API key and IP restrictions
-    const user = (await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, apiKey: true, allowedIps: true } as any
-    })) as any;
+      select: { id: true, apiKey: true, allowedIps: true }
+    });
 
     if (!user) throw new Error("User not found");
 
@@ -364,9 +372,9 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
       const clientIp = headerList.get("x-forwarded-for")?.split(',')[0] || 
                       headerList.get("x-real-ip") || 
                       "unknown";
-      
+
       const allowedIps = user.allowedIps.split(',').map((ip: string) => ip.trim());
-      
+
       if (clientIp !== "unknown" && !allowedIps.includes(clientIp)) {
         await logSecurityEvent(
           "API_KEY_IP_BLOCKED",
@@ -374,17 +382,17 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
           `Blocked request from unauthorized IP: ${clientIp}`,
           "Security"
         );
-        
+
         await prisma.meeting.update({
           where: { id: meetingId },
           data: { status: "FAILED" }
         });
-        
+
         throw new Error(`Unauthorized IP: ${clientIp}. Please update your settings if this is you.`);
       }
     }
 
-    if (!user?.apiKey) {
+    if (!user.apiKey) {
       await prisma.meeting.update({
         where: { id: meetingId },
         data: { status: "FAILED" }
@@ -395,7 +403,7 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
     const apiKey = decrypt(user.apiKey);
 
     // Update lastUsedAt
-    await (prisma.user.update as any)({
+    await prisma.user.update({
       where: { id: user.id },
       data: { lastUsedAt: new Date() }
     });
@@ -436,12 +444,33 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
   }
 }
 
-export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PROCESSING" | "FAILED", data?: any) {
+interface MeetingUpdateData {
+  transcription?: string;
+  summary?: string;
+  code?: string;
+}
+
+export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PROCESSING" | "FAILED", data?: MeetingUpdateData) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
-  const updateData: any = { status };
-  
+  const updateData: {
+    status: "COMPLETED" | "PROCESSING" | "FAILED";
+    transcripts?: {
+      create: {
+        speaker: string;
+        time: string;
+        text: string;
+      }[];
+    };
+    summary?: {
+      create: {
+        content: string;
+      };
+    };
+    code?: string;
+  } = { status };
+
   if (data) {
     if (data.transcription) {
       updateData.transcripts = {
@@ -469,7 +498,7 @@ export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PRO
 
   revalidatePath("/dashboard/recordings");
   revalidatePath(`/dashboard/recordings/${id}`);
-  
+
   return meeting;
 }
 
@@ -511,7 +540,7 @@ export async function getActiveSessions() {
       userAgent: true,
       ipAddress: true,
       sessionToken: true
-    } as any
+    }
   });
 }
 

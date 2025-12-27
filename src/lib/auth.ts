@@ -41,15 +41,14 @@ export const authOptions: NextAuthOptions = {
         }
 
         const headerList = await headers();
-        const ipAddress = headerList.get("x-forwarded-for")?.split(',')[0] || 
-                         headerList.get("x-real-ip") || 
-                         "unknown";
-        const userAgent = headerList.get("user-agent") || "unknown";
+        const ipAddress = headerList.get("x-forwarded-for")?.split(',')[0] ||
+                         headerList.get("x-real-ip");
+        const userAgent = headerList.get("user-agent");
 
         try {
-          const user = (await prisma.user.findUnique({
+          const user = await prisma.user.findUnique({
             where: { email: credentials.email },
-          })) as any;
+          });
 
           if (!user || !user.password) {
             throw new Error("No user found with this email");
@@ -66,8 +65,11 @@ export const authOptions: NextAuthOptions = {
 
           if (!isCorrectPassword) {
             const failedAttempts = (user.failedLoginAttempts || 0) + 1;
-            const updateData: any = { failedLoginAttempts: failedAttempts };
-            
+            const updateData: {
+              failedLoginAttempts: number;
+              lockedUntil?: Date;
+            } = { failedLoginAttempts: failedAttempts };
+
             if (failedAttempts >= 5) {
               updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
             }
@@ -135,8 +137,8 @@ export const authOptions: NextAuthOptions = {
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
         });
-        if (dbUser) {
-          token.role = (dbUser as any).role;
+        if (dbUser && (dbUser as { role?: string }).role) {
+          token.role = (dbUser as { role: string }).role;
         }
       }
       return token;
