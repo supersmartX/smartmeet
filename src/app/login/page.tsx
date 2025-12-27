@@ -36,6 +36,7 @@ export default function LoginPage() {
   useEffect(() => {
     const fetchProviders = async () => {
       const res = await getProviders();
+      console.log("Fetched providers:", res);
       setProviders(res);
     };
     fetchProviders();

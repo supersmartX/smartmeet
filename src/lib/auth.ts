@@ -10,27 +10,26 @@ import { JWT } from "next-auth/jwt";
 import { Adapter } from "next-auth/adapters";
 import { headers } from "next/headers";
 
+const googleId = process.env.GOOGLE_CLIENT_ID?.replace(/['"]+/g, '');
+const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.replace(/['"]+/g, '');
+const githubId = process.env.GITHUB_ID?.replace(/['"]+/g, '');
+const githubSecret = process.env.GITHUB_SECRET?.replace(/['"]+/g, '');
+
+console.log("Initializing authOptions...");
+console.log("GOOGLE_CLIENT_ID:", googleId ? "Found" : "Missing");
+console.log("GITHUB_ID:", githubId ? "Found" : "Missing");
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [
-          GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          }),
-        ]
-      : []
-    ),
-    ...(process.env.GITHUB_ID && process.env.GITHUB_SECRET
-      ? [
-          GitHubProvider({
-            clientId: process.env.GITHUB_ID,
-            clientSecret: process.env.GITHUB_SECRET,
-          }),
-        ]
-      : []
-    ),
+    GoogleProvider({
+      clientId: googleId || "",
+      clientSecret: googleSecret || "",
+    }),
+    GitHubProvider({
+      clientId: githubId || "",
+      clientSecret: githubSecret || "",
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
