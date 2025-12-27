@@ -4,29 +4,16 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from 'uuid';
 import { sendVerificationEmail } from "@/lib/mail";
+import { signUpSchema, SignUpInput } from "@/lib/validations/auth";
 
-interface SignUpFormData {
-  name: string;
-  email: string;
-  password: string;
-  apiKey?: string;
-}
+export async function signUp(formData: SignUpInput) {
+  const result = signUpSchema.safeParse(formData);
 
-interface SignUpResult {
-  success: boolean;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-}
-
-export async function signUp(formData: SignUpFormData) {
-  const { name, email, password, apiKey } = formData;
-
-  if (!name || !email || !password) {
-    throw new Error("Missing required fields");
+  if (!result.success) {
+    throw new Error(result.error.issues[0].message);
   }
+
+  const { name, email, password, apiKey } = result.data;
 
   const existingUser = await prisma.user.findUnique({
     where: { email },

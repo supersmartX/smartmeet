@@ -48,6 +48,8 @@ model User {
   image         String?
   password      String?
   apiKey        String?
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
   role          UserRole  @default(MEMBER)
   accounts      Account[]
   sessions      Session[]

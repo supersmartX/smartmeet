@@ -52,13 +52,40 @@ export const authOptions: NextAuthOptions = {
             throw new Error("No user found with this email");
           }
 
+          if (user.lockedUntil && user.lockedUntil > new Date()) {
+            throw new Error("Account is temporarily locked due to too many failed login attempts. Please try again later.");
+          }
+
           const isCorrectPassword = await bcrypt.compare(
             credentials.password,
             user.password
           );
 
           if (!isCorrectPassword) {
-            throw new Error("Incorrect password");
+            const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+            const updateData: any = { failedLoginAttempts: failedAttempts };
+            
+            if (failedAttempts >= 5) {
+              updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // Lock for 15 minutes
+            }
+
+            await prisma.user.update({
+              where: { id: user.id },
+              data: updateData,
+            });
+
+            throw new Error(`Incorrect password. ${5 - failedAttempts} attempts remaining.`);
+          }
+
+          // Reset failed attempts on successful login
+          if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                failedLoginAttempts: 0,
+                lockedUntil: null,
+              },
+            });
           }
 
           if (!user.emailVerified) {
