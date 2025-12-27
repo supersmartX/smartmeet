@@ -15,10 +15,6 @@ const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.replace(/['"]+/g, '');
 const githubId = process.env.GITHUB_ID?.replace(/['"]+/g, '');
 const githubSecret = process.env.GITHUB_SECRET?.replace(/['"]+/g, '');
 
-console.log("Initializing authOptions...");
-console.log("GOOGLE_CLIENT_ID:", googleId ? "Found" : "Missing");
-console.log("GITHUB_ID:", githubId ? "Found" : "Missing");
-
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
