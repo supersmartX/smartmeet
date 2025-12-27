@@ -5,9 +5,11 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import speakeasy from "speakeasy";
 import { NextAuthOptions, Session } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import { Adapter } from "next-auth/adapters";
+import { headers } from "next/headers";
 
 console.log("NEXTAUTH_URL from process.env:", process.env.NEXTAUTH_URL);
 
@@ -37,16 +39,23 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        mfaToken: { label: "MFA Token", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Invalid credentials");
         }
 
+        const headerList = await headers();
+        const ipAddress = headerList.get("x-forwarded-for")?.split(',')[0] || 
+                         headerList.get("x-real-ip") || 
+                         "unknown";
+        const userAgent = headerList.get("user-agent") || "unknown";
+
         try {
-          const user = await prisma.user.findUnique({
+          const user = (await prisma.user.findUnique({
             where: { email: credentials.email },
-          });
+          })) as any;
 
           if (!user || !user.password) {
             throw new Error("No user found with this email");
@@ -58,8 +67,8 @@ export const authOptions: NextAuthOptions = {
                 action: "LOGIN_LOCKED",
                 userId: user.id,
                 details: "Attempted login while locked",
-                ipAddress: "unknown", // NextAuth doesn't give easy access to req headers here
-                userAgent: "unknown"
+                ipAddress, 
+                userAgent
               }
             });
             throw new Error("Account is temporarily locked due to too many failed login attempts. Please try again later.");
@@ -88,12 +97,38 @@ export const authOptions: NextAuthOptions = {
                 action: "LOGIN_FAILED",
                 userId: user.id,
                 details: `Failed attempt ${failedAttempts}/5`,
-                ipAddress: "unknown",
-                userAgent: "unknown"
+                ipAddress,
+                userAgent
               }
             });
 
             throw new Error(`Incorrect password. ${5 - failedAttempts} attempts remaining.`);
+          }
+
+          // Check for MFA if enabled
+          if (user.mfaEnabled) {
+            if (!credentials.mfaToken) {
+              throw new Error("MFA_REQUIRED");
+            }
+
+            const verified = speakeasy.totp.verify({
+              secret: user.mfaSecret || "",
+              encoding: "base32",
+              token: credentials.mfaToken,
+            });
+
+            if (!verified) {
+              await prisma.auditLog.create({
+                data: {
+                  action: "MFA_FAILED",
+                  userId: user.id,
+                  details: "Invalid MFA token provided",
+                  ipAddress,
+                  userAgent
+                }
+              });
+              throw new Error("Invalid verification code. Please try again.");
+            }
           }
 
           // Reset failed attempts on successful login
@@ -116,8 +151,8 @@ export const authOptions: NextAuthOptions = {
               action: "LOGIN_SUCCESS",
               userId: user.id,
               details: "Successful login",
-              ipAddress: "unknown",
-              userAgent: "unknown"
+              ipAddress,
+              userAgent
             }
           });
 
@@ -135,7 +170,8 @@ export const authOptions: NextAuthOptions = {
   },
   debug: false, // Enable debug for better logs
   session: {
-    strategy: "jwt",
+    strategy: "database",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {

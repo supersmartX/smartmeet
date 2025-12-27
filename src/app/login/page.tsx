@@ -15,8 +15,10 @@ export default function LoginPage() {
     email: "",
     password: "",
     name: "",
-    apiKey: ""
+    apiKey: "",
+    mfaToken: ""
   });
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -68,11 +70,15 @@ export default function LoginPage() {
         const result = await signIn("credentials", {
           email: formData.email,
           password: formData.password,
+          mfaToken: formData.mfaToken,
           redirect: false,
         });
 
-        if (result?.error) {
-          setError("Invalid email or password. Please try again.");
+        if (result?.error === "MFA_REQUIRED") {
+          setMfaRequired(true);
+          setError(""); // Clear password errors
+        } else if (result?.error) {
+          setError(result.error === "CredentialsSignin" ? "Invalid email or password" : result.error);
         } else {
           router.push("/dashboard");
         }
@@ -193,13 +199,14 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
+                  disabled={mfaRequired}
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="appearance-none block w-full pl-12 pr-20 py-4 border-2 border-zinc-50 dark:border-zinc-800 rounded-2xl shadow-sm placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-brand-via bg-zinc-50/50 dark:bg-zinc-950 dark:text-zinc-100 text-sm transition-all font-bold"
+                  className="appearance-none block w-full pl-12 pr-20 py-4 border-2 border-zinc-50 dark:border-zinc-800 rounded-2xl shadow-sm placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-brand-via bg-zinc-50/50 dark:bg-zinc-950 dark:text-zinc-100 text-sm transition-all font-bold disabled:opacity-50"
                   placeholder="••••••••"
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  {formData.password && (
+                  {!mfaRequired && formData.password && (
                     <div className="transition-all duration-300">
                       {isPasswordStrong ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 animate-in zoom-in" />
@@ -212,13 +219,15 @@ export default function LoginPage() {
                       )}
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-brand-via transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  {!mfaRequired && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-brand-via transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  )}
                 </div>
               </div>
               {mode === "signup" && formData.password && !isPasswordStrong && (
@@ -241,6 +250,34 @@ export default function LoginPage() {
                 </div>
               )}
             </div>
+
+            {mfaRequired && (
+              <div className="space-y-2 animate-in slide-in-from-top-4 duration-500">
+                <label htmlFor="mfaToken" className="block text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest ml-1">
+                  Two-Factor Code
+                </label>
+                <div className="relative group">
+                  <Key className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-via" />
+                  <input
+                    id="mfaToken"
+                    name="mfaToken"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    required
+                    autoFocus
+                    value={formData.mfaToken}
+                    onChange={handleInputChange}
+                    className="appearance-none block w-full pl-12 pr-5 py-4 border-2 border-brand-via/30 dark:border-brand-via/20 rounded-2xl shadow-sm placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-brand-via bg-brand-via/5 dark:bg-brand-via/5 dark:text-zinc-100 text-sm tracking-[0.5em] font-black"
+                    placeholder="000000"
+                    maxLength={6}
+                  />
+                </div>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-tight ml-1">
+                  Enter the 6-digit code from your authenticator app.
+                </p>
+              </div>
+            )}
 
             <div className="pt-4">
               <button

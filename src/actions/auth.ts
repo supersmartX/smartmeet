@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from 'uuid';
 import { sendVerificationEmail } from "@/lib/mail";
 import { signUpSchema, SignUpInput } from "@/lib/validations/auth";
+import { logSecurityEvent } from "@/lib/audit";
 
 export async function signUp(formData: SignUpInput) {
   const result = signUpSchema.safeParse(formData);
@@ -38,6 +39,13 @@ export async function signUp(formData: SignUpInput) {
   if (user.email && user.verificationToken) {
     await sendVerificationEmail(user.email, user.verificationToken);
   }
+
+  await logSecurityEvent(
+    "SIGNUP_SUCCESS",
+    user.id,
+    `Account created for ${user.email}`,
+    "Authentication"
+  );
 
   return { success: true, user: { id: user.id, name: user.name, email: user.email } };
 }

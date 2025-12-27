@@ -1,8 +1,10 @@
 import { z } from "zod";
 
+const isServer = typeof window === 'undefined';
+
 const envSchema = z.object({
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  NEXTAUTH_SECRET: z.string().min(1, "NEXTAUTH_SECRET is required"),
+  DATABASE_URL: isServer ? z.string().min(1, "DATABASE_URL is required") : z.string().optional(),
+  NEXTAUTH_SECRET: isServer ? z.string().min(1, "NEXTAUTH_SECRET is required") : z.string().optional(),
   NEXTAUTH_URL: z.string().url().optional(),
   NEXT_PUBLIC_API_BASE_URL: z.string().url().default("https://api.supersmartx.ai"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),

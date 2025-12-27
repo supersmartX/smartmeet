@@ -19,7 +19,8 @@ import {
   Layers,
   Search,
   HelpCircle,
-  Bell
+  Bell,
+  Shield
 } from "lucide-react"
 import { useState } from "react"
 import { LucideIcon } from "lucide-react"
@@ -39,13 +40,10 @@ const workspaceItems: WorkspaceItem[] = [
     type: "folder",
     children: [
       { name: "Overview", href: "/dashboard", icon: Layout },
-      { 
-        name: "My Recordings", 
-        href: "/dashboard/recordings", 
-        icon: Video 
-      },
+      { name: "My Recordings", href: "/dashboard/recordings", icon: Video },
       { name: "Team", href: "/dashboard/team", icon: Users, upcoming: true },
       { name: "Integrations", href: "/dashboard/integrations", icon: Layers, upcoming: true },
+      { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
       { name: "API Settings", href: "/dashboard/settings", icon: Settings },
       { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
     ]

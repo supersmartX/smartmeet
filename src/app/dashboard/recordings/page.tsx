@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, Suspense } from "react"
 import { highlightText } from "@/utils/text"
 import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
 import { audioToCode } from "@/services/api"
-import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl } from "@/actions/meeting"
+import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, updateMeetingStatus } from "@/actions/meeting"
 import { supabase } from "@/lib/supabase"
 import { v4 as uuidv4 } from "uuid"
 
@@ -81,6 +81,18 @@ function RecordingsContent() {
     fetchMeetings()
   }, [])
 
+  // Poll for updates if any meeting is in PROCESSING status
+  useEffect(() => {
+    const hasProcessing = recordings.some(r => r.status === "PROCESSING")
+    if (!hasProcessing) return
+
+    const interval = setInterval(() => {
+      fetchMeetings()
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [recordings])
+
   useEffect(() => {
     if (searchParams.get("action") === "upload") {
       handleNewRecording()
@@ -125,29 +137,27 @@ function RecordingsContent() {
 
     setIsUploading(true)
     setShowToast(true)
-    setUploadStatus("Uploading...")
+    setUploadStatus("Starting upload...")
 
     try {
-      // 1. Get signed upload URL from server
+      // 1. Get signed URL from Supabase via Server Action
+      setUploadStatus("Preparing secure channel...")
       const { signedUrl, path, token } = await createSignedUploadUrl(file.name, file.type)
 
-      // 2. Upload directly to Supabase using the signed URL
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('recordings')
-        .uploadToSignedUrl(path, token, file, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: file.type
-        })
+      // 2. Upload file directly to Supabase
+      setUploadStatus("Uploading recording...")
+      const uploadResponse = await fetch(signedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+          'x-upsert': 'true'
+        }
+      })
 
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
-      }
+      if (!uploadResponse.ok) throw new Error("Upload failed")
 
-      // 3. Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('recordings')
-        .getPublicUrl(path)
+      const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/recordings/${path}`
 
       setUploadStatus("Processing audio...")
 
@@ -164,9 +174,10 @@ function RecordingsContent() {
         audio.onerror = () => resolve("0:00")
       })
 
-      // 3. Create the meeting record in the database
-      const newMeeting = await createMeeting({
-        title: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
+      // 3. Create meeting in database
+      setUploadStatus("Creating meeting record...")
+      const meeting = await createMeeting({
+        title: file.name.replace(/\.[^/.]+$/, ""),
         duration: duration,
         audioUrl: publicUrl
       })
@@ -174,16 +185,31 @@ function RecordingsContent() {
       setUploadStatus("Processing with AI...")
 
       // 4. Start the AI pipeline
-      const response = await audioToCode(file)
+      // We do this asynchronously so the UI can continue
+      audioToCode(file).then(async (response) => {
+        if (response.success && response.data) {
+          await updateMeetingStatus(meeting.id, "COMPLETED", {
+            transcription: response.data.transcription,
+            summary: response.data.summary,
+            code: response.data.code
+          })
+          setUploadStatus("Analysis complete!")
+          await fetchMeetings()
+        } else {
+          console.error("Pipeline failed:", response.error)
+          await updateMeetingStatus(meeting.id, "FAILED")
+          setUploadStatus("AI processing failed.")
+        }
+      }).catch(async (err) => {
+        console.error("AI Pipeline Error:", err)
+        await updateMeetingStatus(meeting.id, "FAILED")
+        setUploadStatus("AI processing error.")
+      })
+
+      // We don't wait for the AI to finish before closing the initial upload state
+      // unless we want to keep the toast open.
+      await fetchMeetings()
       
-      if (response.success) {
-        setUploadStatus("Analysis complete!")
-        // Refresh the list to show the new meeting
-        await fetchMeetings()
-      } else {
-        console.error("Pipeline failed:", response.error)
-        setUploadStatus("AI processing failed, but recording saved.")
-      }
     } catch (error) {
       console.error("Upload error:", error)
       setUploadStatus("Upload failed.")
@@ -366,6 +392,8 @@ function RecordingsContent() {
                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
                                   recording.status?.toUpperCase() === "PROCESSING" 
                                   ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500" 
+                                  : recording.status?.toUpperCase() === "FAILED"
+                                  ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-500"
                                   : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-500"
                                }`}>
                                  {recording.status}
@@ -390,6 +418,8 @@ function RecordingsContent() {
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
                           recording.status?.toUpperCase() === "PROCESSING" 
                           ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500" 
+                          : recording.status?.toUpperCase() === "FAILED"
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-500"
                           : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-500"
                       }`}>
                         {recording.status}

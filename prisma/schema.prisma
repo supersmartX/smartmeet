@@ -37,6 +37,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent    String?
+  ipAddress    String?
 }
 
 model User {
@@ -48,8 +50,14 @@ model User {
   image         String?
   password      String?
   apiKey        String?
+  allowedIps    String?   // Comma-separated list of allowed IPs
+  lastUsedAt    DateTime? // Last time the API key was used
+  preferredProvider String? @default("openai")
+  preferredModel    String? @default("gpt-4o")
   failedLoginAttempts Int      @default(0)
   lockedUntil         DateTime?
+  mfaEnabled          Boolean   @default(false)
+  mfaSecret           String?
   role          UserRole  @default(MEMBER)
   accounts      Account[]
   sessions      Session[]

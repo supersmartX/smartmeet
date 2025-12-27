@@ -1,10 +1,12 @@
+import { env } from "@/lib/env";
+
 /**
  * SupersmartX API Service
  * Handles all communication with the backend API
  */
 
-// Configuration - will be replaced with actual AWS URL when provided
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.supersmartx.ai";
+// Configuration - using validated environment variables
+const API_BASE_URL = env.NEXT_PUBLIC_API_BASE_URL;
 
 interface ApiResponse<T> {
   success: boolean;
@@ -14,7 +16,7 @@ interface ApiResponse<T> {
 }
 
 interface AudioToCodeParams {
-  file: File;
+  file: File | Blob;
   api_key?: string;
   summary_provider?: "BART" | "GPT-4" | "CLAUDE" | "GEMINI" | "GROQ";
   code_provider?: "openai" | "claude" | "gemini" | "groq";
@@ -148,7 +150,7 @@ async function makeApiRequest<T>(
  * Complete audio-to-code pipeline
  */
 export async function audioToCode(
-  file: File,
+  file: File | Blob,
   params: Partial<AudioToCodeParams> = {}
 ): Promise<ApiResponse<CompletePipelineResponse>> {
   const formData = new FormData();
@@ -166,7 +168,7 @@ export async function audioToCode(
  * Transcribe audio file
  */
 export async function transcribeAudio(
-  file: File,
+  file: File | Blob,
   apiKey: string = ""
 ): Promise<ApiResponse<TranscriptionResponse>> {
   const formData = new FormData();
@@ -230,6 +232,10 @@ export async function testCode(
  * Download file from URL
  */
 export async function downloadFile(url: string, filename: string): Promise<void> {
+  if (typeof window === 'undefined') {
+    console.error("downloadFile is only available in the browser");
+    return;
+  }
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error("Failed to download file");

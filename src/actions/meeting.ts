@@ -5,8 +5,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/crypto";
+import { logSecurityEvent } from "@/lib/audit";
 import { supabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
+import { headers } from "next/headers";
 
 interface DashboardStat {
   label: string;
@@ -178,30 +180,71 @@ export async function getMeetingById(id: string) {
   }) as MeetingWithRelations | null;
 }
 
-export async function updateUserApiKey(apiKey: string) {
+/**
+ * Update user API key and AI preferences
+ */
+export async function updateUserApiKey(apiKey: string, preferredProvider?: string, preferredModel?: string, allowedIps?: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
-  const encryptedKey = encrypt(apiKey);
-
-  return await prisma.user.update({
+  const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    data: { apiKey: encryptedKey },
+    select: { id: true }
   });
+
+  if (!user) throw new Error("User not found");
+
+  const encryptedKey = apiKey ? encrypt(apiKey) : undefined;
+
+  const data: any = {};
+  if (encryptedKey !== undefined) data.apiKey = encryptedKey;
+  if (preferredProvider) data.preferredProvider = preferredProvider;
+  if (preferredModel) data.preferredModel = preferredModel;
+  if (allowedIps !== undefined) data.allowedIps = allowedIps;
+  data.lastUsedAt = new Date();
+
+  const updatedUser = await (prisma.user.update as any)({
+    where: { email: session.user.email },
+    data,
+  });
+
+  // Log the security event
+  await logSecurityEvent(
+    "API_KEY_UPDATED",
+    user.id,
+    `Provider: ${preferredProvider || 'unchanged'}, Model: ${preferredModel || 'unchanged'}, IP Restriction: ${allowedIps ? 'enabled' : 'disabled'}`,
+    "Settings"
+  );
+
+  return updatedUser;
 }
 
-export async function getUserApiKey() {
+export async function getUserSettings() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    select: { apiKey: true },
+    select: { 
+      apiKey: true,
+      preferredProvider: true,
+      preferredModel: true,
+      allowedIps: true,
+      lastUsedAt: true,
+      name: true,
+      email: true,
+      image: true,
+      mfaEnabled: true
+    } as any,
   });
 
-  if (!user?.apiKey) return null;
+  if (!user) return null;
 
-  return decrypt(user.apiKey);
+  return {
+    ...user,
+    apiKey: (user as any).apiKey ? decrypt((user as any).apiKey as string) : null,
+    allowedIps: (user as any).allowedIps || ""
+  };
 }
 
 interface CreateMeetingData {
@@ -299,4 +342,194 @@ export async function createSignedUploadUrl(fileName: string, fileType: string) 
     path: filePath,
     token: data.token
   };
+}
+
+import { audioToCode } from "@/services/api";
+
+export async function processMeetingAI(meetingId: string, audioUrl: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  try {
+    // 1. Get the user's API key and IP restrictions
+    const user = (await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, apiKey: true, allowedIps: true } as any
+    })) as any;
+
+    if (!user) throw new Error("User not found");
+
+    // 2. Check IP Restriction if enabled
+    if (user.allowedIps) {
+      const headerList = await headers();
+      const clientIp = headerList.get("x-forwarded-for")?.split(',')[0] || 
+                      headerList.get("x-real-ip") || 
+                      "unknown";
+      
+      const allowedIps = user.allowedIps.split(',').map((ip: string) => ip.trim());
+      
+      if (clientIp !== "unknown" && !allowedIps.includes(clientIp)) {
+        await logSecurityEvent(
+          "API_KEY_IP_BLOCKED",
+          user.id,
+          `Blocked request from unauthorized IP: ${clientIp}`,
+          "Security"
+        );
+        
+        await prisma.meeting.update({
+          where: { id: meetingId },
+          data: { status: "FAILED" }
+        });
+        
+        throw new Error(`Unauthorized IP: ${clientIp}. Please update your settings if this is you.`);
+      }
+    }
+
+    if (!user?.apiKey) {
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { status: "FAILED" }
+      });
+      throw new Error("API Key missing. Please add it in Settings.");
+    }
+
+    const apiKey = decrypt(user.apiKey);
+
+    // Update lastUsedAt
+    await (prisma.user.update as any)({
+      where: { id: user.id },
+      data: { lastUsedAt: new Date() }
+    });
+
+    // 2. Download the file from Supabase to send to the AI API
+    // (For MVP, we might still want to do this on the client if the file is large, 
+    // but doing it on the server is more robust for background processing)
+    
+    // NOTE: For now, we will keep the client-side call to audioToCode 
+    // but update the meeting status properly. 
+    // If we wanted true background processing, we would use a queue here.
+    
+    return { success: true };
+  } catch (error) {
+    console.error("AI Processing Error:", error);
+    await prisma.meeting.update({
+      where: { id: meetingId },
+      data: { status: "FAILED" }
+    });
+    throw error;
+  }
+}
+
+export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PROCESSING" | "FAILED", data?: any) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  const updateData: any = { status };
+  
+  if (data) {
+    if (data.transcription) {
+      updateData.transcripts = {
+        create: [{
+          speaker: "AI Assistant",
+          time: "0:00",
+          text: data.transcription
+        }]
+      };
+    }
+    if (data.summary) {
+      updateData.summary = {
+        create: { content: data.summary }
+      };
+    }
+    if (data.code) {
+      updateData.code = data.code;
+    }
+  }
+
+  const meeting = await prisma.meeting.update({
+    where: { id, user: { email: session.user.email } },
+    data: updateData
+  });
+
+  revalidatePath("/dashboard/recordings");
+  revalidatePath(`/dashboard/recordings/${id}`);
+  
+  return meeting;
+}
+
+export async function getAuditLogs() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+
+  if (!user) throw new Error("User not found");
+
+  return prisma.auditLog.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 50
+  });
+}
+
+export async function getActiveSessions() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+
+  if (!user) throw new Error("User not found");
+
+  return prisma.session.findMany({
+    where: { userId: user.id, expires: { gt: new Date() } },
+    orderBy: { expires: "desc" },
+    select: {
+      id: true,
+      expires: true,
+      userAgent: true,
+      ipAddress: true,
+      sessionToken: true
+    } as any
+  });
+}
+
+export async function revokeSession(sessionId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+
+  if (!user) throw new Error("User not found");
+
+  // Only allow revoking sessions that belong to the current user
+  const targetSession = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { userId: true }
+  });
+
+  if (!targetSession || targetSession.userId !== user.id) {
+    throw new Error("Session not found or unauthorized");
+  }
+
+  await prisma.session.delete({
+    where: { id: sessionId }
+  });
+
+  await logSecurityEvent(
+    "SESSION_REVOKED",
+    user.id,
+    `Revoked session: ${sessionId}`,
+    "Security"
+  );
+
+  return { success: true };
 }
