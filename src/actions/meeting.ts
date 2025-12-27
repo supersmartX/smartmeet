@@ -9,6 +9,7 @@ import { logSecurityEvent } from "@/lib/audit";
 import { supabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { headers } from "next/headers";
+import { audioToCode } from "@/services/api";
 
 interface DashboardStat {
   label: string;
@@ -315,7 +316,7 @@ export async function updateMeetingCode(id: string, code: string) {
   });
 }
 
-export async function createSignedUploadUrl(fileName: string, fileType: string) {
+export async function createSignedUploadUrl(fileName: string, _fileType: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
@@ -343,8 +344,6 @@ export async function createSignedUploadUrl(fileName: string, fileType: string) 
     token: data.token
   };
 }
-
-import { audioToCode } from "@/services/api";
 
 export async function processMeetingAI(meetingId: string, audioUrl: string) {
   const session = await getServerSession(authOptions);
@@ -402,14 +401,31 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
     });
 
     // 2. Download the file from Supabase to send to the AI API
-    // (For MVP, we might still want to do this on the client if the file is large, 
-    // but doing it on the server is more robust for background processing)
+    const audioResponse = await fetch(audioUrl);
+    if (!audioResponse.ok) throw new Error("Failed to download audio from storage");
     
-    // NOTE: For now, we will keep the client-side call to audioToCode 
-    // but update the meeting status properly. 
-    // If we wanted true background processing, we would use a queue here.
-    
-    return { success: true };
+    const audioBlob = await audioResponse.blob();
+
+    // 3. Call the AI pipeline
+    const pipelineResponse = await audioToCode(audioBlob, {
+      api_key: apiKey
+    });
+
+    if (pipelineResponse.success && pipelineResponse.data) {
+      await updateMeetingStatus(meetingId, "COMPLETED", {
+        transcription: pipelineResponse.data.transcription,
+        summary: pipelineResponse.data.summary,
+        code: pipelineResponse.data.code
+      });
+      return { success: true };
+    } else {
+      console.error("Pipeline failed:", pipelineResponse.error);
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { status: "FAILED" }
+      });
+      return { success: false, error: pipelineResponse.error };
+    }
   } catch (error) {
     console.error("AI Processing Error:", error);
     await prisma.meeting.update({

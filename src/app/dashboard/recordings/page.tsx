@@ -6,8 +6,7 @@ import { useSearchParams } from "next/navigation"
 import { useState, useRef, useEffect, Suspense } from "react"
 import { highlightText } from "@/utils/text"
 import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
-import { audioToCode } from "@/services/api"
-import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, updateMeetingStatus } from "@/actions/meeting"
+import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, updateMeetingStatus, processMeetingAI } from "@/actions/meeting"
 import { supabase } from "@/lib/supabase"
 import { v4 as uuidv4 } from "uuid"
 
@@ -184,30 +183,17 @@ function RecordingsContent() {
 
       setUploadStatus("Processing with AI...")
 
-      // 4. Start the AI pipeline
-      // We do this asynchronously so the UI can continue
-      audioToCode(file).then(async (response) => {
-        if (response.success && response.data) {
-          await updateMeetingStatus(meeting.id, "COMPLETED", {
-            transcription: response.data.transcription,
-            summary: response.data.summary,
-            code: response.data.code
-          })
-          setUploadStatus("Analysis complete!")
-          await fetchMeetings()
-        } else {
-          console.error("Pipeline failed:", response.error)
-          await updateMeetingStatus(meeting.id, "FAILED")
-          setUploadStatus("AI processing failed.")
-        }
-      }).catch(async (err) => {
+      // 4. Start the AI pipeline on the server
+      processMeetingAI(meeting.id, publicUrl).catch(async (err) => {
         console.error("AI Pipeline Error:", err)
+        // Status is already handled inside processMeetingAI for most cases, 
+        // but this is a fallback for unexpected errors.
         await updateMeetingStatus(meeting.id, "FAILED")
-        setUploadStatus("AI processing error.")
       })
 
       // We don't wait for the AI to finish before closing the initial upload state
       // unless we want to keep the toast open.
+      setUploadStatus("AI processing started...")
       await fetchMeetings()
       
     } catch (error) {
