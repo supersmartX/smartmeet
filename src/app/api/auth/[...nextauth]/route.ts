@@ -53,6 +53,15 @@ export const authOptions: NextAuthOptions = {
           }
 
           if (user.lockedUntil && user.lockedUntil > new Date()) {
+            await prisma.auditLog.create({
+              data: {
+                action: "LOGIN_LOCKED",
+                userId: user.id,
+                details: "Attempted login while locked",
+                ipAddress: "unknown", // NextAuth doesn't give easy access to req headers here
+                userAgent: "unknown"
+              }
+            });
             throw new Error("Account is temporarily locked due to too many failed login attempts. Please try again later.");
           }
 
@@ -74,6 +83,16 @@ export const authOptions: NextAuthOptions = {
               data: updateData,
             });
 
+            await prisma.auditLog.create({
+              data: {
+                action: "LOGIN_FAILED",
+                userId: user.id,
+                details: `Failed attempt ${failedAttempts}/5`,
+                ipAddress: "unknown",
+                userAgent: "unknown"
+              }
+            });
+
             throw new Error(`Incorrect password. ${5 - failedAttempts} attempts remaining.`);
           }
 
@@ -91,6 +110,16 @@ export const authOptions: NextAuthOptions = {
           if (!user.emailVerified) {
             throw new Error("Email not verified. Please check your inbox for a verification link.");
           }
+
+          await prisma.auditLog.create({
+            data: {
+              action: "LOGIN_SUCCESS",
+              userId: user.id,
+              details: "Successful login",
+              ipAddress: "unknown",
+              userAgent: "unknown"
+            }
+          });
 
           return user;
         } catch (error) {
