@@ -5,7 +5,7 @@ import { signIn, getProviders, ClientSafeProvider } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, User, Key, ArrowRight, Loader2, Sparkles, Github } from "lucide-react";
+import { Mail, Lock, User, Key, ArrowRight, Loader2, Sparkles, Github, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { signUp } from "@/actions/auth";
 
 export default function LoginPage() {
@@ -19,6 +19,15 @@ export default function LoginPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const passwordRequirements = {
+    length: formData.password.length >= 8,
+    number: /\d/.test(formData.password),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
+  };
+
+  const isPasswordStrong = passwordRequirements.length && passwordRequirements.number && passwordRequirements.special;
   
   const router = useRouter();
 
@@ -123,7 +132,10 @@ export default function LoginPage() {
         <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl py-12 px-6 shadow-2xl shadow-black/5 sm:rounded-[40px] sm:px-12 border border-zinc-100 dark:border-zinc-800 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-rose-50 dark:bg-rose-950/30 border-2 border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
+              <div 
+                aria-live="polite"
+                className="bg-rose-50 dark:bg-rose-950/30 border-2 border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-2"
+              >
                 {error}
               </div>
             )}
@@ -178,39 +190,57 @@ export default function LoginPage() {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="appearance-none block w-full pl-12 pr-5 py-4 border-2 border-zinc-50 dark:border-zinc-800 rounded-2xl shadow-sm placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-brand-via bg-zinc-50/50 dark:bg-zinc-950 dark:text-zinc-100 text-sm transition-all font-bold"
+                  className="appearance-none block w-full pl-12 pr-20 py-4 border-2 border-zinc-50 dark:border-zinc-800 rounded-2xl shadow-sm placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-brand-via bg-zinc-50/50 dark:bg-zinc-950 dark:text-zinc-100 text-sm transition-all font-bold"
                   placeholder="••••••••"
                 />
-              </div>
-            </div>
-
-            {mode === "signup" && (
-              <div className="space-y-2">
-                <label htmlFor="apiKey" className="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
-                  API Key (Optional)
-                </label>
-                <div className="relative group">
-                  <Key className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand-via transition-colors" />
-                  <input
-                    id="apiKey"
-                    name="apiKey"
-                    type="text"
-                    value={formData.apiKey}
-                    onChange={handleInputChange}
-                    className="appearance-none block w-full pl-12 pr-5 py-4 border-2 border-zinc-50 dark:border-zinc-800 rounded-2xl shadow-sm placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-brand-via bg-zinc-50/50 dark:bg-zinc-950 dark:text-zinc-100 text-sm transition-all font-bold"
-                    placeholder="sk-..."
-                  />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {formData.password && (
+                    <div className="transition-all duration-300">
+                      {isPasswordStrong ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 animate-in zoom-in" />
+                      ) : (
+                        <div className="flex gap-1">
+                          <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.length ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                          <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.number ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                          <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.special ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-brand-via transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
-                <p className="mt-2 text-[10px] text-zinc-500 dark:text-zinc-400 font-bold italic px-1 uppercase tracking-tight">
-                  Bring your own OpenAI/Anthropic key for custom workflows.
-                </p>
               </div>
-            )}
+              {mode === "signup" && formData.password && !isPasswordStrong && (
+                <div className="px-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Requirements:</p>
+                  <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <li className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 ${passwordRequirements.length ? 'text-emerald-500' : 'text-zinc-400'}`}>
+                      <div className={`w-1 h-1 rounded-full ${passwordRequirements.length ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                      8+ Characters
+                    </li>
+                    <li className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 ${passwordRequirements.number ? 'text-emerald-500' : 'text-zinc-400'}`}>
+                      <div className={`w-1 h-1 rounded-full ${passwordRequirements.number ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                      One Number
+                    </li>
+                    <li className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 ${passwordRequirements.special ? 'text-emerald-500' : 'text-zinc-400'}`}>
+                      <div className={`w-1 h-1 rounded-full ${passwordRequirements.special ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                      One Special
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
 
             <div className="pt-4">
               <button
@@ -290,19 +320,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          <div className="mt-10">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t-2 border-zinc-100 dark:border-zinc-800" />
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-black">
-                <span className="px-4 bg-white dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600">Demo Account</span>
-              </div>
-            </div>
-            <div className="mt-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500 font-black uppercase tracking-widest italic opacity-60">
-              Try with any email and password for this MVP demo.
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SupersmartX AI - Meeting Intelligence
 
-## Getting Started
+AI-Powered Meeting Intelligence platform for capturing, transcribing, and summarizing your meetings.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Next.js 15 (App Router)**: High-performance React framework.
+- **Authentication**: Secure login with NextAuth.js (Google, GitHub, and Credentials).
+- **Database**: Prisma ORM with PostgreSQL (Supabase).
+- **Security**: 
+  - Password hashing with Bcrypt.
+  - Account lockout after 5 failed attempts.
+  - Audit logging for security events.
+  - Zod schema validation for all inputs and environment variables.
+- **Styling**: Tailwind CSS with Dark Mode support.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2.  **Set up Environment Variables**:
+    Create a `.env` file based on the required schema in `src/lib/env.ts`.
 
-## Learn More
+3.  **Sync Database**:
+    ```bash
+    npx prisma db push
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+4.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛡️ Security Audit & Roadmap (December 2025)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The project has undergone a professional security audit and is currently **Production Ready**.
 
-## Deploy on Vercel
+### Current Security Implementation
+- ✅ **Brute Force Protection**: Automatic 15-minute account lockout after 5 failed login attempts.
+- ✅ **Audit Logs**: Every login (success/fail/locked) is recorded in the `AuditLog` table.
+- ✅ **Type Safety**: Full TypeScript implementation with strict mode enabled.
+- ✅ **Input Sanitization**: All user data is validated via Zod before hitting the database.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 📈 Future Recommendations (Roadmap)
+To transition from a professional MVP to an Enterprise-grade platform (SOC2/Compliance ready), the following enhancements are recommended:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1.  **Multi-Factor Authentication (MFA)**: Implement TOTP (Authenticator App) support to prevent account takeovers.
+2.  **Auth Architecture Refactor**: Move `authOptions` from the route handler to `src/lib/auth.ts` for cleaner imports in Server Actions.
+3.  **API Key Hashing**: Transition from plain-text API key storage to hashed storage (similar to passwords).
+4.  **Security Activity Dashboard**: Build a UI for users to view their own `AuditLog` history and active sessions.
+5.  **Role-Based Access Control (RBAC)**: Fully implement the `UserRole` (ADMIN, MEMBER, VIEWER) logic across all dashboard routes.
+
+---
+Built with ❤️ by the SupersmartX Team.

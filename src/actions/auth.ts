@@ -13,7 +13,7 @@ export async function signUp(formData: SignUpInput) {
     throw new Error(result.error.issues[0].message);
   }
 
-  const { name, email, password, apiKey } = result.data;
+  const { name, email, password } = result.data;
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -30,7 +30,6 @@ export async function signUp(formData: SignUpInput) {
       name,
       email,
       password: hashedPassword,
-      apiKey: apiKey || null,
       verificationToken: uuidv4(),
       emailVerified: null,
     },
