@@ -1,4 +1,4 @@
-export const PRODUCT_NAME = "Supersmart"
+export const PRODUCT_NAME = "SupersmartX"
 export const HEADLINE = "Turn Your Conversations into Clear Actions"
 export const SUBHEADLINE = "Plan smarter agendas, capture decisions, and turn meetings into actions."
 export const FEATURES = [

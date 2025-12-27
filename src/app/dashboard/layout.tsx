@@ -128,7 +128,7 @@ export default function DashboardLayout({
                 <div className={`${isSearchOpen ? 'hidden' : 'hidden sm:flex'} items-center gap-1.5 text-[10px] font-bold tracking-tight h-full`}>
                   <Link href="/dashboard" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer transition-colors flex items-center gap-1.5 uppercase">
                     <Layout className="w-3 h-3" />
-                    supersmart
+                    supersmartX
                   </Link>
                   <span className="text-zinc-300 dark:text-zinc-700 font-light text-xs">/</span>
                   <div className="flex items-center gap-1 group/ws cursor-pointer">
@@ -247,7 +247,7 @@ export default function DashboardLayout({
         <footer className="h-6 bg-brand-via dark:bg-zinc-900 border-t border-brand-via/20 dark:border-zinc-800 flex items-center justify-between px-3 text-[10px] text-white/90 dark:text-zinc-400 font-medium z-50 overflow-hidden">
           <div className="flex items-center gap-4 h-full">
             <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer shrink-0">
-              <span>supersmartx.ai</span>
+              <span>supersmartX.ai</span>
             </div>
             <div className="hidden sm:flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer text-emerald-300 shrink-0">
               <span>Pipeline: Stable</span>

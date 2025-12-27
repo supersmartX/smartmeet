@@ -147,13 +147,13 @@ export default function Hero() {
                 <div className="relative w-24 h-24 animate-bounce">
                   <Image
                     src="/logoX.png"
-                    alt="Supersmart Logo"
+                    alt="SupersmartX Logo"
                     fill
                     className="object-contain"
                   />
                 </div>
-                <div className="space-y-2">
-                  <p className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">AI Meeting Intelligence</p>
+                <div className="flex flex-col text-left">
+                  <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">SupersmartX</span>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium max-w-xs">Transcribe, summarize, and extract actionable insights automatically.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 w-full max-w-sm mt-4">

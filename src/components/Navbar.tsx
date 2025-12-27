@@ -19,7 +19,7 @@ export default function Navbar() {
           <div className="relative w-9 h-9 group-hover:scale-110 transition-transform">
             <Image
               src="/logoX.png"
-              alt="Supersmart Logo"
+              alt="SupersmartX Logo"
               fill
               className="object-contain"
               priority
@@ -27,7 +27,7 @@ export default function Navbar() {
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
+              <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">SupersmartX</span>
               <span className="px-1.5 py-0.5 bg-brand-via/10 text-brand-via text-[8px] font-black uppercase tracking-widest rounded-md border border-brand-via/20">BETA</span>
             </div>
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] -mt-1">Meeting Intelligence</span>

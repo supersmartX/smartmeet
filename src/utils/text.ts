@@ -1,5 +1,5 @@
 /**
- * Text utility functions for the Supersmart application
+ * Text utility functions for the SupersmartX application
  */
 
 /**

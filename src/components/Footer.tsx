@@ -12,13 +12,13 @@ export default function Footer() {
               <div className="relative w-8 h-8">
                 <Image
                   src="/logoX.png"
-                  alt="Supersmart Logo"
+                  alt="SupersmartX Logo"
                   fill
                   className="object-contain"
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Supersmart</span>
+                <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">SupersmartX</span>
                 <span className="text-[8px] font-black text-brand-via uppercase tracking-widest -mt-1">Public Beta</span>
               </div>
             </div>
@@ -57,7 +57,7 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">
-            © {currentYear} Supersmart AI. All rights reserved.
+            © {currentYear} SupersmartX AI. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">

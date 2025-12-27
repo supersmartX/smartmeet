@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 
 const categories = [
-  { title: "Getting Started", icon: Zap, desc: "Learn the basics of Supersmart AI pipeline." },
+  { title: "Getting Started", icon: Zap, desc: "Learn the basics of SupersmartX AI pipeline." },
   { title: "Recordings", icon: Video, desc: "How to capture and manage your meetings." },
   { title: "Security & Privacy", icon: Shield, desc: "How we protect your data and API keys." },
 ]
@@ -107,7 +107,7 @@ export default function HelpPage() {
           <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center">
             <Book className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
             <p className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-1">Developer Docs</p>
-            <p className="text-[9px] text-zinc-500 font-medium mb-4">Integrate Supersmart into your own apps.</p>
+            <p className="text-[9px] text-zinc-500 font-medium mb-4">Integrate SupersmartX into your own apps.</p>
             <button className="text-[9px] font-black text-brand-via uppercase tracking-widest hover:underline flex items-center gap-1 mx-auto">
               Read Documentation <FileText className="w-3 h-3" />
             </button>

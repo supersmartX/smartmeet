@@ -4,7 +4,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   NEXTAUTH_SECRET: z.string().min(1, "NEXTAUTH_SECRET is required"),
   NEXTAUTH_URL: z.string().url().optional(),
-  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("https://api.supersmart.ai"),
+  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("https://api.supersmartx.ai"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

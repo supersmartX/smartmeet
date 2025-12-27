@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Supersmart AI",
-  description: "AI-Powered Audio-to-Code Pipeline",
+  title: "SupersmartX AI",
+  description: "AI-Powered Meeting Intelligence",
   icons: { icon: "/favicon.ico" },
 };
 
