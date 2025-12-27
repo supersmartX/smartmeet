@@ -9,7 +9,7 @@ import { ModeToggle } from "@/components/ModeToggle"
 import { useSession, signOut } from "next-auth/react"
 import {
   Menu, Layout, FileVideo, Settings, Search, HelpCircle, LogOut, ChevronDown,
-  Bell, Command
+  Bell, Command, X
 } from "lucide-react"
 
 export default function DashboardLayout({
@@ -18,6 +18,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(240)
   const [isResizing, setIsResizing] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
@@ -124,7 +125,7 @@ export default function DashboardLayout({
                 >
                   <Menu className="w-4 h-4" />
                 </button>
-                <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold tracking-tight h-full">
+                <div className={`${isSearchOpen ? 'hidden' : 'hidden sm:flex'} items-center gap-1.5 text-[10px] font-bold tracking-tight h-full`}>
                   <Link href="/dashboard" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer transition-colors flex items-center gap-1.5 uppercase">
                     <Layout className="w-3 h-3" />
                     supersmart
@@ -148,24 +149,41 @@ export default function DashboardLayout({
               </div>
 
               {/* Center: Global Search Bar */}
-              <div className="hidden md:flex flex-1 max-w-md mx-8 relative group">
+              <div className={`${isSearchOpen ? 'flex absolute inset-x-0 mx-4' : 'hidden'} md:flex md:relative flex-1 max-w-md md:mx-8 group z-50`}>
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                   <Search className="w-3.5 h-3.5 text-zinc-400 group-focus-within:text-brand-via transition-colors" />
                 </div>
                 <input 
                   type="text"
                   placeholder="Search recordings, logic, or help..."
+                  autoFocus={isSearchOpen}
                   className="w-full pl-9 pr-12 h-7 bg-zinc-100/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[11px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-brand-via/20 focus:border-brand-via transition-all"
                 />
-                <div className="absolute inset-y-0 right-3 flex items-center gap-1 opacity-50 pointer-events-none">
-                  <Command className="w-2.5 h-2.5" />
-                  <span className="text-[9px] font-black">K</span>
+                <div className="absolute inset-y-0 right-3 flex items-center gap-2">
+                  <div className="hidden md:flex items-center gap-1 opacity-50 pointer-events-none">
+                    <Command className="w-2.5 h-2.5" />
+                    <span className="text-[9px] font-black">K</span>
+                  </div>
+                  {isSearchOpen && (
+                    <button 
+                      onClick={() => setIsSearchOpen(false)}
+                      className="md:hidden p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                    >
+                      <X className="w-3 h-3 text-zinc-500" />
+                    </button>
+                  )}
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 h-full">
+              <div className={`${isSearchOpen ? 'hidden' : 'flex'} items-center gap-3 h-full`}>
                 <div className="flex items-center gap-3 h-full">
                   <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => setIsSearchOpen(true)}
+                      className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all"
+                    >
+                      <Search className="w-4 h-4" />
+                    </button>
                     <button className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all relative group">
                       <Bell className="w-4 h-4 group-hover:scale-110 transition-transform" />
                       <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand-via rounded-full border border-white dark:border-zinc-950" />
@@ -226,20 +244,20 @@ export default function DashboardLayout({
         </div>
 
         {/* Editor-style Status Bar */}
-        <footer className="h-6 bg-brand-via dark:bg-zinc-900 border-t border-brand-via/20 dark:border-zinc-800 flex items-center justify-between px-3 text-[10px] text-white/90 dark:text-zinc-400 font-medium z-50">
+        <footer className="h-6 bg-brand-via dark:bg-zinc-900 border-t border-brand-via/20 dark:border-zinc-800 flex items-center justify-between px-3 text-[10px] text-white/90 dark:text-zinc-400 font-medium z-50 overflow-hidden">
           <div className="flex items-center gap-4 h-full">
-            <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer">
+            <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer shrink-0">
               <span>supersmartx.ai</span>
             </div>
-            <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer text-emerald-300">
+            <div className="hidden sm:flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer text-emerald-300 shrink-0">
               <span>Pipeline: Stable</span>
             </div>
           </div>
           <div className="flex items-center gap-4 h-full">
-            <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer">
+            <div className="hidden md:flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer shrink-0">
               <span>AI Engine: 4.0-Turbo</span>
             </div>
-            <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer">
+            <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer shrink-0">
               <span>Latency: 24ms</span>
             </div>
           </div>

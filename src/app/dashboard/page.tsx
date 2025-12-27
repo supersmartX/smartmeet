@@ -198,28 +198,35 @@ export default function DashboardPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
-                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Name</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
+                    <th className="px-4 sm:px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Name</th>
+                    <th className="hidden sm:table-cell px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
                     <th className="hidden md:table-cell px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Participants</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Status</th>
-                    <th className="px-6 py-4 text-right"></th>
+                    <th className="hidden sm:table-cell px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Status</th>
+                    <th className="px-4 sm:px-6 py-4 text-right"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
                   {filteredRecordings.length > 0 ? (
                     filteredRecordings.slice(0, 4).map((recording) => (
                       <tr key={recording.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-105 transition-transform">
-                                  <Video className="w-5 h-5 text-brand-via" />
+                        <td className="px-4 sm:px-6 py-4">
+                          <div className="flex items-center gap-3 sm:gap-4">
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                                  <Video className="w-4 h-4 sm:w-5 sm:h-5 text-brand-via" />
                               </div>
-                              <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-sm truncate max-w-[200px]">
-                                  {renderHighlightedText(recording.title, searchQuery)}
-                              </Link>
+                              <div className="flex flex-col min-w-0">
+                                <Link href={`/dashboard/recordings/${recording.id}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-sm truncate max-w-[150px] sm:max-w-[200px]">
+                                    {renderHighlightedText(recording.title, searchQuery)}
+                                </Link>
+                                <div className="flex items-center gap-2 sm:hidden mt-0.5">
+                                  <span className="text-[10px] text-zinc-500 font-bold">
+                                    {recording.date instanceof Date ? recording.date.toLocaleDateString() : String(recording.date)}
+                                  </span>
+                                </div>
+                              </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-xs text-zinc-500 dark:text-zinc-400 font-bold">
+                        <td className="hidden sm:table-cell px-6 py-4 text-xs text-zinc-500 dark:text-zinc-400 font-bold">
                           {renderHighlightedText(recording.date instanceof Date ? recording.date.toLocaleDateString() : String(recording.date), searchQuery)}
                         </td>
                         <td className="hidden md:table-cell px-6 py-4">
@@ -230,7 +237,7 @@ export default function DashboardPage() {
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Members</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="hidden sm:table-cell px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
                               recording.status?.toUpperCase() === "PROCESSING" 
                               ? "bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50" 
@@ -239,7 +246,7 @@ export default function DashboardPage() {
                             {recording.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 sm:px-6 py-4 text-right">
                           <Link 
                               href={`/dashboard/recordings/${recording.id}`}
                               className="p-2 text-zinc-400 hover:text-brand-via transition-colors inline-block"

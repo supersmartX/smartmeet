@@ -94,15 +94,15 @@ export default function Hero() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-5 gap-4 relative">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 relative">
                   {pipelineSteps.map((step, i) => (
                     <div key={step.label} className="flex flex-col items-center gap-3 group/step">
                       <div className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${step.bg} ${step.border} border flex items-center justify-center transition-all duration-500 group-hover/step:scale-110 group-hover/step:shadow-lg group-hover/step:shadow-brand-via/10`}>
                         <step.icon className={`w-6 h-6 sm:w-7 sm:h-7 ${step.color} transition-transform duration-500 group-hover/step:rotate-12`} />
                         
-                        {/* Connecting Arrow (except last) */}
+                        {/* Connecting Arrow (except last and on small screens) */}
                         {i < pipelineSteps.length - 1 && (
-                          <div className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 hidden sm:block">
+                          <div className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
                             <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 animate-pulse" />
                           </div>
                         )}

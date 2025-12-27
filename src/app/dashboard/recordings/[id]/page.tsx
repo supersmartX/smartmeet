@@ -299,13 +299,13 @@ export default function RecordingDetailPage() {
     <div className={`flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden ${isResizing ? 'cursor-row-resize select-none' : ''}`}>
       {/* Editor Header / Breadcrumbs (Local) */}
       <div className="h-auto min-h-10 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 shrink-0 gap-3">
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest overflow-hidden">
-            <Link href="/dashboard" className="hover:text-brand-via transition-colors shrink-0">smartmeet</Link>
-            <ChevronRight className="w-3 h-3 shrink-0" />
+        <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest overflow-hidden shrink-0">
+            <Link href="/dashboard" className="hover:text-brand-via transition-colors shrink-0 hidden xs:inline">smartmeet</Link>
+            <ChevronRight className="w-3 h-3 shrink-0 hidden xs:inline" />
             <Link href="/dashboard/recordings" className="hover:text-brand-via transition-colors shrink-0">recordings</Link>
             <ChevronRight className="w-3 h-3 shrink-0" />
-            <span className="text-zinc-900 dark:text-zinc-100 truncate">Meeting Analysis</span>
+            <span className="text-zinc-900 dark:text-zinc-100 truncate max-w-[100px] xs:max-w-none">Analysis</span>
           </div>
           
           <div className="hidden xl:flex items-center gap-6 ml-6 pl-6 border-l border-zinc-200 dark:border-zinc-800">
