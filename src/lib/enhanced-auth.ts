@@ -68,19 +68,28 @@ export const enhancedAuthOptions: NextAuthOptions = {
     async jwt({ token, account, profile }) {
       try {
         // Enhanced JWT handling for OAuth
+        if (!token) {
+          console.error('🚨 JWT callback: token is undefined');
+          return token;
+        }
+        
         if (account?.provider && account.type === 'oauth') {
           console.log(`🔍 Processing ${account.provider} OAuth JWT`);
           
-          // Add OAuth provider info to token
-          (token as ExtendedJWT).oauthProvider = account.provider;
-          (token as ExtendedJWT).oauthAccountId = account.providerAccountId;
-          
-          if (profile) {
-            (token as ExtendedJWT).oauthProfile = {
-              name: profile.name,
-              email: profile.email,
-              image: profile.image,
-            };
+          // Safely add OAuth provider info to token
+          try {
+            (token as ExtendedJWT).oauthProvider = account.provider;
+            (token as ExtendedJWT).oauthAccountId = account.providerAccountId;
+            
+            if (profile) {
+              (token as ExtendedJWT).oauthProfile = {
+                name: profile.name,
+                email: profile.email,
+                image: profile.image,
+              };
+            }
+          } catch (tokenError) {
+            console.error('🚨 Error setting OAuth properties on token:', tokenError);
           }
         }
         
@@ -94,8 +103,15 @@ export const enhancedAuthOptions: NextAuthOptions = {
     async session({ session, token }) {
       try {
         // Enhanced session handling for OAuth
+        if (!session || !token) {
+          console.error('🚨 Session callback: session or token is undefined', { session: !!session, token: !!token });
+          return session;
+        }
+        
         const extendedToken = token as ExtendedJWT;
-        if (extendedToken.oauthProvider) {
+        
+        // Safely check for OAuth properties
+        if (extendedToken?.oauthProvider) {
           console.log(`✅ Adding OAuth info to session: ${extendedToken.oauthProvider}`);
           
           const extendedSession = session as ExtendedSession;
