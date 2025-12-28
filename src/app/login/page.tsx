@@ -36,19 +36,64 @@ function LoginContent() {
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
+    const errorDescription = searchParams.get("error_description");
+    
+    console.log('🔍 Login error params:', { errorParam, errorDescription });
+    
     if (errorParam === "OAuthAccountNotLinked") {
       setError("This email is already associated with another login method. Please sign in using your original method.");
+    } else if (errorParam === "OAuthSigninFailed") {
+      setError("OAuth signin failed. Please check your account and try again.");
+    } else if (errorParam === "OAuthCallback") {
+      setError("OAuth callback error. The authentication provider returned an error.");
+    } else if (errorParam === "OAuthCreateAccount") {
+      setError("Failed to create account during OAuth signin.");
+    } else if (errorParam === "EmailCreateAccount") {
+      setError("Failed to create account. Please try a different login method.");
+    } else if (errorParam === "Callback") {
+      setError("Callback route error. Please try again.");
     } else if (errorParam) {
-      setError("An authentication error occurred. Please try again.");
+      const detailedError = errorDescription 
+        ? `Authentication error: ${errorParam} - ${errorDescription}`
+        : `Authentication error: ${errorParam}`;
+      setError(detailedError);
+      console.error('🔍 Detailed OAuth error:', { errorParam, errorDescription });
     }
   }, [searchParams]);
 
   useEffect(() => {
     const fetchProviders = async () => {
-      const res = await getProviders();
-      setProviders(res);
+      try {
+        console.log('🔍 Fetching auth providers...');
+        const res = await getProviders();
+        console.log('✅ Providers fetched:', res);
+        setProviders(res);
+      } catch (error) {
+        console.error('❌ Failed to fetch providers:', error);
+        setError('Failed to load authentication providers');
+      }
     };
     fetchProviders();
+    
+    // Add debug scripts
+    const debugScript = document.createElement('script');
+    debugScript.src = '/nextauth-debug.js';
+    debugScript.async = true;
+    document.head.appendChild(debugScript);
+    
+    const emergencyScript = document.createElement('script');
+    emergencyScript.src = '/emergency-oauth.js';
+    emergencyScript.async = true;
+    document.head.appendChild(emergencyScript);
+    
+    return () => {
+      if (document.head.contains(debugScript)) {
+        document.head.removeChild(debugScript);
+      }
+      if (document.head.contains(emergencyScript)) {
+        document.head.removeChild(emergencyScript);
+      }
+    };
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,7 +370,18 @@ function LoginContent() {
               <div className={`grid gap-4 ${Object.values(providers).filter(p => p.id !== "credentials").length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
                 {providers.google && (
                   <button
-                    onClick={() => signIn("google", { callbackUrl: `${window.location.origin}/dashboard` })}
+                    onClick={() => {
+                    console.log('Google OAuth clicked');
+                    try {
+                      signIn("google", { 
+                        callbackUrl: '/dashboard',
+                        redirect: true 
+                      });
+                    } catch (error) {
+                      console.error('Google OAuth error:', error);
+                      setError('Failed to initiate Google login. Please try again.');
+                    }
+                  }}
                     className="flex items-center justify-center gap-3 py-4 px-4 rounded-2xl border-2 border-zinc-50 dark:border-zinc-800 hover:border-brand-via transition-all bg-zinc-50/50 dark:bg-zinc-950 group"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -356,7 +412,18 @@ function LoginContent() {
 
                 {providers.github && (
                   <button
-                    onClick={() => signIn("github", { callbackUrl: `${window.location.origin}/dashboard` })}
+                    onClick={() => {
+                    console.log('GitHub OAuth clicked');
+                    try {
+                      signIn("github", { 
+                        callbackUrl: '/dashboard',
+                        redirect: true 
+                      });
+                    } catch (error) {
+                      console.error('GitHub OAuth error:', error);
+                      setError('Failed to initiate GitHub login. Please try again.');
+                    }
+                  }}
                     className="flex items-center justify-center gap-3 py-4 px-4 rounded-2xl border-2 border-zinc-50 dark:border-zinc-800 hover:border-brand-via transition-all bg-zinc-50/50 dark:bg-zinc-950 group"
                   >
                     <Github className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />

@@ -115,6 +115,13 @@ export const authOptions: NextAuthOptions = {
           return user;
         } catch (error) {
           console.error("Auth authorize error:", error);
+          console.error("Production Debug - Credentials:", {
+            hasEmail: !!credentials?.email,
+            hasPassword: !!credentials?.password,
+            hasMfaToken: !!credentials?.mfaToken,
+            nextauthUrl: process.env.NEXTAUTH_URL,
+            nextauthSecret: !!process.env.NEXTAUTH_SECRET
+          });
           throw error;
         }
       },
@@ -124,7 +131,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
-  debug: process.env.NODE_ENV === "development",
+  debug: process.env.NODE_ENV === "development" || process.env.NEXTAUTH_DEBUG === "true",
   session: {
     strategy: "database",
     maxAge: 30 * 24 * 60 * 60,

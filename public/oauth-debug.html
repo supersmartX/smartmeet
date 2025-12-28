@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Debug Test</title>
+</head>
+<body>
+    <h1>OAuth Debug Test</h1>
+    <button id="test-google">Test Google OAuth</button>
+    <button id="test-github">Test GitHub OAuth</button>
+    <div id="result"></div>
+
+    <script>
+        // Test OAuth flow
+        document.getElementById('test-google').addEventListener('click', function() {
+            try {
+                console.log('Testing Google OAuth...');
+                document.getElementById('result').innerHTML = 'Testing Google OAuth...';
+                
+                // Test the exact same URL your app uses
+                const callbackUrl = window.location.origin + '/dashboard';
+                console.log('Callback URL:', callbackUrl);
+                
+                // Test direct OAuth signin URL
+                const googleUrl = 'https://supersmartx.com/api/auth/signin/google';
+                console.log('Opening:', googleUrl);
+                
+                // Try to open in new window first
+                const newWindow = window.open(googleUrl, '_blank', 'width=600,height=600');
+                if (newWindow) {
+                    document.getElementById('result').innerHTML = '✅ New window opened for Google OAuth';
+                } else {
+                    document.getElementById('result').innerHTML = '❌ Popup blocked, trying redirect...';
+                    window.location.href = googleUrl + '?callbackUrl=' + encodeURIComponent(callbackUrl);
+                }
+            } catch (error) {
+                console.error('Google OAuth error:', error);
+                document.getElementById('result').innerHTML = '❌ Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('test-github').addEventListener('click', function() {
+            try {
+                console.log('Testing GitHub OAuth...');
+                document.getElementById('result').innerHTML = 'Testing GitHub OAuth...';
+                
+                const callbackUrl = window.location.origin + '/dashboard';
+                console.log('Callback URL:', callbackUrl);
+                
+                const githubUrl = 'https://supersmartx.com/api/auth/signin/github';
+                console.log('Opening:', githubUrl);
+                
+                const newWindow = window.open(githubUrl, '_blank', 'width=600,height=600');
+                if (newWindow) {
+                    document.getElementById('result').innerHTML = '✅ New window opened for GitHub OAuth';
+                } else {
+                    document.getElementById('result').innerHTML = '❌ Popup blocked, trying redirect...';
+                    window.location.href = githubUrl + '?callbackUrl=' + encodeURIComponent(callbackUrl);
+                }
+            } catch (error) {
+                console.error('GitHub OAuth error:', error);
+                document.getElementById('result').innerHTML = '❌ Error: ' + error.message;
+            }
+        });
+
+        // Test NextAuth.js directly
+        console.log('NextAuth debug info:');
+        console.log('Window location:', window.location.href);
+        console.log('Window origin:', window.location.origin);
+    </script>
+</body>
+</html>
