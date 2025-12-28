@@ -9,6 +9,15 @@ import { NextAuthOptions, Session } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import { Adapter } from "next-auth/adapters";
 import { headers } from "next/headers";
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { z } from 'zod';
+
+// Rate limiter for login attempts
+const loginLimiter = new RateLimiterMemory({
+  keyPrefix: 'login_fail',
+  points: 5, // 5 attempts
+  duration: 60 * 15, // 15 minutes
+});
 
 const googleId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -40,18 +49,37 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
+        // Validate email format
+        const emailSchema = z.string().email();
+        try {
+          emailSchema.parse(credentials.email);
+        } catch (error) {
+          throw new Error("Invalid email format");
+        }
+
         const headerList = await headers();
         const ipAddress = headerList.get("x-forwarded-for")?.split(',')[0] ||
                          headerList.get("x-real-ip");
         const userAgent = headerList.get("user-agent");
 
         try {
+          // Check rate limiting before user lookup
+          try {
+            await loginLimiter.consume(credentials.email);
+          } catch (rateLimiterRes) {
+            throw new Error("Too many login attempts. Please try again later.");
+          }
+
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           });
 
           if (!user || !user.password) {
-            throw new Error("No user found with this email");
+            // Perform dummy bcrypt comparison to prevent timing attacks
+            if (credentials.password) {
+              await bcrypt.compare(credentials.password, '$2a$10$dummy.hash.to.prevent.timing.attacks');
+            }
+            throw new Error("Invalid credentials");
           }
 
           if (user.lockedUntil && user.lockedUntil > new Date()) {
