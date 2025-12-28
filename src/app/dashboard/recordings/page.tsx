@@ -141,7 +141,7 @@ function RecordingsContent() {
     try {
       // 1. Get signed URL from Supabase via Server Action
       setUploadStatus("Preparing secure channel...")
-      const { signedUrl, path, token } = await createSignedUploadUrl(file.name, file.type)
+      const { signedUrl, path, token } = await createSignedUploadUrl(file.name)
 
       // 2. Upload file directly to Supabase
       setUploadStatus("Uploading recording...")
