@@ -62,8 +62,34 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Define allowed endpoints to prevent SSRF attacks
+    const ALLOWED_ENDPOINTS = [
+      '/audio-to-code',
+      '/transcribe-upload', 
+      '/summarize',
+      '/generate-code',
+      '/test-code'
+    ];
+    
+    // Validate endpoint to prevent SSRF
+    if (!ALLOWED_ENDPOINTS.includes(endpoint)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid endpoint" },
+        { status: 400, headers: createRateLimitHeaders(rateLimitResult) }
+      );
+    }
+    
+    // Sanitize endpoint to prevent path traversal
+    const sanitizedEndpoint = endpoint.replace(/[^a-zA-Z0-9\-\/]/g, '');
+    if (sanitizedEndpoint !== endpoint) {
+      return NextResponse.json(
+        { success: false, error: "Invalid endpoint format" },
+        { status: 400, headers: createRateLimitHeaders(rateLimitResult) }
+      );
+    }
+    
     // Forward request to actual API
-    const apiUrl = `${process.env.API_BASE_URL || "https://api.example.com"}${endpoint}`;
+    const apiUrl = `${process.env.API_BASE_URL || "https://api.example.com"}${sanitizedEndpoint}`;
     
     const requestHeaders: Record<string, string> = {
       "Accept": "application/json",
@@ -104,13 +130,31 @@ export async function POST(request: NextRequest) {
 /**
  * Handle OPTIONS requests for CORS
  */
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const headersList = await headers();
+  const origin = headersList.get("origin") || "";
+  
+  // Define allowed origins - update with your actual domains
+  const ALLOWED_ORIGINS = [
+    'https://supersmartx.ai',
+    'https://www.supersmartx.ai',
+    'http://localhost:3000' // for development
+  ];
+  
+  // Check if origin is allowed
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || 
+                   origin.endsWith('.supersmartx.ai');
+  
   return NextResponse.json({}, {
     status: 200,
     headers: {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": isAllowed ? origin : 'null',
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Credentials": "true",
+      "Vary": "Origin",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "strict-origin-when-cross-origin"
     }
   });
 }

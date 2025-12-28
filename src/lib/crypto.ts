@@ -1,9 +1,12 @@
 import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-cbc';
-const ENCRYPTION_KEY = process.env.NEXTAUTH_SECRET 
-  ? crypto.createHash('sha256').update(process.env.NEXTAUTH_SECRET).digest() 
-  : Buffer.alloc(32); // Fallback for dev, though env validation should catch this
+const ENCRYPTION_KEY = (() => {
+  if (!process.env.NEXTAUTH_SECRET) {
+    throw new Error('NEXTAUTH_SECRET is required for encryption operations');
+  }
+  return crypto.createHash('sha256').update(process.env.NEXTAUTH_SECRET).digest();
+})();
 const IV_LENGTH = 16;
 
 export function encrypt(text: string): string {
