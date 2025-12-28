@@ -36,13 +36,20 @@ interface WorkspaceItem {
 
 const workspaceItems: WorkspaceItem[] = [
   { 
-    name: "SMARTMEET", 
+    name: "SUPERSMART", 
     type: "folder",
     children: [
       { name: "Overview", href: "/dashboard", icon: Layout },
-      { name: "My Recordings", href: "/dashboard/recordings", icon: Video },
-      { name: "Team", href: "/dashboard/team", icon: Users, upcoming: true },
-      { name: "Integrations", href: "/dashboard/integrations", icon: Layers, upcoming: true },
+      { 
+        name: "My Projects", 
+        type: "folder",
+        children: [
+          { name: "Audio-to-Code", href: "/dashboard/recordings/1", icon: Code },
+          { name: "Speech-to-Text", href: "/dashboard/recordings/2", icon: Video },
+          { name: "Code Summaries", href: "/dashboard/recordings/3", icon: FileText },
+          { name: "Generated Docs", href: "/dashboard/recordings/4", icon: FileCode },
+        ]
+      },
       { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
       { name: "API Settings", href: "/dashboard/settings", icon: Settings },
       { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
@@ -55,7 +62,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { data: session } = useSession()
   const user = session?.user
   const logout = () => signOut()
-  const [openFolders, setOpenFolders] = useState<string[]>(["SMARTMEET", "ACTIVE SESSIONS"])
+  const [openFolders, setOpenFolders] = useState<string[]>(["SUPERSMART", "ACTIVE SESSIONS", "My Projects"])
 
   const toggleFolder = (name: string) => {
     setOpenFolders(prev =>
@@ -150,7 +157,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="mt-auto border-t border-zinc-200 dark:border-zinc-800 p-4">
         <div className="bg-brand-via/5 border border-brand-via/10 rounded-lg p-3">
           <p className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-1">Free Plan</p>
-          <p className="text-[9px] text-zinc-500 mb-2 italic">Using 0/3 meetings this month</p>
+          <p className="text-[9px] text-zinc-500 mb-2 italic">Using 0/3 projects this month</p>
           <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
             <div className="bg-brand-via w-0 h-full" />
           </div>

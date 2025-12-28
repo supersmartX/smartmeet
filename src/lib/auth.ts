@@ -10,24 +10,24 @@ import { JWT } from "next-auth/jwt";
 import { Adapter } from "next-auth/adapters";
 import { headers } from "next/headers";
 
-const googleId = process.env.GOOGLE_CLIENT_ID?.replace(/['"]+/g, '');
-const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.replace(/['"]+/g, '');
-const githubId = process.env.GITHUB_ID?.replace(/['"]+/g, '');
-const githubSecret = process.env.GITHUB_SECRET?.replace(/['"]+/g, '');
+const googleId = process.env.GOOGLE_CLIENT_ID?.trim();
+const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+const githubId = process.env.GITHUB_ID?.trim();
+const githubSecret = process.env.GITHUB_SECRET?.trim();
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
-    GoogleProvider({
-      clientId: googleId || "",
-      clientSecret: googleSecret || "",
+    ...(googleId && googleSecret ? [GoogleProvider({
+      clientId: googleId,
+      clientSecret: googleSecret,
       allowDangerousEmailAccountLinking: true,
-    }),
-    GitHubProvider({
-      clientId: githubId || "",
-      clientSecret: githubSecret || "",
+    })] : []),
+    ...(githubId && githubSecret ? [GitHubProvider({
+      clientId: githubId,
+      clientSecret: githubSecret,
       allowDangerousEmailAccountLinking: true,
-    }),
+    })] : []),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -124,7 +124,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
-  debug: false,
+  debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "database",
     maxAge: 30 * 24 * 60 * 60,

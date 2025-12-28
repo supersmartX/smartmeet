@@ -23,7 +23,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
-              Transforming raw audio into clear, actionable intelligence with a sophisticated AI pipeline. Join the future of collaboration.
+              Transforming raw audio into clear, actionable code and documentation with a sophisticated AI pipeline. Join the future of development.
             </p>
           </div>
           

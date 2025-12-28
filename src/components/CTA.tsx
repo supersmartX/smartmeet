@@ -16,7 +16,7 @@ export default function CTA() {
             </div>
 
             <h2 className="text-3xl sm:text-4xl lg:text-6xl font-black tracking-tight text-white leading-tight">
-              Shape the Future of <span className="text-transparent bg-clip-text bg-brand-gradient">AI Meetings</span>
+              Shape the Future of <span className="text-transparent bg-clip-text bg-brand-gradient">Audio-to-Code</span>
             </h2>
 
             <p className="text-lg text-zinc-400 font-medium leading-relaxed">

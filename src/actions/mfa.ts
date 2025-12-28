@@ -12,7 +12,7 @@ export async function generateMFASecret() {
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const secret = speakeasy.generateSecret({
-    name: `SmartMeet (${session.user.email})`,
+    name: `Supersmart (${session.user.email})`,
   });
 
   const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || "");
@@ -37,7 +37,7 @@ export async function verifyAndEnableMFA(token: string, secret: string) {
     throw new Error("Invalid verification code. Please try again.");
   }
 
-  const user = await (prisma.user.update as any)({
+  const user = await prisma.user.update({
     where: { email: session.user.email },
     data: {
       mfaEnabled: true,
@@ -59,7 +59,7 @@ export async function disableMFA() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
-  const user = await (prisma.user.update as any)({
+  const user = await prisma.user.update({
     where: { email: session.user.email },
     data: {
       mfaEnabled: false,
