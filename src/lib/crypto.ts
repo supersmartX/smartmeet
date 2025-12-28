@@ -27,7 +27,10 @@ export function decrypt(text: string): string {
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return decrypted.toString();
   } catch (error) {
-    console.error("Decryption failed:", error);
-    return "";
+    // Log decryption errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Decryption error:', error);
+    }
+    throw new Error('Failed to decrypt data');
   }
 }

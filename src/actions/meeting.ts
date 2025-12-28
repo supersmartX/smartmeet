@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { logSecurityEvent } from "@/lib/audit";
@@ -76,7 +76,7 @@ interface UserWithMeetings {
 }
 
 export async function getDashboardStats() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) return null;
 
   const user = await prisma.user.findUnique({
@@ -151,7 +151,7 @@ export async function getDashboardStats() {
 }
 
 export async function getMeetings() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) return [];
 
   return await prisma.meeting.findMany({
@@ -165,7 +165,7 @@ export async function getMeetings() {
 }
 
 export async function getMeetingById(id: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) return null;
 
   return await prisma.meeting.findUnique({
@@ -185,7 +185,7 @@ export async function getMeetingById(id: string) {
  * Update user API key and AI preferences
  */
 export async function updateUserApiKey(apiKey: string, preferredProvider?: string, preferredModel?: string, allowedIps?: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const user = await prisma.user.findUnique({
@@ -195,10 +195,8 @@ export async function updateUserApiKey(apiKey: string, preferredProvider?: strin
 
   if (!user) throw new Error("User not found");
 
-          const encryptedKey = apiKey ? encrypt(apiKey) : undefined;
-
           const data: {
-            apiKey?: string;
+            apiKey?: string | null;
             preferredProvider?: string;
             preferredModel?: string;
             allowedIps?: string;
@@ -207,7 +205,11 @@ export async function updateUserApiKey(apiKey: string, preferredProvider?: strin
             lastUsedAt: new Date()
           };
 
-          if (encryptedKey !== undefined) data.apiKey = encryptedKey;
+          if (apiKey) {
+            data.apiKey = encrypt(apiKey);
+          } else {
+            data.apiKey = null;
+          }
           if (preferredProvider) data.preferredProvider = preferredProvider;
           if (preferredModel) data.preferredModel = preferredModel;
           if (allowedIps !== undefined) data.allowedIps = allowedIps;
@@ -229,7 +231,7 @@ export async function updateUserApiKey(apiKey: string, preferredProvider?: strin
 }
 
 export async function getUserSettings() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) return null;
 
   const user = await prisma.user.findUnique({
@@ -264,7 +266,7 @@ interface CreateMeetingData {
 }
 
 export async function createMeeting(data: CreateMeetingData) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const meeting = await prisma.meeting.create({
@@ -283,7 +285,7 @@ export async function createMeeting(data: CreateMeetingData) {
 }
 
 export async function deleteMeeting(id: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   await prisma.meeting.delete({
@@ -299,7 +301,7 @@ export async function deleteMeeting(id: string) {
 }
 
 export async function updateMeetingTitle(id: string, title: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   return await prisma.meeting.update({
@@ -312,7 +314,7 @@ export async function updateMeetingTitle(id: string, title: string) {
 }
 
 export async function updateMeetingCode(id: string, code: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   return await prisma.meeting.update({
@@ -324,8 +326,8 @@ export async function updateMeetingCode(id: string, code: string) {
   });
 }
 
-export async function createSignedUploadUrl(fileName: string, fileType: string) {
-  const session = await getServerSession(authOptions);
+export async function createSignedUploadUrl(fileName: string) {
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const user = await prisma.user.findUnique({
@@ -354,7 +356,7 @@ export async function createSignedUploadUrl(fileName: string, fileType: string) 
 }
 
 export async function processMeetingAI(meetingId: string, audioUrl: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   try {
@@ -427,7 +429,6 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
       });
       return { success: true };
     } else {
-      console.error("Pipeline failed:", pipelineResponse.error);
       await prisma.meeting.update({
         where: { id: meetingId },
         data: { status: "FAILED" }
@@ -435,7 +436,6 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
       return { success: false, error: pipelineResponse.error };
     }
   } catch (error) {
-    console.error("AI Processing Error:", error);
     await prisma.meeting.update({
       where: { id: meetingId },
       data: { status: "FAILED" }
@@ -451,7 +451,7 @@ interface MeetingUpdateData {
 }
 
 export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PROCESSING" | "FAILED", data?: MeetingUpdateData) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const updateData: {
@@ -503,7 +503,7 @@ export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PRO
 }
 
 export async function getAuditLogs() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const user = await prisma.user.findUnique({
@@ -521,7 +521,7 @@ export async function getAuditLogs() {
 }
 
 export async function getActiveSessions() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const user = await prisma.user.findUnique({
@@ -545,7 +545,7 @@ export async function getActiveSessions() {
 }
 
 export async function revokeSession(sessionId: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const user = await prisma.user.findUnique({

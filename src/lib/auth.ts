@@ -9,7 +9,7 @@ import { NextAuthOptions, Session } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import { Adapter } from "next-auth/adapters";
 import { headers } from "next/headers";
-import { checkLoginRateLimit } from '@/lib/rate-limit';
+import { checkLoginRateLimitWithIP, resetRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const googleId = process.env.GOOGLE_CLIENT_ID?.trim();
@@ -42,20 +42,15 @@ export const authOptions: NextAuthOptions = {
 
         // Validate email format
         const emailSchema = z.string().email();
-        try {
-          emailSchema.parse(credentials.email);
-        } catch (error) {
-          throw new Error("Invalid email format");
-        }
+        emailSchema.parse(credentials.email);
 
         const headerList = await headers();
         const ipAddress = headerList.get("x-forwarded-for")?.split(',')[0] ||
-                         headerList.get("x-real-ip");
-        const userAgent = headerList.get("user-agent");
+                         headerList.get("x-real-ip") || undefined;
 
         try {
-          // Check rate limiting before user lookup
-          const rateLimitResult = await checkLoginRateLimit(credentials.email);
+          // Check rate limiting before user lookup (with IP tracking)
+        const rateLimitResult = await checkLoginRateLimitWithIP(credentials.email, ipAddress);
           if (!rateLimitResult.allowed) {
             throw new Error("Too many login attempts. Please try again later.");
           }
@@ -131,7 +126,6 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Reset rate limit on successful login
-          const { resetRateLimit } = await import('@/lib/rate-limit');
           await resetRateLimit(credentials.email, 'login');
 
           return user;
@@ -163,16 +157,16 @@ export const authOptions: NextAuthOptions = {
           where: { id: user.id },
         });
         if (dbUser && (dbUser as { role?: string }).role) {
-          token.role = (dbUser as { role: string }).role;
+          token.role = (dbUser as { role: string }).role as UserRole;
         }
       }
       return token;
     },
     async session({ session, token }: { session: Session; token: JWT }) {
-      if (token?.sub && session.user) {
+      if (token?.id && session.user) {
         const extendedUser = {
           ...session.user,
-          id: token.sub,
+          id: token.id,
           role: token.role,
         };
         session.user = extendedUser;

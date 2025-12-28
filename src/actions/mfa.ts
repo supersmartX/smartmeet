@@ -2,13 +2,13 @@
 
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import { logSecurityEvent } from "@/lib/audit";
 
 export async function generateMFASecret() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const secret = speakeasy.generateSecret({
@@ -24,7 +24,7 @@ export async function generateMFASecret() {
 }
 
 export async function verifyAndEnableMFA(token: string, secret: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const verified = speakeasy.totp.verify({
@@ -56,7 +56,7 @@ export async function verifyAndEnableMFA(token: string, secret: string) {
 }
 
 export async function disableMFA() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
   const user = await prisma.user.update({

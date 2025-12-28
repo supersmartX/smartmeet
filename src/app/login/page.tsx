@@ -25,11 +25,13 @@ function LoginContent() {
 
   const passwordRequirements = {
     length: formData.password.length >= 8,
+    uppercase: /[A-Z]/.test(formData.password),
+    lowercase: /[a-z]/.test(formData.password),
     number: /\d/.test(formData.password),
-    special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
+    special: /[^A-Za-z0-9]/.test(formData.password),
   };
 
-  const isPasswordStrong = passwordRequirements.length && passwordRequirements.number && passwordRequirements.special;
+  const isPasswordStrong = passwordRequirements.length && passwordRequirements.uppercase && passwordRequirements.lowercase && passwordRequirements.number && passwordRequirements.special;
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -268,6 +270,8 @@ function LoginContent() {
                       ) : (
                         <div className="flex gap-1">
                           <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.length ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                          <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.uppercase ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                          <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.lowercase ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
                           <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.number ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
                           <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.special ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
                         </div>
@@ -292,6 +296,14 @@ function LoginContent() {
                     <li className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 ${passwordRequirements.length ? 'text-emerald-500' : 'text-zinc-400'}`}>
                       <div className={`w-1 h-1 rounded-full ${passwordRequirements.length ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
                       8+ Characters
+                    </li>
+                    <li className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 ${passwordRequirements.uppercase ? 'text-emerald-500' : 'text-zinc-400'}`}>
+                      <div className={`w-1 h-1 rounded-full ${passwordRequirements.uppercase ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                      One Uppercase
+                    </li>
+                    <li className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 ${passwordRequirements.lowercase ? 'text-emerald-500' : 'text-zinc-400'}`}>
+                      <div className={`w-1 h-1 rounded-full ${passwordRequirements.lowercase ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                      One Lowercase
                     </li>
                     <li className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 ${passwordRequirements.number ? 'text-emerald-500' : 'text-zinc-400'}`}>
                       <div className={`w-1 h-1 rounded-full ${passwordRequirements.number ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
@@ -370,15 +382,23 @@ function LoginContent() {
               <div className={`grid gap-4 ${Object.values(providers).filter(p => p.id !== "credentials").length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
                 {providers.google && (
                   <button
-                    onClick={() => {
-                    console.log('Google OAuth clicked');
+                    onClick={async () => {
+                    console.log('🚀 Google OAuth clicked');
                     try {
-                      signIn("google", { 
+                      const result = await signIn("google", {
                         callbackUrl: '/dashboard',
-                        redirect: true 
+                        redirect: false
                       });
+
+                      if (result?.error) {
+                        console.error('❌ Google OAuth error:', result.error);
+                        setError(`Google login failed: ${result.error}`);
+                      } else if (result?.ok) {
+                        // Successful initiation, redirect will happen
+                        console.log('✅ Google OAuth initiated successfully');
+                      }
                     } catch (error) {
-                      console.error('Google OAuth error:', error);
+                      console.error('❌ Google OAuth exception:', error);
                       setError('Failed to initiate Google login. Please try again.');
                     }
                   }}
@@ -412,15 +432,23 @@ function LoginContent() {
 
                 {providers.github && (
                   <button
-                    onClick={() => {
-                    console.log('GitHub OAuth clicked');
+                    onClick={async () => {
+                    console.log('🚀 GitHub OAuth clicked');
                     try {
-                      signIn("github", { 
+                      const result = await signIn("github", {
                         callbackUrl: '/dashboard',
-                        redirect: true 
+                        redirect: false
                       });
+
+                      if (result?.error) {
+                        console.error('❌ GitHub OAuth error:', result.error);
+                        setError(`GitHub login failed: ${result.error}`);
+                      } else if (result?.ok) {
+                        // Successful initiation, redirect will happen
+                        console.log('✅ GitHub OAuth initiated successfully');
+                      }
                     } catch (error) {
-                      console.error('GitHub OAuth error:', error);
+                      console.error('❌ GitHub OAuth exception:', error);
                       setError('Failed to initiate GitHub login. Please try again.');
                     }
                   }}

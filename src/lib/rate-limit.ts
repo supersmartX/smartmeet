@@ -38,12 +38,12 @@ export async function checkApiRateLimit(key: string): Promise<RateLimitResult> {
       remaining: res.remainingPoints,
       reset: res.msBeforeNext,
     };
-  } catch (rateLimiterRes: any) {
+  } catch (rateLimiterRes: unknown) {
     return {
       allowed: false,
       limit: apiRateLimiter.points,
       remaining: 0,
-      reset: rateLimiterRes.msBeforeNext,
+      reset: (rateLimiterRes as { msBeforeNext: number }).msBeforeNext,
     };
   }
 }
@@ -60,12 +60,12 @@ export async function checkLoginRateLimit(key: string): Promise<RateLimitResult>
       remaining: res.remainingPoints,
       reset: res.msBeforeNext,
     };
-  } catch (rateLimiterRes: any) {
+  } catch (rateLimiterRes: unknown) {
     return {
       allowed: false,
       limit: loginRateLimiter.points,
       remaining: 0,
-      reset: rateLimiterRes.msBeforeNext,
+      reset: (rateLimiterRes as { msBeforeNext: number }).msBeforeNext,
     };
   }
 }
@@ -82,14 +82,39 @@ export async function checkGeneralRateLimit(key: string): Promise<RateLimitResul
       remaining: res.remainingPoints,
       reset: res.msBeforeNext,
     };
-  } catch (rateLimiterRes: any) {
+  } catch (rateLimiterRes: unknown) {
     return {
       allowed: false,
       limit: generalRateLimiter.points,
       remaining: 0,
-      reset: rateLimiterRes.msBeforeNext,
+      reset: (rateLimiterRes as { msBeforeNext: number }).msBeforeNext,
     };
   }
+}
+
+/**
+ * Enhanced login rate limiting with IP tracking
+ */
+export async function checkLoginRateLimitWithIP(email: string, ip?: string): Promise<RateLimitResult> {
+  // Rate limit by email first
+  const emailResult = await checkLoginRateLimit(email);
+  if (!emailResult.allowed) {
+    return emailResult;
+  }
+  
+  // Also rate limit by IP if available (prevents email rotation attacks)
+  if (ip) {
+    const ipKey = `login:ip:${ip}`;
+    const ipResult = await checkLoginRateLimit(ipKey);
+    if (!ipResult.allowed) {
+      return {
+        ...ipResult,
+        remaining: Math.min(emailResult.remaining || 0, ipResult.remaining || 0)
+      };
+    }
+  }
+  
+  return emailResult;
 }
 
 /**

@@ -22,8 +22,7 @@ export async function logSecurityEvent(
         userAgent,
       },
     });
-  } catch (error) {
-    console.error("Failed to write audit log:", error);
-    // Don't throw error to prevent blocking main flow
+  } catch {
+    // Silently handle audit log errors to prevent blocking main flow
   }
 }

@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import { authOptions } from "./auth";
+import { prisma } from "@/lib/prisma";
 
 // Extended JWT token type for OAuth
 interface ExtendedJWT {
@@ -33,24 +34,49 @@ export const enhancedAuthOptions: NextAuthOptions = {
   ...authOptions,
   callbacks: {
     ...authOptions.callbacks,
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       try {
-        // Handle OAuth account linking
+        // Handle OAuth account linking with enhanced security
         if (account?.provider && account.type === 'oauth') {
-          // Check if user exists with this email
-          const existingUser = await authOptions.adapter?.getUserByEmail?.(user.email!);
-          
-          if (existingUser && existingUser.email !== user.email) {
-            return `/login?error=OAuthAccountNotLinked`;
+          // Validate OAuth state parameter for CSRF protection
+          if (!account.state) {
+            console.warn('⚠️ Missing OAuth state parameter - possible CSRF attack');
+            return '/login?error=OAuthStateMissing';
           }
-          
-          console.log('✅ OAuth signin allowed');
+
+          // Validate callback URL matches expected domain
+          const expectedUrl = process.env.NEXTAUTH_URL;
+          if (account.callbackUrl && typeof account.callbackUrl === 'string' && expectedUrl && !account.callbackUrl.startsWith(expectedUrl)) {
+            console.warn('⚠️ OAuth callback URL mismatch - possible redirect attack');
+            return '/login?error=OAuthCallbackInvalid';
+          }
+
+          // Check if user exists with this email using Prisma directly
+          const existingUser = user.email ? await prisma.user.findUnique({
+            where: { email: user.email }
+          }) : null;
+
+          if (existingUser) {
+            // Check if this OAuth account is already linked to this user
+            const existingAccount = await prisma.account.findFirst({
+              where: {
+                userId: existingUser.id,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+            });
+
+            if (!existingAccount) {
+              return `/login?error=OAuthAccountNotLinked`;
+            }
+          }
+
           return true;
         }
         
         return true;
-      } catch (error) {
-        console.error('🚨 OAuth signIn callback error:', error);
+      } catch {
+        console.error('OAuth signin error occurred');
         return `/login?error=OAuthSigninFailed`;
       }
     },
@@ -75,13 +101,13 @@ export const enhancedAuthOptions: NextAuthOptions = {
                 image: profile.image,
               };
             }
-          } catch (tokenError) {
-            console.error('🚨 Error setting OAuth properties on token:', tokenError);
+          } catch {
+            // Silently handle token errors
           }
         }
         
         return token;
-      } catch (error) {
+      } catch {
         return token;
       }
     },
@@ -109,32 +135,11 @@ export const enhancedAuthOptions: NextAuthOptions = {
         }
         
         return session;
-      } catch (error) {
-        console.error('🚨 OAuth session callback error:', error);
+      } catch {
         return session;
       }
     },
   },
   
-  // Enhanced error handling
-  logger: {
-    error: (error: any) => {
-      // Log only critical errors in production
-      if (process.env.NODE_ENV === 'development') {
-        console.error(`NextAuth Error [${error?.code}]:`, error?.metadata);
-      }
-    },
-    warn: (code: any) => {
-      // Log warnings only in development
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(`NextAuth Warning [${code}]`);
-      }
-    },
-    debug: (code: any, metadata: any) => {
-      // Debug logs only in development
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`NextAuth Debug [${code}]:`, metadata);
-      }
-    }
-  }
+
 };
