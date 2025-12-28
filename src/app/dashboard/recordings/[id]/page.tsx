@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
+import Script from "next/script"
 
 import { highlightText } from "@/utils/text"
 import { getMeetingById, updateMeetingCode } from "@/actions/meeting"
@@ -31,9 +32,7 @@ import {
 type EditorTab = "transcript" | "summary" | "code" | "tests" | "docs"
 
 export default function RecordingDetailPage() {
-  const { data: session } = useSession()
   const params = useParams()
-  const user = session?.user
   interface Meeting {
     id: string;
     title: string;
@@ -81,24 +80,43 @@ export default function RecordingDetailPage() {
   const [isLogicGenerated, setIsLogicGenerated] = useState(false)
   const [isGeneratingLogic, setIsGeneratingLogic] = useState(false)
   
+  // SSR Protection: Check authentication and authorization
+  const { data: session, status } = useSession()
+  const [isAuthorized, setIsAuthorized] = useState(false)
+  
   useEffect(() => {
+    // Check authentication
+    if (status === 'unauthenticated') {
+      setError("Please sign in to view this meeting.")
+      setIsLoading(false)
+      return
+    }
+    
+    if (status === 'authenticated' && session?.user?.id) {
+      setIsAuthorized(true)
+    }
+  }, [status, session])
+  
+  useEffect(() => {
+    if (!isAuthorized || !params.id) return
+    
     const fetchMeeting = async () => {
       try {
         setIsLoading(true)
         setError(null)
-        if (params.id) {
-          const data = await getMeetingById(params.id as string)
-          if (!data) {
-            setError("Meeting not found.")
-          } else {
-            setMeeting(data)
-            if (data?.code) {
-              setIsLogicGenerated(true)
-            }
+        
+        const data = await getMeetingById(params.id as string)
+        if (!data) {
+          setError("Meeting not found.")
+        } else if (data.userId !== session?.user?.id) {
+          setError("You don't have permission to view this meeting.")
+        } else {
+          setMeeting(data)
+          if (data?.code) {
+            setIsLogicGenerated(true)
           }
         }
       } catch (err) {
-        console.error("Fetch meeting error:", err)
         setError("Failed to load meeting details. Please try again.")
       } finally {
         setIsLoading(false)
@@ -171,19 +189,23 @@ export default function RecordingDetailPage() {
   }
 
   useEffect(() => {
-    // Persist active tab in URL query params if needed, or local storage
-    const savedTab = localStorage.getItem("smartmeet_active_tab") as EditorTab
-    if (savedTab && tabs.some(t => t.id === savedTab)) {
-      // Use requestAnimationFrame to avoid synchronous state update
-      requestAnimationFrame(() => {
-        setActiveTab(savedTab)
-      })
+    // Persist active tab in session storage (client-side only)
+    if (typeof window !== 'undefined') {
+      const savedTab = sessionStorage.getItem("smartmeet_active_tab") as EditorTab
+      if (savedTab && tabs.some(t => t.id === savedTab)) {
+        // Use requestAnimationFrame to avoid synchronous state update
+        requestAnimationFrame(() => {
+          setActiveTab(savedTab)
+        })
+      }
     }
   }, [tabs])
 
   const handleTabChange = (tabId: EditorTab) => {
     setActiveTab(tabId)
-    localStorage.setItem("smartmeet_active_tab", tabId)
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem("smartmeet_active_tab", tabId)
+    }
   }
 
   const filteredTranscript = (meeting?.transcripts || []).filter((item: Transcript) =>
@@ -290,6 +312,56 @@ export default function RecordingDetailPage() {
               Back to Dashboard
             </Link>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // SSR Protection: Show authentication error or redirect
+  if (status === 'loading') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-zinc-950">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-via mb-4" />
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</p>
+      </div>
+    )
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-zinc-950">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-8 h-8 text-zinc-400" />
+          </div>
+          <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-2">Authentication Required</h3>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">Please sign in to view this meeting.</p>
+          <Link 
+            href="/login" 
+            className="w-full py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-black/10"
+          >
+            Sign In
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && error.includes("permission")) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-zinc-950">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-8 h-8 text-zinc-400" />
+          </div>
+          <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-2">Access Denied</h3>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">You don't have permission to view this meeting.</p>
+          <Link 
+            href="/dashboard" 
+            className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+          >
+            Back to Dashboard
+          </Link>
         </div>
       </div>
     )
@@ -653,7 +725,7 @@ export default function RecordingDetailPage() {
                   </div>
                   <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                      Hello {user?.name}! {meeting?.transcripts?.length > 0 ? "I've analyzed the transcript. You can ask me anything about the meeting discussions, blockers, or next steps." : "The transcript is still being processed. Once it's ready, I can help you analyze the meeting content."}
+                      Hello {session?.user?.name}! {meeting?.transcripts?.length > 0 ? "I've analyzed the transcript. You can ask me anything about the meeting discussions, blockers, or next steps." : "The transcript is still being processed. Once it's ready, I can help you analyze the meeting content."}
                     </p>
                   </div>
                 </div>

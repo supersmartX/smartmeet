@@ -79,68 +79,54 @@ function handleApiError<T>(error: unknown): ApiResponse<T> {
 }
 
 /**
- * Make authenticated API request
+ * Make authenticated API request through server-side proxy
  */
-let lastRequestTime = 0;
-const RATE_LIMIT_MS = 1000; // 1 request per second
-
 async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   data?: FormData | Record<string, unknown>,
   apiKey: string = ""
 ): Promise<ApiResponse<T>> {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
-
-  if (timeSinceLastRequest < RATE_LIMIT_MS) {
-    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_MS - timeSinceLastRequest));
-  }
-
-  lastRequestTime = Date.now();
-
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const headers: Record<string, string> = {
-      "Accept": "application/json",
-    };
-
-    if (!(data instanceof FormData)) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    if (apiKey) {
-      headers["Authorization"] = `Bearer ${apiKey}`;
-    }
-
-    const config: RequestInit = {
+    // Use server-side proxy for rate limiting and security
+    const proxyUrl = "/api/proxy";
+    
+    const proxyData = {
+      endpoint,
       method,
-      headers,
-      credentials: "include",
+      data: data instanceof FormData ? Object.fromEntries(data.entries()) : data,
+      apiKey,
     };
 
-    if (data) {
-      config.body = data instanceof FormData ? data : JSON.stringify(data);
-    }
+    const response = await fetch(proxyUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(proxyData),
+    });
 
-    const response = await fetch(url, config);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ 
-        error: `HTTP Error ${response.status}: ${response.statusText}` 
-      }));
+    const result = await response.json();
+    
+    // Handle rate limit errors
+    if (response.status === 429) {
       return {
         success: false,
-        error: errorData.error || response.statusText,
-        message: `API request failed with status ${response.status}`
+        error: "Rate limit exceeded",
+        message: "Too many requests. Please try again later.",
       };
     }
 
-    const responseData = await response.json();
-    return {
-      success: true,
-      data: responseData,
-    };
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || "Request failed",
+        message: result.message || "API request failed",
+      };
+    }
+
+    return result;
   } catch (error) {
     return handleApiError(error);
   }

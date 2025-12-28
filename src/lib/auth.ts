@@ -9,15 +9,8 @@ import { NextAuthOptions, Session } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import { Adapter } from "next-auth/adapters";
 import { headers } from "next/headers";
-import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { checkLoginRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
-
-// Rate limiter for login attempts
-const loginLimiter = new RateLimiterMemory({
-  keyPrefix: 'login_fail',
-  points: 5, // 5 attempts
-  duration: 60 * 15, // 15 minutes
-});
 
 const googleId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -30,12 +23,10 @@ export const authOptions: NextAuthOptions = {
     ...(googleId && googleSecret ? [GoogleProvider({
       clientId: googleId,
       clientSecret: googleSecret,
-      allowDangerousEmailAccountLinking: true,
     })] : []),
     ...(githubId && githubSecret ? [GitHubProvider({
       clientId: githubId,
       clientSecret: githubSecret,
-      allowDangerousEmailAccountLinking: true,
     })] : []),
     CredentialsProvider({
       name: "credentials",
@@ -64,9 +55,8 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // Check rate limiting before user lookup
-          try {
-            await loginLimiter.consume(credentials.email);
-          } catch (rateLimiterRes) {
+          const rateLimitResult = await checkLoginRateLimit(credentials.email);
+          if (!rateLimitResult.allowed) {
             throw new Error("Too many login attempts. Please try again later.");
           }
 
@@ -140,16 +130,16 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Email not verified.");
           }
 
+          // Reset rate limit on successful login
+          const { resetRateLimit } = await import('@/lib/rate-limit');
+          await resetRateLimit(credentials.email, 'login');
+
           return user;
         } catch (error) {
-          console.error("Auth authorize error:", error);
-          console.error("Production Debug - Credentials:", {
-            hasEmail: !!credentials?.email,
-            hasPassword: !!credentials?.password,
-            hasMfaToken: !!credentials?.mfaToken,
-            nextauthUrl: process.env.NEXTAUTH_URL,
-            nextauthSecret: !!process.env.NEXTAUTH_SECRET
-          });
+          // Log errors only in development
+          if (process.env.NODE_ENV === 'development') {
+            console.error("Auth authorize error:", error);
+          }
           throw error;
         }
       },

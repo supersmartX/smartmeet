@@ -34,23 +34,13 @@ export const enhancedAuthOptions: NextAuthOptions = {
   callbacks: {
     ...authOptions.callbacks,
     async signIn({ user, account, profile }) {
-      console.log('🔍 OAuth signIn callback:', {
-        user: user?.email || user?.id,
-        account: account?.provider,
-        accountType: account?.type,
-        profile: profile?.email || 'no email'
-      });
-      
       try {
         // Handle OAuth account linking
         if (account?.provider && account.type === 'oauth') {
-          console.log(`✅ Processing ${account.provider} OAuth signin`);
-          
           // Check if user exists with this email
           const existingUser = await authOptions.adapter?.getUserByEmail?.(user.email!);
           
           if (existingUser && existingUser.email !== user.email) {
-            console.log('❌ Email already exists with different provider');
             return `/login?error=OAuthAccountNotLinked`;
           }
           
@@ -69,13 +59,10 @@ export const enhancedAuthOptions: NextAuthOptions = {
       try {
         // Enhanced JWT handling for OAuth
         if (!token) {
-          console.error('🚨 JWT callback: token is undefined');
           return token;
         }
         
         if (account?.provider && account.type === 'oauth') {
-          console.log(`🔍 Processing ${account.provider} OAuth JWT`);
-          
           // Safely add OAuth provider info to token
           try {
             (token as ExtendedJWT).oauthProvider = account.provider;
@@ -95,7 +82,6 @@ export const enhancedAuthOptions: NextAuthOptions = {
         
         return token;
       } catch (error) {
-        console.error('🚨 OAuth JWT callback error:', error);
         return token;
       }
     },
@@ -104,7 +90,6 @@ export const enhancedAuthOptions: NextAuthOptions = {
       try {
         // Enhanced session handling for OAuth
         if (!session || !token) {
-          console.error('🚨 Session callback: session or token is undefined', { session: !!session, token: !!token });
           return session;
         }
         
@@ -112,8 +97,6 @@ export const enhancedAuthOptions: NextAuthOptions = {
         
         // Safely check for OAuth properties
         if (extendedToken?.oauthProvider) {
-          console.log(`✅ Adding OAuth info to session: ${extendedToken.oauthProvider}`);
-          
           const extendedSession = session as ExtendedSession;
           extendedSession.user.oauthProvider = extendedToken.oauthProvider;
           extendedSession.user.oauthAccountId = extendedToken.oauthAccountId;
@@ -135,14 +118,23 @@ export const enhancedAuthOptions: NextAuthOptions = {
   
   // Enhanced error handling
   logger: {
-    error: (code, metadata) => {
-      console.error(`🚨 NextAuth Error [${code}]:`, metadata);
+    error: (error: any) => {
+      // Log only critical errors in production
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`NextAuth Error [${error?.code}]:`, error?.metadata);
+      }
     },
-    warn: (code) => {
-      console.warn(`⚠️ NextAuth Warning [${code}]`);
+    warn: (code: any) => {
+      // Log warnings only in development
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`NextAuth Warning [${code}]`);
+      }
     },
-    debug: (code, metadata) => {
-      console.debug(`🔍 NextAuth Debug [${code}]:`, metadata);
+    debug: (code: any, metadata: any) => {
+      // Debug logs only in development
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(`NextAuth Debug [${code}]:`, metadata);
+      }
     }
   }
 };
