@@ -386,7 +386,7 @@ function LoginContent() {
                     console.log('🚀 Google OAuth clicked');
                     try {
                       const result = await signIn("google", {
-                        callbackUrl: '/dashboard',
+                        callbackUrl: `${window.location.origin}/dashboard`,
                         redirect: false
                       });
 
@@ -436,7 +436,7 @@ function LoginContent() {
                     console.log('🚀 GitHub OAuth clicked');
                     try {
                       const result = await signIn("github", {
-                        callbackUrl: '/dashboard',
+                        callbackUrl: `${window.location.origin}/dashboard`,
                         redirect: false
                       });
 
