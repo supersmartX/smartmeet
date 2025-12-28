@@ -38,12 +38,6 @@ export const enhancedAuthOptions: NextAuthOptions = {
       try {
         // Handle OAuth account linking with enhanced security
         if (account?.provider && account.type === 'oauth') {
-          // Validate OAuth state parameter for CSRF protection
-          if (!account.state) {
-            console.warn('⚠️ Missing OAuth state parameter - possible CSRF attack');
-            return '/login?error=OAuthStateMissing';
-          }
-
           // Validate callback URL matches expected domain
           const expectedUrl = process.env.NEXTAUTH_URL;
           if (account.callbackUrl && typeof account.callbackUrl === 'string' && expectedUrl && !account.callbackUrl.startsWith(expectedUrl)) {
