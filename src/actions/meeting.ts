@@ -523,8 +523,9 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       });
       return { success: true };
     } else {
+      console.error("Pipeline failure details:", pipelineResponse.error || pipelineResponse.message);
       await updateMeetingStatus(meetingId, "FAILED");
-      return { success: false, error: pipelineResponse.error || "AI Pipeline failed" };
+      return { success: false, error: pipelineResponse.error || pipelineResponse.message || "AI Pipeline failed" };
     }
   } catch (error: unknown) {
     console.error("Process meeting AI error:", error);
