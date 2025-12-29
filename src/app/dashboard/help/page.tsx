@@ -13,6 +13,7 @@ import {
   Video,
   Activity
 } from "lucide-react"
+import StructuredData from "@/components/StructuredData"
 
 const categories = [
   { title: "Getting Started", icon: Zap, desc: "Learn how to use the AI pipeline effectively." },
@@ -57,6 +58,19 @@ export default function HelpPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full flex flex-col gap-10 animate-in fade-in duration-700">
+      <StructuredData 
+        type="FAQPage" 
+        data={{
+          mainEntity: faqs.map(faq => ({
+            "@type": "Question",
+            "name": faq.q,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": faq.a
+            }
+          }))
+        }} 
+      />
       {/* Header */}
       <header className="text-center space-y-4">
         <h1 className="text-4xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">How can we help?</h1>
@@ -162,7 +176,7 @@ export default function HelpPage() {
                 </div>
               </div>
               <button 
-                onClick={() => window.location.href = 'mailto:support@supersmartx.ai'}
+                onClick={() => window.location.href = 'mailto:support@supersmartx.com'}
                 className="w-full py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg"
               >
                 Start Conversation

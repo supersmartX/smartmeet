@@ -15,8 +15,47 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SupersmartX AI",
-  description: "AI-Powered Meeting Intelligence",
+  title: {
+    default: "SupersmartX AI | Meeting Intelligence for Engineers",
+    template: "%s | SupersmartX AI"
+  },
+  description: "Transform your meetings into structured intelligence. Automated transcription, AI summaries, and production-ready code generation from your discussions.",
+  keywords: ["AI Meeting Assistant", "Meeting Transcription", "Engineering Intelligence", "Automated Summaries", "Meeting to Code"],
+  authors: [{ name: "SupersmartX Team" }],
+  creator: "SupersmartX",
+  publisher: "SupersmartX",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL("https://supersmartx.com"),
+   alternates: {
+     canonical: "/",
+   },
+   openGraph: {
+     title: "SupersmartX AI | Meeting Intelligence",
+     description: "AI-Powered Meeting Intelligence for capturing, transcribing, and summarizing your meetings into actionable engineering assets.",
+     url: "https://supersmartx.com",
+    siteName: "SupersmartX AI",
+    images: [
+      {
+        url: "/logoX.png", // Using your existing logo as a fallback OG image
+        width: 1200,
+        height: 630,
+        alt: "SupersmartX AI Platform",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SupersmartX AI | Meeting Intelligence",
+    description: "Transform meetings into code and documentation with AI.",
+    images: ["/logoX.png"],
+    creator: "@supersmartx",
+  },
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
@@ -26,6 +65,17 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export default function RootLayout({

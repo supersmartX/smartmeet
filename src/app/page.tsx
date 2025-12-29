@@ -5,10 +5,12 @@ import HowItWorks from "@/components/HowItWorks"
 import Pricing from "@/components/Pricing"
 import CTA from "@/components/CTA"
 import Footer from "@/components/Footer"
+import StructuredData from "@/components/StructuredData"
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
+      <StructuredData />
       <Navbar />
       <main>
         <Hero />

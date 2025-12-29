@@ -139,14 +139,14 @@ export async function OPTIONS() {
   
   // Define allowed origins - update with your actual domains
   const ALLOWED_ORIGINS = [
-    'https://supersmartx.ai',
-    'https://www.supersmartx.ai',
+    'https://supersmartx.com',
+    'https://www.supersmartx.com',
     'http://localhost:3000' // for development
   ];
   
   // Check if origin is allowed
   const isAllowed = ALLOWED_ORIGINS.includes(origin) || 
-                   origin.endsWith('.supersmartx.ai');
+                   origin.endsWith('.supersmartx.com');
   
   return NextResponse.json({}, {
     status: 200,
