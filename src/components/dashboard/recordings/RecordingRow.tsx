@@ -175,15 +175,22 @@ export function RecordingRow({
       <td className="px-6 py-6 hidden md:table-cell">
         <span className="text-sm text-zinc-500 font-bold">{recording.duration || "0:00"}</span>
       </td>
-      <td className="px-4 sm:px-8 py-4 sm:py-6 text-right">
-        <div className="flex items-center justify-end gap-2 sm:gap-4">
-          <div className={`hidden sm:inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+      <td className="px-6 py-6 hidden lg:table-cell">
+        <span className="text-sm text-zinc-500 font-bold">{recording.participants || 0}</span>
+      </td>
+      <td className="px-6 py-6 hidden sm:table-cell">
+        <div className="flex items-center justify-end">
+          <div className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
             status === "COMPLETED" 
               ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
               : "bg-amber-500/10 text-amber-600 border-amber-500/20"
           }`}>
             {status}
           </div>
+        </div>
+      </td>
+      <td className="px-4 sm:px-8 py-4 sm:py-6 text-right">
+        <div className="flex items-center justify-end">
           <div className="relative" ref={menuRef}>
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
