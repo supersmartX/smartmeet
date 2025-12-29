@@ -98,31 +98,52 @@ export default function RecordingDetailPage() {
   useEffect(() => {
     if (!isAuthorized || !params.id) return
     
-    const fetchMeeting = async () => {
+    let pollInterval: NodeJS.Timeout | null = null
+
+    const fetchMeeting = async (isPolling = false) => {
       try {
-        setIsLoading(true)
+        if (!isPolling) setIsLoading(true)
         setError(null)
         
         const result = await getMeetingById(params.id as string)
         if (!result.success || !result.data) {
           setError(result.error || "Meeting not found.")
+          if (pollInterval) clearInterval(pollInterval)
         } else if (result.data.userId !== session?.user?.id) {
           setError("You don't have permission to view this meeting.")
+          if (pollInterval) clearInterval(pollInterval)
         } else {
           setMeeting(result.data)
           if (result.data?.code) {
             setIsLogicGenerated(true)
           }
+          
+          // Stop polling if completed or failed
+          if (result.data.status !== 'PROCESSING' && pollInterval) {
+            clearInterval(pollInterval)
+          }
         }
       } catch (err) {
         console.error("Fetch meeting error:", err)
-        setError("Failed to load meeting details. Please try again.")
+        if (!isPolling) setError("Failed to load meeting details. Please try again.")
       } finally {
-        setIsLoading(false)
+        if (!isPolling) setIsLoading(false)
       }
     }
+
     fetchMeeting()
-  }, [params.id, isAuthorized, session?.user?.id])
+
+    // Start polling if status is PROCESSING
+    pollInterval = setInterval(() => {
+      if (meeting?.status === 'PROCESSING' || !meeting) {
+        fetchMeeting(true)
+      }
+    }, 5000)
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval)
+    }
+  }, [params.id, isAuthorized, session?.user?.id, meeting?.status])
 
   // Check if meeting is technical based on keywords
   const isTechnicalMeeting = meeting?.transcripts?.some((item: Transcript) => 
@@ -162,10 +183,10 @@ export default function RecordingDetailPage() {
   const tabs = useMemo(() => [
     { id: "transcript", label: "Transcript", icon: MessageSquare, ext: "" },
     { id: "summary", label: "AI Summary", icon: Sparkles, ext: "" },
-    { id: "code", label: "Meeting Logic", icon: Code, ext: "", hidden: !isLogicGenerated && !meeting?.code },
-    { id: "tests", label: "Compliance", icon: CheckCircle2, ext: "", hidden: !isLogicGenerated && !testResults && !meeting?.testResults },
-    { id: "docs", label: "Documentation", icon: FileText, ext: "", hidden: !isLogicGenerated && !planResult && !meeting?.projectDoc },
-  ], [isLogicGenerated, meeting?.code, meeting?.testResults, meeting?.projectDoc, testResults, planResult]) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
+    { id: "code", label: "Meeting Logic", icon: Code, ext: "", hidden: !isLogicGenerated && !meeting?.code && meeting?.status !== 'PROCESSING' },
+    { id: "tests", label: "Compliance", icon: CheckCircle2, ext: "", hidden: !isLogicGenerated && !testResults && !meeting?.testResults && meeting?.status !== 'PROCESSING' },
+    { id: "docs", label: "Documentation", icon: FileText, ext: "", hidden: !isLogicGenerated && !planResult && !meeting?.projectDoc && meeting?.status !== 'PROCESSING' },
+  ], [isLogicGenerated, meeting?.code, meeting?.testResults, meeting?.projectDoc, testResults, planResult, meeting?.status]) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
 
   const [terminalTab, setTerminalTab] = useState<"chat" | "context">("chat")
 
@@ -315,11 +336,11 @@ export default function RecordingDetailPage() {
   const suggestions: string[] = []
 
   const journeySteps = [
-    { label: "Captured", status: "completed" as const },
-    { label: "Transcribed", status: "completed" as const },
-    { label: "AI Summary", status: "completed" as const },
-    { label: "Logic", status: isLogicGenerated ? ("completed" as const) : ("pending" as const) },
-    { label: "Documentation", status: isLogicGenerated ? ("completed" as const) : ("pending" as const) },
+    { label: "Captured", status: meeting ? "completed" as const : "pending" as const },
+    { label: "Transcribed", status: (meeting?.transcripts?.length || 0) > 0 ? "completed" as const : "pending" as const },
+    { label: "AI Summary", status: meeting?.summary ? "completed" as const : "pending" as const },
+    { label: "Logic", status: (isLogicGenerated || meeting?.code) ? "completed" as const : "pending" as const },
+    { label: "Documentation", status: (planResult || meeting?.projectDoc) ? "completed" as const : "pending" as const },
   ]
 
   const [copyStatus, setCopyStatus] = useState("Copy Code")
