@@ -80,8 +80,12 @@ async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   data?: FormData | Record<string, unknown>,
-  apiKey: string = ""
+  apiKey: string = "",
+  timeout: number = 30000 // Default 30s timeout
 ): Promise<ApiResponse<T>> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
   try {
     // Use server-side proxy for rate limiting and security
     const proxyUrl = "/api/proxy";
@@ -100,7 +104,10 @@ async function makeApiRequest<T>(
       },
       credentials: "include",
       body: JSON.stringify(proxyData),
+      signal: controller.signal,
     });
+
+    clearTimeout(id);
 
     const result = await response.json();
     
@@ -122,7 +129,15 @@ async function makeApiRequest<T>(
     }
 
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
+    clearTimeout(id);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        success: false,
+        error: "Request timeout",
+        message: `Request exceeded ${timeout / 1000} seconds`
+      };
+    }
     return handleApiError(error);
   }
 }

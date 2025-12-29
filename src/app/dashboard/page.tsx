@@ -6,28 +6,11 @@ import { useState, useMemo, useEffect } from "react"
 import { highlightText } from "@/utils/text"
 import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, Calendar, HardDrive, Users } from "lucide-react"
 import { getMeetings, getDashboardStats } from "@/actions/meeting"
+import { Meeting, DashboardStat } from "@/types/meeting"
+import { useToast } from "@/hooks/useToast"
+import { Toast } from "@/components/Toast"
 
 import { useRouter } from "next/navigation"
-
-interface Meeting {
-  id: string;
-  title: string;
-  date: Date;
-  duration?: string;
-  participants?: number;
-  status: string;
-  userId: string;
-}
-
-interface DashboardStat {
-  label: string;
-  value: string;
-  icon: string;
-  color: string;
-  bg: string;
-  trend: string;
-  href: string;
-}
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -38,23 +21,32 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showToast, setShowToast] = useState(false)
+  const { toast, showToast } = useToast()
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true)
         setError(null)
-        setShowToast(true)
-        const [meetingsData, statsData] = await Promise.all([
+        
+        const [meetingsResult, statsResult] = await Promise.all([
           getMeetings(),
           getDashboardStats()
         ])
-        setRecordings(meetingsData)
-        if (statsData) setStats(statsData)
-        
-        // Hide toast after 3 seconds
-        setTimeout(() => setShowToast(false), 3000)
+
+        if (meetingsResult.success && meetingsResult.data) {
+          setRecordings(meetingsResult.data)
+        } else if (!meetingsResult.success) {
+          setError(meetingsResult.error || "Failed to load meetings")
+          showToast(meetingsResult.error || "Failed to load meetings", "error")
+        }
+
+        if (statsResult.success && statsResult.data) {
+          setStats(statsResult.data)
+        } else if (!statsResult.success) {
+          setError(statsResult.error || "Failed to load stats")
+          showToast(statsResult.error || "Failed to load stats", "error")
+        }
       } catch (err) {
         console.error("Dashboard fetch error:", err)
         setError("Failed to load dashboard data. Please try again.")
@@ -103,6 +95,7 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-8 animate-in fade-in duration-700">
       {/* Welcome Header */}
+      <Toast {...toast} />
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -330,15 +323,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="bg-zinc-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10">
-            <Sparkles className="w-4 h-4 text-brand-via" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Recording pipeline is initializing...</span>
-          </div>
-        </div>
-      )}
+
     </>
   )}
 </div>

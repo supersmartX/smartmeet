@@ -60,17 +60,26 @@ export const enhancedAuthOptions: NextAuthOptions = {
               },
             });
 
-          if (!existingAccount) {
-            return false;
-          }
+            if (!existingAccount) {
+              // If account doesn't exist but user does, it means they are trying to 
+              // sign in with a new provider for an existing email.
+              // In Next.js Auth, if allowDangerousEmailAccountLinking is true, it might link.
+              // Here we can choose to auto-link if the email is verified, or redirect to an error page.
+              // For now, let's redirect to a specific error page that explains they should link the account.
+              throw new Error("AccountLinkRequired");
+            }
           }
 
           return true;
         }
         
         return true;
-      } catch {
-        console.error('OAuth signin error occurred');
+      } catch (error: unknown) {
+        console.error('OAuth signin error occurred:', error);
+        if (error instanceof Error && error.message === "AccountLinkRequired") {
+          // This will be caught by NextAuth and redirected to the error page with this message
+          throw error;
+        }
         return false;
       }
     },

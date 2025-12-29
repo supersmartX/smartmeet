@@ -110,7 +110,13 @@ function LoginContent() {
 
     try {
       if (mode === "signup") {
-        await signUp(formData);
+        const signUpResult = await signUp(formData);
+        
+        if (!signUpResult.success) {
+          setError(signUpResult.error || "Failed to create account");
+          return;
+        }
+
         // After signup, sign in automatically
         const result = await signIn("credentials", {
           email: formData.email,
@@ -264,11 +270,11 @@ function LoginContent() {
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {!mfaRequired && formData.password && (
-                    <div className="transition-all duration-300">
+                    <div className="transition-all duration-300" aria-live="polite">
                       {isPasswordStrong ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 animate-in zoom-in" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 animate-in zoom-in" aria-hidden="true" />
                       ) : (
-                        <div className="flex gap-1">
+                        <div className="flex gap-1" role="img" aria-label={`Password strength: ${Object.values(passwordRequirements).filter(Boolean).length} of 5 requirements met`}>
                           <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.length ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
                           <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.uppercase ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
                           <div className={`h-1 w-2 rounded-full transition-colors ${passwordRequirements.lowercase ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
@@ -283,8 +289,9 @@ function LoginContent() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-brand-via transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                     </button>
                   )}
                 </div>

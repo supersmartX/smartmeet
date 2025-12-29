@@ -21,11 +21,11 @@ import {
 } from "lucide-react"
 import { getAuditLogs, getActiveSessions, revokeSession } from "@/actions/meeting"
 import { format } from "date-fns"
-import type { AuditLog, Session } from "@prisma/client"
+import type { AuditLog, Session } from "@/types/meeting"
 
 export default function SecurityPage() {
   const [logs, setLogs] = useState<AuditLog[]>([])
-  const [sessions, setSessions] = useState<Partial<Session>[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRevoking, setIsRevoking] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -34,12 +34,22 @@ export default function SecurityPage() {
     async function loadData() {
       try {
         setIsLoading(true)
-        const [logsData, sessionsData] = await Promise.all([
+        const [logsResult, sessionsResult] = await Promise.all([
           getAuditLogs(),
           getActiveSessions()
         ])
-        setLogs(logsData)
-        setSessions(sessionsData)
+        
+        if (logsResult.success && logsResult.data) {
+          setLogs(logsResult.data)
+        }
+        
+        if (sessionsResult.success && sessionsResult.data) {
+          setSessions(sessionsResult.data)
+        }
+
+        if (!logsResult.success || !sessionsResult.success) {
+          setError(logsResult.error || sessionsResult.error || "Failed to load security data.")
+        }
       } catch (err) {
         console.error("Failed to load security data:", err)
         setError("Could not load security activity.")
@@ -53,11 +63,15 @@ export default function SecurityPage() {
   const handleRevokeSession = async (sessionId: string) => {
     try {
       setIsRevoking(sessionId)
-      await revokeSession(sessionId)
-      setSessions(prev => prev.filter(s => s.id !== sessionId))
+      const result = await revokeSession(sessionId)
+      if (result.success) {
+        setSessions(prev => prev.filter(s => s.id !== sessionId))
+      } else {
+        alert(result.error || "Failed to revoke session. Please try again.")
+      }
     } catch (err) {
       console.error("Failed to revoke session:", err)
-      alert("Failed to revoke session. Please try again.")
+      alert("An unexpected error occurred. Please try again.")
     } finally {
       setIsRevoking(null)
     }
@@ -80,9 +94,9 @@ export default function SecurityPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[400px]">
+      <div className="flex-1 flex items-center justify-center min-h-[400px]" role="status" aria-busy="true">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-6 h-6 text-brand-via animate-spin" />
+          <Loader2 className="w-6 h-6 text-brand-via animate-spin" aria-hidden="true" />
           <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Scanning security logs...</p>
         </div>
       </div>
@@ -96,8 +110,8 @@ export default function SecurityPage() {
           <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Security Activity</h1>
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Monitor account access and security-related events in real-time.</p>
         </div>
-        <div className="flex items-center gap-4 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
-          <Shield className="w-5 h-5 text-emerald-500" />
+        <div className="flex items-center gap-4 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl" role="status" aria-label="Account status protected">
+          <Shield className="w-5 h-5 text-emerald-500" aria-hidden="true" />
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Account Status</p>
             <p className="text-xs font-bold text-emerald-700">Protected & Active</p>
@@ -107,8 +121,8 @@ export default function SecurityPage() {
 
       <div className="grid gap-8">
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500">
-            <AlertCircle className="w-5 h-5" />
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500" role="alert">
+            <AlertCircle className="w-5 h-5" aria-hidden="true" />
             <p className="text-xs font-bold uppercase tracking-widest">{error}</p>
           </div>
         )}
@@ -171,11 +185,12 @@ export default function SecurityPage() {
                     onClick={() => session.id && handleRevokeSession(session.id)}
                     disabled={isRevoking === session.id}
                     className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50"
+                    aria-label={`Revoke session from ${session.userAgent?.split('(')[0] || 'Unknown Browser'}`}
                   >
                     {isRevoking === session.id ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
                     ) : (
-                      <LogOut className="w-3 h-3" />
+                      <LogOut className="w-3 h-3" aria-hidden="true" />
                     )}
                     Sign Out
                   </button>
@@ -232,21 +247,21 @@ export default function SecurityPage() {
                             <p className="text-xs font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
                               {formatActionName(log.action)}
                             </p>
-                            <p className="text-[10px] font-medium text-zinc-400">{log.resource || 'System'}</p>
+                            <p className="text-[10px] font-medium text-zinc-400" aria-label={`Resource: ${log.resource || 'System'}`}>{log.resource || 'System'}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-3 h-3 text-zinc-400" />
-                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                          <MapPin className="w-3 h-3 text-zinc-400" aria-hidden="true" />
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest" aria-label={`IP Address: ${log.ipAddress || 'Unknown IP'}`}>
                             {log.ipAddress || 'Unknown IP'}
                           </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <Monitor className="w-3 h-3 text-zinc-400" />
+                          <Monitor className="w-3 h-3 text-zinc-400" aria-hidden="true" />
                           <span className="text-[10px] font-medium text-zinc-500 truncate max-w-[150px]">
                             {log.userAgent || 'Unknown Device'}
                           </span>

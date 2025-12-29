@@ -68,16 +68,21 @@ export default function Navbar() {
             className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
+            aria-expanded={isMenuOpen}
           >
-            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {isMenuOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
           </button>
         </div>
       </div>
       
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black px-4 py-6 space-y-6 animate-in fade-in slide-in-from-top-4">
-          <nav className="flex flex-col gap-4">
+        <div 
+          className="md:hidden border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black px-4 py-6 space-y-6 animate-in fade-in slide-in-from-top-4"
+          role="dialog"
+          aria-label="Mobile Navigation"
+        >
+          <nav className="flex flex-col gap-4" aria-label="Mobile Menu">
             <Link 
               href="/#features" 
               className="text-sm font-black text-zinc-900 dark:text-zinc-100 py-2 uppercase tracking-widest"

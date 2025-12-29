@@ -8,44 +8,55 @@ import { signUpSchema, SignUpInput } from "@/lib/validations/auth";
 import { logSecurityEvent } from "@/lib/audit";
 
 export async function signUp(formData: SignUpInput) {
-  const result = signUpSchema.safeParse(formData);
+  try {
+    const result = signUpSchema.safeParse(formData);
 
-  if (!result.success) {
-    throw new Error(result.error.issues[0].message);
+    if (!result.success) {
+      return { success: false, error: result.error.issues[0].message };
+    }
+
+    const { name, email, password } = result.data;
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return { success: false, error: "User already exists" };
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        verificationToken: uuidv4(),
+        emailVerified: null,
+      },
+    });
+
+    if (user.email && user.verificationToken) {
+      await sendVerificationEmail(user.email, user.verificationToken);
+    }
+
+    await logSecurityEvent(
+      "SIGNUP_SUCCESS",
+      user.id,
+      `Account created for ${user.email}`,
+      "Authentication"
+    );
+
+    return { 
+      success: true, 
+      user: { id: user.id, name: user.name, email: user.email } 
+    };
+  } catch (error) {
+    console.error("SignUp Error:", error);
+    return { 
+      success: false, 
+      error: "An unexpected error occurred during signup." 
+    };
   }
-
-  const { name, email, password } = result.data;
-
-  const existingUser = await prisma.user.findUnique({
-    where: { email },
-  });
-
-  if (existingUser) {
-    throw new Error("User already exists");
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 12);
-
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-      verificationToken: uuidv4(),
-      emailVerified: null,
-    },
-  });
-
-  if (user.email && user.verificationToken) {
-    await sendVerificationEmail(user.email, user.verificationToken);
-  }
-
-  await logSecurityEvent(
-    "SIGNUP_SUCCESS",
-    user.id,
-    `Account created for ${user.email}`,
-    "Authentication"
-  );
-
-  return { success: true, user: { id: user.id, name: user.name, email: user.email } };
 }

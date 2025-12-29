@@ -135,9 +135,16 @@ model Summary {
 }
 
 model ActionItem {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   title     String
-  status    String   @default("pending") // pending, completed
+  status    ActionItemStatus @default(PENDING)
   meetingId String
-  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meeting   Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+enum ActionItemStatus {
+  PENDING
+  COMPLETED
+  IN_PROGRESS
+  CANCELLED
 }

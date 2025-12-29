@@ -22,7 +22,13 @@ export default function DashboardLayout({
   const [sidebarWidth, setSidebarWidth] = useState(240)
   const [isResizing, setIsResizing] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const pathname = usePathname()
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true)
+  }, [])
   const { data: session } = useSession()
   const user = session?.user
   const logout = () => signOut({ callbackUrl: "/" })

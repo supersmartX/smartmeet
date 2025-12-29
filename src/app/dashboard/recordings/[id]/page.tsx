@@ -7,6 +7,10 @@ import { useParams } from "next/navigation"
 
 import { highlightText } from "@/utils/text"
 import { getMeetingById, updateMeetingCode } from "@/actions/meeting"
+import { MeetingWithRelations, Transcript, ActionItem } from "@/types/meeting"
+import { useToast } from "@/hooks/useToast"
+import { Toast } from "@/components/Toast"
+
 import { 
   Clock, 
   Users, 
@@ -31,41 +35,8 @@ type EditorTab = "transcript" | "summary" | "code" | "tests" | "docs"
 
 export default function RecordingDetailPage() {
   const params = useParams()
-  interface Meeting {
-    id: string;
-    title: string;
-    date: Date;
-    duration?: string;
-    participants?: number;
-    status: string;
-    userId: string;
-    code?: string;
-    audioUrl?: string;
-    transcripts: Transcript[];
-    summary?: Summary;
-    actionItems: ActionItem[];
-  }
 
-  interface Transcript {
-    id: string;
-    speaker: string;
-    time: string;
-    text: string;
-  }
-
-  interface Summary {
-    id: string;
-    content: string;
-  }
-
-  interface ActionItem {
-    id: string;
-    title: string;
-    status: string;
-    content?: string;
-  }
-
-  const [meeting, setMeeting] = useState<Meeting | null>(null)
+  const [meeting, setMeeting] = useState<MeetingWithRelations | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<EditorTab>("transcript")
@@ -73,6 +44,8 @@ export default function RecordingDetailPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isAnswering, setIsAnswering] = useState(false)
   const [answer, setAnswer] = useState<string | null>(null)
+
+  const { toast, showToast: toastVisible } = useToast()
 
   // Logic Generation State
   const [isLogicGenerated, setIsLogicGenerated] = useState(false)
@@ -103,18 +76,19 @@ export default function RecordingDetailPage() {
         setIsLoading(true)
         setError(null)
         
-        const data = await getMeetingById(params.id as string)
-        if (!data) {
-          setError("Meeting not found.")
-        } else if (data.userId !== session?.user?.id) {
+        const result = await getMeetingById(params.id as string)
+        if (!result.success || !result.data) {
+          setError(result.error || "Meeting not found.")
+        } else if (result.data.userId !== session?.user?.id) {
           setError("You don't have permission to view this meeting.")
         } else {
-          setMeeting(data)
-          if (data?.code) {
+          setMeeting(result.data)
+          if (result.data?.code) {
             setIsLogicGenerated(true)
           }
         }
-      } catch {
+      } catch (err) {
+        console.error("Fetch meeting error:", err)
         setError("Failed to load meeting details. Please try again.")
       } finally {
         setIsLoading(false)
@@ -175,13 +149,20 @@ export default function RecordingDetailPage() {
     const mockCode = `// Generated Meeting Logic for: ${meeting?.title}\n\n/**\n * Key Decisions & Business Logic extracted from discussion\n */\n\nfunction processMeetingOutcome() {\n  const decisions = [\n    "Adopt new authentication provider",\n    "Implement Redis for session caching",\n    "Migrate to Prisma ORM v6"\n  ];\n\n  return decisions.map(d => ({\n    task: d,\n    priority: "High",\n    status: "TODO"\n  }));\n}\n\n// Action Items Count: ${meeting?.actionItems?.length || 0}`
 
     try {
-      await updateMeetingCode(params.id as string, mockCode)
-      setMeeting((prev: Meeting | null) => prev ? { ...prev, code: mockCode } : null)
-      setIsLogicGenerated(true)
-      setIsGeneratingLogic(false)
-      setActiveTab("code")
+      const result = await updateMeetingCode(params.id as string, mockCode)
+      if (result.success) {
+        setMeeting((prev: MeetingWithRelations | null) => prev ? { ...prev, code: mockCode } : null)
+        setIsLogicGenerated(true)
+        setIsGeneratingLogic(false)
+        setActiveTab("code")
+        toastVisible("Business logic generated successfully", "success")
+      } else {
+        toastVisible(result.error || "Failed to generate logic", "error")
+        setIsGeneratingLogic(false)
+      }
     } catch (error) {
       console.error("Failed to generate logic:", error)
+      toastVisible("An unexpected error occurred while generating logic", "error")
       setIsGeneratingLogic(false)
     }
   }
@@ -211,19 +192,15 @@ export default function RecordingDetailPage() {
     item.speaker.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const renderHighlightedText = (text: string, query: string) => {
-    const parts = highlightText(text, query);
-    return parts.map((part, i) => {
-      if (typeof part === 'string') {
-        return <span key={i}>{part}</span>;
-      } else {
-        return (
-          <mark key={i} className="bg-brand-via/20 text-brand-via rounded-sm px-0.5 border-b border-brand-via/30">
-            {part.match}
-          </mark>
-        );
-      }
-    });
+  const renderHighlightedText = (text: string, query: string): React.ReactNode => {
+    const parts = highlightText(text, query)
+    return parts.map((part, i) => 
+      typeof part === 'string' ? part : (
+        <mark key={i} className="bg-brand-via/20 text-brand-via rounded px-0.5">
+          {part.match}
+        </mark>
+      )
+    )
   }
 
   const handleAskAI = (e: React.FormEvent) => {
@@ -262,12 +239,39 @@ export default function RecordingDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-black">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-            <Loader2 className="w-6 h-6 text-brand-via animate-spin" />
+      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-500">
+        <Toast {...toast} />
+        {/* Header Skeleton */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-3">
+            <div className="h-10 w-64 bg-zinc-200 dark:bg-zinc-800 rounded-2xl animate-pulse" />
+            <div className="h-4 w-40 bg-zinc-100 dark:bg-zinc-800/50 rounded-lg animate-pulse" />
           </div>
-          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Loading session intelligence...</p>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 bg-zinc-200 dark:bg-zinc-800 rounded-xl animate-pulse" />
+            <div className="h-12 w-32 bg-zinc-200 dark:bg-zinc-800 rounded-xl animate-pulse" />
+          </div>
+        </div>
+
+        {/* Stats Row Skeleton */}
+        <div className="flex flex-wrap gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-8 w-24 bg-zinc-100 dark:bg-zinc-800 rounded-full animate-pulse" />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-320px)] min-h-[600px]">
+          {/* Main Content Skeleton */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            <div className="h-14 w-full bg-zinc-200 dark:bg-zinc-800 rounded-2xl animate-pulse" />
+            <div className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] animate-pulse" />
+          </div>
+
+          {/* Sidebar Skeleton */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            <div className="h-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] animate-pulse" />
+            <div className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] animate-pulse" />
+          </div>
         </div>
       </div>
     )
@@ -276,6 +280,7 @@ export default function RecordingDetailPage() {
   if (error || !meeting) {
     return (
       <div className="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-black p-8">
+        <Toast {...toast} />
         <div className="flex flex-col items-center gap-6 max-w-sm text-center">
           <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center border transition-all ${
             error ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
@@ -328,6 +333,7 @@ export default function RecordingDetailPage() {
   if (status === 'unauthenticated') {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-zinc-950">
+        <Toast {...toast} />
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <ShieldCheck className="w-8 h-8 text-zinc-400" />
@@ -348,6 +354,7 @@ export default function RecordingDetailPage() {
   if (error && error.includes("permission")) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-zinc-950">
+        <Toast {...toast} />
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <ShieldCheck className="w-8 h-8 text-zinc-400" />
@@ -367,6 +374,7 @@ export default function RecordingDetailPage() {
 
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden ${isResizing ? 'cursor-row-resize select-none' : ''}`}>
+      <Toast {...toast} />
       {/* Editor Header / Breadcrumbs (Local) */}
       <div className="h-auto min-h-10 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 shrink-0 gap-3">
         <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
@@ -658,7 +666,7 @@ export default function RecordingDetailPage() {
                           </div>
                           <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">Identified</span>
                         </div>
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-2">{test.content}</h4>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-2">{test.title}</h4>
                         <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">Assigned/Status: {test.status || 'Pending'}</p>
                       </div>
                     ))}

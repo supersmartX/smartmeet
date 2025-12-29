@@ -10,363 +10,430 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { headers } from "next/headers";
 import { audioToCode } from "@/services/api";
+import { 
+  meetingSchema, 
+  meetingIdSchema, 
+  updateMeetingTitleSchema,
+  updateMeetingCodeSchema,
+  apiKeyUpdateSchema,
+  MeetingInput,
+  ApiKeyUpdateInput
+} from "@/lib/validations/meeting";
+import {
+  ActionResult,
+  Meeting,
+  MeetingWithRelations,
+  UserWithMeetings,
+  DashboardStat,
+  MeetingUpdateData,
+  AuditLog,
+  Session,
+  UserSettings
+} from "@/types/meeting";
 
-interface DashboardStat {
-  label: string;
-  value: string;
-  icon: string;
-  color: string;
-  bg: string;
-  trend: string;
-  href: string;
-}
+export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-interface Meeting {
-  id: string;
-  title: string;
-  date: Date;
-  duration?: string;
-  participants?: number;
-  status: string;
-  userId: string;
-  code?: string;
-  audioUrl?: string;
-}
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: {
+        meetings: {
+          include: {
+            _count: {
+              select: { actionItems: true }
+            },
+            summary: true
+          }
+        },
+        _count: {
+          select: { meetings: true },
+        },
+      },
+    }) as UserWithMeetings | null;
 
-interface MeetingWithRelations extends Meeting {
-  transcripts: Transcript[];
-  summary?: Summary;
-  actionItems: ActionItem[];
-}
+    if (!user) return { success: false, error: "User not found" };
 
-interface Transcript {
-  id: string;
-  speaker: string;
-  time: string;
-  text: string;
-  meetingId: string;
-}
+    const totalMeetings = user._count.meetings;
+    const aiInsightsCount = user.meetings.reduce((acc: number, meeting) => {
+      return acc + (meeting._count?.actionItems ?? 0) + (meeting.summary ? 1 : 0);
+    }, 0);
 
-interface Summary {
-  id: string;
-  content: string;
-  meetingId: string;
-}
+    // Heuristic: Each meeting saves ~30 mins of manual note taking/reviewing
+    const timeSavedHours = (totalMeetings * 0.5).toFixed(1);
 
-interface ActionItem {
-  id: string;
-  title: string;
-  status: string;
-  meetingId: string;
-}
+    const complianceScore = totalMeetings > 0
+      ? Math.round((user.meetings.filter((m) => m.summary || m._count.actionItems > 0).length / totalMeetings) * 100)
+      : 0;
 
-interface UserWithMeetings {
-  id: string;
-  email: string;
-  _count: {
-    meetings: number;
-  };
-  meetings: Array<{
-    id: string;
-    _count: {
-      actionItems: number;
+    const stats: DashboardStat[] = [
+      {
+        label: "Total Meetings",
+        value: totalMeetings.toString(),
+        icon: "Video",
+        color: "text-brand-via",
+        bg: "bg-brand-via/10",
+        trend: "+12%",
+        href: "/dashboard/recordings"
+      },
+      {
+        label: "AI Insights",
+        value: aiInsightsCount.toString(),
+        icon: "Sparkles",
+        color: "text-amber-500",
+        bg: "bg-amber-500/10",
+        trend: aiInsightsCount > 0 ? "+5%" : "0%",
+        href: "/dashboard/recordings?filter=action+items"
+      },
+      {
+        label: "Time Saved",
+        value: `${timeSavedHours}h`,
+        icon: "Zap",
+        color: "text-emerald-500",
+        bg: "bg-emerald-500/10",
+        trend: "+18%",
+        href: "/dashboard/recordings"
+      },
+      {
+        label: "Compliance",
+        value: `${complianceScore}%`,
+        icon: "ShieldCheck",
+        color: "text-indigo-500",
+        bg: "bg-indigo-500/10",
+        trend: "+2%",
+        href: "/dashboard/security"
+      }
+    ];
+
+    return { success: true, data: stats };
+  } catch (error: unknown) {
+    console.error("Get dashboard stats error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to fetch dashboard stats" 
     };
-    summary?: Summary;
-  }>;
+  }
 }
 
-export async function getDashboardStats() {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) return null;
+export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      meetings: {
-        include: {
-          _count: {
-            select: { actionItems: true }
-          },
-          summary: true
-        }
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        user: { email: session.user.email },
       },
-      _count: {
-        select: { meetings: true },
+      orderBy: {
+        date: "desc",
       },
-    },
-  }) as UserWithMeetings | null;
+    }) as Meeting[];
 
-  if (!user) return null;
-
-  const totalMeetings = user._count.meetings;
-  const aiInsightsCount = user.meetings.reduce((acc: number, meeting) => {
-    return acc + (meeting._count?.actionItems ?? 0) + (meeting.summary ? 1 : 0);
-  }, 0);
-
-  // Heuristic: Each meeting saves ~30 mins of manual note taking/reviewing
-  const timeSavedHours = (totalMeetings * 0.5).toFixed(1);
-
-  const complianceScore = totalMeetings > 0
-    ? Math.round((user.meetings.filter((m) => m.summary || m._count.actionItems > 0).length / totalMeetings) * 100)
-    : 0;
-
-  return [
-    {
-      label: "Total Meetings",
-      value: totalMeetings.toString(),
-      icon: "Video",
-      color: "text-brand-via",
-      bg: "bg-brand-via/10",
-      trend: "+12%",
-      href: "/dashboard/recordings"
-    },
-    {
-      label: "AI Insights",
-      value: aiInsightsCount.toString(),
-      icon: "Sparkles",
-      color: "text-amber-500",
-      bg: "bg-amber-500/10",
-      trend: aiInsightsCount > 0 ? "+5%" : "0%",
-      href: "/dashboard/recordings?filter=action+items"
-    },
-    {
-      label: "Time Saved",
-      value: `${timeSavedHours}h`,
-      icon: "Zap",
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-      trend: "+18%",
-      href: "/dashboard/recordings"
-    },
-    {
-      label: "Compliance Score",
-      value: `${complianceScore}%`,
-      icon: "ShieldCheck",
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
-      trend: complianceScore > 90 ? "Stable" : "Improving",
-      href: "/dashboard/recordings"
-    },
-  ] as DashboardStat[];
+    return { success: true, data: meetings };
+  } catch (error: unknown) {
+    console.error("Get meetings error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to fetch meetings" 
+    };
+  }
 }
 
-export async function getMeetings() {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) return [];
+export async function getMeetingById(id: string): Promise<ActionResult<MeetingWithRelations>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-  return await prisma.meeting.findMany({
-    where: {
-      user: { email: session.user.email },
-    },
-    orderBy: {
-      date: "desc",
-    },
-  }) as Meeting[];
-}
+    const validatedId = meetingIdSchema.parse({ id });
 
-export async function getMeetingById(id: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) return null;
+    const meeting = await prisma.meeting.findUnique({
+      where: {
+        id: validatedId.id,
+        user: { email: session.user.email },
+      },
+      include: {
+        transcripts: true,
+        summary: true,
+        actionItems: true,
+      },
+    }) as MeetingWithRelations | null;
 
-  return await prisma.meeting.findUnique({
-    where: {
-      id,
-      user: { email: session.user.email },
-    },
-    include: {
-      transcripts: true,
-      summary: true,
-      actionItems: true,
-    },
-  }) as MeetingWithRelations | null;
+    if (!meeting) return { success: false, error: "Meeting not found" };
+
+    return { success: true, data: meeting };
+  } catch (error: unknown) {
+    console.error("Get meeting by ID error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to fetch meeting" 
+    };
+  }
 }
 
 /**
  * Update user API key and AI preferences
  */
-export async function updateUserApiKey(apiKey: string, preferredProvider?: string, preferredModel?: string, allowedIps?: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true }
-  });
-
-  if (!user) throw new Error("User not found");
-
-          const data: {
-            apiKey?: string | null;
-            preferredProvider?: string;
-            preferredModel?: string;
-            allowedIps?: string;
-            lastUsedAt: Date;
-          } = {
-            lastUsedAt: new Date()
-          };
-
-          if (apiKey) {
-            data.apiKey = encrypt(apiKey);
-          } else {
-            data.apiKey = null;
-          }
-          if (preferredProvider) data.preferredProvider = preferredProvider;
-          if (preferredModel) data.preferredModel = preferredModel;
-          if (allowedIps !== undefined) data.allowedIps = allowedIps;
-
-          const updatedUser = await prisma.user.update({
-            where: { email: session.user.email },
-            data,
-          });
-
-  // Log the security event
-  await logSecurityEvent(
-    "API_KEY_UPDATED",
-    user.id,
-    `Provider: ${preferredProvider || 'unchanged'}, Model: ${preferredModel || 'unchanged'}, IP Restriction: ${allowedIps ? 'enabled' : 'disabled'}`,
-    "Settings"
-  );
-
-  return updatedUser;
-}
-
-export async function getUserSettings() {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) return null;
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: {
-      apiKey: true,
-      preferredProvider: true,
-      preferredModel: true,
-      allowedIps: true,
-      lastUsedAt: true,
-      name: true,
-      email: true,
-      image: true,
-      mfaEnabled: true
-    },
-  });
-
-  if (!user) return null;
-
-  return {
-    ...user,
-    apiKey: user.apiKey ? decrypt(user.apiKey) : null,
-    allowedIps: user.allowedIps || ""
-  };
-}
-
-interface CreateMeetingData {
-  title: string;
-  duration?: string;
-  code?: string;
-  audioUrl?: string;
-}
-
-export async function createMeeting(data: CreateMeetingData) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  const meeting = await prisma.meeting.create({
-    data: {
-      title: data.title,
-      duration: data.duration || "0:00",
-      status: "PROCESSING",
-      code: data.code,
-      audioUrl: data.audioUrl,
-      user: { connect: { email: session.user.email } },
-    },
-  });
-
-  revalidatePath("/dashboard");
-  return meeting;
-}
-
-export async function deleteMeeting(id: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  await prisma.meeting.delete({
-    where: {
-      id,
-      user: { email: session.user.email },
-    },
-  });
-
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/recordings");
-  return { success: true };
-}
-
-export async function updateMeetingTitle(id: string, title: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  return await prisma.meeting.update({
-    where: {
-      id,
-      user: { email: session.user.email },
-    },
-    data: { title },
-  });
-}
-
-export async function updateMeetingCode(id: string, code: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  return await prisma.meeting.update({
-    where: {
-      id,
-      user: { email: session.user.email },
-    },
-    data: { code },
-  });
-}
-
-export async function createSignedUploadUrl(fileName: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true }
-  });
-
-  if (!user) throw new Error("User not found");
-  if (!supabaseAdmin) throw new Error("Supabase Admin not configured");
-
-  const fileExt = fileName.split('.').pop();
-  const uniqueFileName = `${uuidv4()}.${fileExt}`;
-  const filePath = `private/${user.id}/${uniqueFileName}`;
-
-  const { data, error } = await supabaseAdmin.storage
-    .from('recordings')
-    .createSignedUploadUrl(filePath);
-
-  if (error) throw new Error(error.message);
-
-  return {
-    signedUrl: data.signedUrl,
-    path: filePath,
-    token: data.token
-  };
-}
-
-export async function processMeetingAI(meetingId: string, audioUrl: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
+export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionResult> {
   try {
-    // 1. Get the user's API key and IP restrictions
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const validatedData = apiKeyUpdateSchema.parse(data);
+
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, apiKey: true, allowedIps: true }
+      select: { id: true }
     });
 
-    if (!user) throw new Error("User not found");
+    if (!user) return { success: false, error: "User not found" };
+
+    const updatePayload: {
+      apiKey?: string | null;
+      preferredProvider?: string;
+      preferredModel?: string;
+      allowedIps?: string;
+      lastUsedAt: Date;
+    } = {
+      lastUsedAt: new Date()
+    };
+
+    if (validatedData.apiKey) {
+      updatePayload.apiKey = encrypt(validatedData.apiKey);
+    } else if (validatedData.apiKey === "") {
+      updatePayload.apiKey = null;
+    }
+
+    if (validatedData.preferredProvider) updatePayload.preferredProvider = validatedData.preferredProvider;
+    if (validatedData.preferredModel) updatePayload.preferredModel = validatedData.preferredModel;
+    if (validatedData.allowedIps !== undefined) updatePayload.allowedIps = validatedData.allowedIps;
+
+    const updatedUser = await prisma.user.update({
+      where: { email: session.user.email },
+      data: updatePayload,
+    });
+
+    // Log the security event
+    await logSecurityEvent(
+      "API_KEY_UPDATED",
+      user.id,
+      `Provider: ${validatedData.preferredProvider || 'unchanged'}, Model: ${validatedData.preferredModel || 'unchanged'}, IP Restriction: ${validatedData.allowedIps ? 'enabled' : 'disabled'}`,
+      "Settings"
+    );
+
+    return { success: true, data: updatedUser };
+  } catch (error: unknown) {
+    console.error("Update API key error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to update API key" 
+    };
+  }
+}
+
+export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: {
+        apiKey: true,
+        preferredProvider: true,
+        preferredModel: true,
+        allowedIps: true,
+        lastUsedAt: true,
+        name: true,
+        email: true,
+        image: true,
+        mfaEnabled: true
+      },
+    });
+
+    if (!user) return { success: false, error: "User not found" };
+
+    const settings = {
+      ...user,
+      apiKey: user.apiKey ? decrypt(user.apiKey) : null,
+      allowedIps: user.allowedIps || ""
+    };
+
+    return { success: true, data: settings };
+  } catch (error: unknown) {
+    console.error("Get user settings error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to fetch user settings" 
+    };
+  }
+}
+
+export async function createMeeting(data: MeetingInput): Promise<ActionResult<Meeting>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const validatedData = meetingSchema.parse(data);
+
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: validatedData.title,
+        duration: validatedData.duration || "0:00",
+        status: "PROCESSING",
+        code: validatedData.code,
+        audioUrl: validatedData.audioUrl,
+        user: { connect: { email: session.user.email } },
+      },
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/recordings");
+    return { success: true, data: meeting as unknown as Meeting };
+  } catch (error: unknown) {
+    console.error("Create meeting error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to create meeting" 
+    };
+  }
+}
+
+export async function deleteMeeting(id: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const { id: validatedId } = meetingIdSchema.parse({ id });
+
+    await prisma.meeting.delete({
+      where: {
+        id: validatedId,
+        user: { email: session.user.email },
+      },
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/recordings");
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Delete meeting error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to delete meeting" 
+    };
+  }
+}
+
+export async function updateMeetingTitle(id: string, title: string): Promise<ActionResult<Meeting>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const validatedData = updateMeetingTitleSchema.parse({ id, title });
+
+    const meeting = await prisma.meeting.update({
+      where: {
+        id: validatedData.id,
+        user: { email: session.user.email },
+      },
+      data: { title: validatedData.title },
+    });
+
+    revalidatePath("/dashboard/recordings");
+    return { success: true, data: meeting as unknown as Meeting };
+  } catch (error: unknown) {
+    console.error("Update meeting title error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to update meeting title" 
+    };
+  }
+}
+
+export async function updateMeetingCode(id: string, code: string): Promise<ActionResult<Meeting>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const validatedData = updateMeetingCodeSchema.parse({ id, code });
+
+    const meeting = await prisma.meeting.update({
+      where: {
+        id: validatedData.id,
+        user: { email: session.user.email },
+      },
+      data: { code: validatedData.code },
+    });
+
+    revalidatePath(`/dashboard/recordings/${id}`);
+    return { success: true, data: meeting as unknown as Meeting };
+  } catch (error: unknown) {
+    console.error("Update meeting code error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to update meeting code" 
+    };
+  }
+}
+
+export async function createSignedUploadUrl(fileName: string): Promise<ActionResult<{ signedUrl: string; path: string; token: string }>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    });
+
+    if (!user) return { success: false, error: "User not found" };
+    if (!supabaseAdmin) return { success: false, error: "Supabase Admin not configured" };
+
+    const fileExt = fileName.split('.').pop();
+    const uniqueFileName = `${uuidv4()}.${fileExt}`;
+    const filePath = `private/${user.id}/${uniqueFileName}`;
+
+    const { data, error } = await supabaseAdmin.storage
+      .from('recordings')
+      .createSignedUploadUrl(filePath);
+
+    if (error) return { success: false, error: error.message };
+
+    return {
+      success: true,
+      data: {
+        signedUrl: data.signedUrl,
+        path: filePath,
+        token: data.token
+      }
+    };
+  } catch (error: unknown) {
+    console.error("Create signed upload URL error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to create upload URL" 
+    };
+  }
+}
+
+export async function processMeetingAI(meetingId: string): Promise<ActionResult> {
+  const session = await getServerSession(enhancedAuthOptions);
+  if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+  try {
+    // 1. Get meeting and user details
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        user: {
+          select: { id: true, apiKey: true, allowedIps: true }
+        }
+      }
+    });
+
+    if (!meeting || !meeting.user) return { success: false, error: "Meeting or user not found" };
+    const user = meeting.user;
 
     // 2. Check IP Restriction if enabled
     if (user.allowedIps) {
@@ -390,7 +457,7 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
           data: { status: "FAILED" }
         });
 
-        throw new Error(`Unauthorized IP: ${clientIp}. Please update your settings if this is you.`);
+        return { success: false, error: `Unauthorized IP: ${clientIp}. Please update your settings if this is you.` };
       }
     }
 
@@ -399,7 +466,7 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
         where: { id: meetingId },
         data: { status: "FAILED" }
       });
-      throw new Error("API Key missing. Please add it in Settings.");
+      return { success: false, error: "API Key missing. Please add it in Settings." };
     }
 
     const apiKey = decrypt(user.apiKey);
@@ -410,13 +477,31 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
       data: { lastUsedAt: new Date() }
     });
 
-    // 2. Download the file from Supabase to send to the AI API
-    const audioResponse = await fetch(audioUrl);
-    if (!audioResponse.ok) throw new Error("Failed to download audio from storage");
-    
-    const audioBlob = await audioResponse.blob();
+    if (!meeting.audioUrl) {
+      return { success: false, error: "Audio URL missing for this meeting" };
+    }
 
-    // 3. Call the AI pipeline
+    // 2. Get a signed URL for downloading the file from Supabase
+    if (!supabaseAdmin) return { success: false, error: "Supabase Admin not configured" };
+    
+    const { data: signedData, error: signedError } = await supabaseAdmin.storage
+      .from('recordings')
+      .createSignedUrl(meeting.audioUrl, 3600); // 1 hour
+
+    if (signedError || !signedData) {
+      return { success: false, error: `Failed to generate download URL: ${signedError?.message}` };
+    }
+
+    // 3. Download the file using the signed URL
+    const audioResponse = await fetch(signedData.signedUrl);
+    if (!audioResponse.ok) {
+      return { success: false, error: `Failed to download audio from storage: ${audioResponse.statusText}` };
+    }
+    
+    const audioBuffer = await audioResponse.arrayBuffer();
+    const audioBlob = new Blob([audioBuffer], { type: audioResponse.headers.get("content-type") || "audio/mpeg" });
+
+    // 4. Call the AI pipeline
     const pipelineResponse = await audioToCode(audioBlob, {
       api_key: apiKey
     });
@@ -429,152 +514,181 @@ export async function processMeetingAI(meetingId: string, audioUrl: string) {
       });
       return { success: true };
     } else {
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { status: "FAILED" }
-      });
-      return { success: false, error: pipelineResponse.error };
+      await updateMeetingStatus(meetingId, "FAILED");
+      return { success: false, error: pipelineResponse.error || "AI Pipeline failed" };
     }
-  } catch (error) {
-    await prisma.meeting.update({
-      where: { id: meetingId },
-      data: { status: "FAILED" }
+  } catch (error: unknown) {
+    console.error("Process meeting AI error:", error);
+    await updateMeetingStatus(meetingId, "FAILED");
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to process meeting with AI" 
+    };
+  }
+}
+
+export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PROCESSING" | "FAILED", data?: MeetingUpdateData): Promise<ActionResult<Meeting>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const updateData: {
+      status: "COMPLETED" | "PROCESSING" | "FAILED";
+      transcripts?: {
+        create: {
+          speaker: string;
+          time: string;
+          text: string;
+        }[];
+      };
+      summary?: {
+        create: {
+          content: string;
+        };
+      };
+      code?: string;
+    } = { status };
+
+    if (data) {
+      if (data.transcription) {
+        updateData.transcripts = {
+          create: [{
+            speaker: "AI Assistant",
+            time: "0:00",
+            text: data.transcription
+          }]
+        };
+      }
+      if (data.summary) {
+        updateData.summary = {
+          create: { content: data.summary }
+        };
+      }
+      if (data.code) {
+        updateData.code = data.code;
+      }
+    }
+
+    const meeting = await prisma.meeting.update({
+      where: { id, user: { email: session.user.email } },
+      data: updateData
     });
-    throw error;
-  }
-}
 
-interface MeetingUpdateData {
-  transcription?: string;
-  summary?: string;
-  code?: string;
-}
+    revalidatePath("/dashboard/recordings");
+    revalidatePath(`/dashboard/recordings/${id}`);
 
-export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PROCESSING" | "FAILED", data?: MeetingUpdateData) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  const updateData: {
-    status: "COMPLETED" | "PROCESSING" | "FAILED";
-    transcripts?: {
-      create: {
-        speaker: string;
-        time: string;
-        text: string;
-      }[];
+    return { success: true, data: meeting as unknown as Meeting };
+  } catch (error: unknown) {
+    console.error("Update meeting status error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to update meeting status" 
     };
-    summary?: {
-      create: {
-        content: string;
-      };
+  }
+}
+
+export async function getAuditLogs(): Promise<ActionResult<AuditLog[]>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    });
+
+    if (!user) return { success: false, error: "User not found" };
+
+    const logs = await prisma.auditLog.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 50
+    });
+
+    return { success: true, data: logs as unknown as AuditLog[] };
+  } catch (error: unknown) {
+    console.error("Get audit logs error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to fetch audit logs" 
     };
-    code?: string;
-  } = { status };
-
-  if (data) {
-    if (data.transcription) {
-      updateData.transcripts = {
-        create: [{
-          speaker: "AI Assistant",
-          time: "0:00",
-          text: data.transcription
-        }]
-      };
-    }
-    if (data.summary) {
-      updateData.summary = {
-        create: { content: data.summary }
-      };
-    }
-    if (data.code) {
-      updateData.code = data.code;
-    }
   }
-
-  const meeting = await prisma.meeting.update({
-    where: { id, user: { email: session.user.email } },
-    data: updateData
-  });
-
-  revalidatePath("/dashboard/recordings");
-  revalidatePath(`/dashboard/recordings/${id}`);
-
-  return meeting;
 }
 
-export async function getAuditLogs() {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
+export async function getActiveSessions(): Promise<ActionResult<Session[]>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true }
-  });
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    });
 
-  if (!user) throw new Error("User not found");
+    if (!user) return { success: false, error: "User not found" };
 
-  return prisma.auditLog.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 50
-  });
-}
+    const sessions = await prisma.session.findMany({
+      where: { userId: user.id, expires: { gt: new Date() } },
+      orderBy: { expires: "desc" },
+      select: {
+        id: true,
+        expires: true,
+        userAgent: true,
+        ipAddress: true,
+        sessionToken: true,
+        userId: true
+      }
+    });
 
-export async function getActiveSessions() {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true }
-  });
-
-  if (!user) throw new Error("User not found");
-
-  return prisma.session.findMany({
-    where: { userId: user.id, expires: { gt: new Date() } },
-    orderBy: { expires: "desc" },
-    select: {
-      id: true,
-      expires: true,
-      userAgent: true,
-      ipAddress: true,
-      sessionToken: true
-    }
-  });
-}
-
-export async function revokeSession(sessionId: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true }
-  });
-
-  if (!user) throw new Error("User not found");
-
-  // Only allow revoking sessions that belong to the current user
-  const targetSession = await prisma.session.findUnique({
-    where: { id: sessionId },
-    select: { userId: true }
-  });
-
-  if (!targetSession || targetSession.userId !== user.id) {
-    throw new Error("Session not found or unauthorized");
+    return { success: true, data: sessions as unknown as Session[] };
+  } catch (error: unknown) {
+    console.error("Get active sessions error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to fetch active sessions" 
+    };
   }
+}
 
-  await prisma.session.delete({
-    where: { id: sessionId }
-  });
+export async function revokeSession(sessionId: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-  await logSecurityEvent(
-    "SESSION_REVOKED",
-    user.id,
-    `Revoked session: ${sessionId}`,
-    "Security"
-  );
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    });
 
-  return { success: true };
+    if (!user) return { success: false, error: "User not found" };
+
+    // Only allow revoking sessions that belong to the current user
+    const targetSession = await prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { userId: true }
+    });
+
+    if (!targetSession || targetSession.userId !== user.id) {
+      return { success: false, error: "Session not found or unauthorized" };
+    }
+
+    await prisma.session.delete({
+      where: { id: sessionId }
+    });
+
+    await logSecurityEvent(
+      "SESSION_REVOKED",
+      user.id,
+      `Revoked session: ${sessionId}`,
+      "Security"
+    );
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Revoke session error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to revoke session" 
+    };
+  }
 }
