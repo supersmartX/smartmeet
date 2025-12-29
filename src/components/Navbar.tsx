@@ -19,7 +19,7 @@ export default function Navbar() {
           <div className="relative w-9 h-9 group-hover:scale-110 transition-transform">
             <Image
               src="/logoX.png"
-              alt="SupersmartX Logo"
+              alt="SupersmartX AI - Meeting Intelligence Logo"
               fill
               className="object-contain"
               priority

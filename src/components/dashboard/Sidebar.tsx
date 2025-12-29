@@ -145,8 +145,19 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <aside className="w-full bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col h-full z-20 transition-colors duration-300" aria-label="Dashboard Sidebar">
       {/* Workspace Header */}
-      <div className="h-10 px-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/50 dark:bg-zinc-950/50" role="presentation">
-        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Workspace</span>
+      <div className="h-12 px-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/50 dark:bg-zinc-950/50" role="presentation">
+        <div className="flex items-center gap-2">
+          <div className="relative w-8 h-8">
+            <Image 
+              src="/logoX.png" 
+              alt="SupersmartX AI Dashboard Logo" 
+              fill 
+              className="object-contain"
+              priority 
+            />
+          </div>
+          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Workspace</span>
+        </div>
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" aria-hidden="true" />
           <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">Live</span>

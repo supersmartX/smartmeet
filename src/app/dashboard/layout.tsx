@@ -77,7 +77,14 @@ export default function DashboardLayout({
           {/* Editor-style Activity Bar (Narrow Left Strip) */}
           <aside className="hidden lg:flex w-16 flex-col items-center py-4 bg-zinc-100 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 shrink-0 z-50">
             <div className="w-10 h-10 mb-8 relative">
-              <Image src="/logoX.png" alt="Logo" width={40} height={40} className="object-contain" />
+              <Image 
+                src="/logoX.png" 
+                alt="SupersmartX AI Navigation Logo" 
+                width={40} 
+                height={40} 
+                className="object-contain"
+                priority 
+              />
             </div>
             <div className="flex flex-col gap-4 flex-1">
               <Link href="/dashboard" className={`p-3 rounded-xl transition-all ${pathname === "/dashboard" ? "text-brand-via bg-brand-via/5" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-900"}`}>
