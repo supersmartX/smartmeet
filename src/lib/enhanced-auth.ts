@@ -42,7 +42,7 @@ export const enhancedAuthOptions: NextAuthOptions = {
           const expectedUrl = process.env.NEXTAUTH_URL;
           if (account.callbackUrl && typeof account.callbackUrl === 'string' && expectedUrl && !account.callbackUrl.startsWith(expectedUrl)) {
             console.warn('⚠️ OAuth callback URL mismatch - possible redirect attack');
-            return '/login?error=OAuthCallbackInvalid';
+            return false;
           }
 
           // Check if user exists with this email using Prisma directly
@@ -60,9 +60,9 @@ export const enhancedAuthOptions: NextAuthOptions = {
               },
             });
 
-            if (!existingAccount) {
-              return `/login?error=OAuthAccountNotLinked`;
-            }
+          if (!existingAccount) {
+            return false;
+          }
           }
 
           return true;
@@ -71,7 +71,7 @@ export const enhancedAuthOptions: NextAuthOptions = {
         return true;
       } catch {
         console.error('OAuth signin error occurred');
-        return `/login?error=OAuthSigninFailed`;
+        return false;
       }
     },
     
