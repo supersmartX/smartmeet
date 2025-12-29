@@ -74,49 +74,105 @@ function handleApiError<T>(error: unknown): ApiResponse<T> {
 }
 
 /**
- * Make authenticated API request through server-side proxy
+ * Make authenticated API request through server-side proxy or directly if on server
  */
 async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   data?: FormData | Record<string, unknown>,
   apiKey: string = "",
-  timeout: number = 30000 // Default 30s timeout
+  timeout: number = 300000 // Increased default to 5 minutes for AI tasks
 ): Promise<ApiResponse<T>> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
 
+  const isServer = typeof window === 'undefined';
+
   try {
-    // Use server-side proxy for rate limiting and security
-    const proxyUrl = "/api/proxy";
-    
-    const proxyData = {
-      endpoint,
-      method,
-      data: data instanceof FormData ? Object.fromEntries(data.entries()) : data,
-      apiKey,
-    };
+    let url: string;
+    let requestOptions: RequestInit;
 
-    const response = await fetch(proxyUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(proxyData),
-      signal: controller.signal,
-    });
+    if (isServer) {
+      // Direct call to API if on server
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "https://api.example.com";
+      url = `${baseUrl}${endpoint}`;
+      
+      const headers: Record<string, string> = {
+        "Accept": "application/json",
+      };
 
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+
+      // Don't set Content-Type if it's FormData, fetch will set it with boundary
+      if (!(data instanceof FormData)) {
+        headers["Content-Type"] = "application/json";
+      }
+
+      requestOptions = {
+        method,
+        headers,
+        body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
+        signal: controller.signal,
+      };
+    } else {
+      // Use proxy if on client
+      url = "/api/proxy";
+      
+      // If data is FormData, we need to convert it to something JSON-serializable 
+      // because our current proxy only accepts JSON. 
+      // For audio files, we should really be using a multipart proxy or direct upload.
+      // However, since processMeetingAI is a SERVER ACTION, it will hit the 'isServer' block above.
+      
+      const proxyData = {
+        endpoint,
+        method,
+        data: data instanceof FormData ? Object.fromEntries(data.entries()) : data,
+        apiKey,
+      };
+
+      requestOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(proxyData),
+        signal: controller.signal,
+      };
+    }
+
+    const response = await fetch(url, requestOptions);
     clearTimeout(id);
 
-    const result = await response.json();
-    
     // Handle rate limit errors
     if (response.status === 429) {
       return {
         success: false,
         error: "Rate limit exceeded",
         message: "Too many requests. Please try again later.",
+      };
+    }
+
+    const result = await response.json();
+    
+    // Normalize response structure
+    // Case 1: Proxy response { success: true, data: { ... } }
+    if (result.success !== undefined && result.data !== undefined && !isServer) {
+      return result.data;
+    }
+
+    // Case 2: Direct API response that is already an ApiResponse
+    if (result.success !== undefined) {
+      return result;
+    }
+
+    // Case 3: Direct API response that is just the data
+    if (response.ok) {
+      return {
+        success: true,
+        data: result
       };
     }
 
@@ -150,7 +206,13 @@ export async function audioToCode(
   params: Partial<AudioToCodeParams> = {}
 ): Promise<ApiResponse<CompletePipelineResponse>> {
   const formData = new FormData();
-  formData.append("file", file);
+  
+  // Add filename for server-side FormData consistency
+  if (file instanceof File) {
+    formData.append("file", file);
+  } else {
+    formData.append("file", file, "audio.mp3");
+  }
 
   if (params.api_key) formData.append("api_key", params.api_key);
   if (params.summary_provider) formData.append("summary_provider", params.summary_provider);
@@ -168,7 +230,12 @@ export async function transcribeAudio(
   apiKey: string = ""
 ): Promise<ApiResponse<TranscriptionResponse>> {
   const formData = new FormData();
-  formData.append("file", file);
+  
+  if (file instanceof File) {
+    formData.append("file", file);
+  } else {
+    formData.append("file", file, "audio.mp3");
+  }
 
   return makeApiRequest<TranscriptionResponse>("/transcribe-upload", "POST", formData, apiKey);
 }
