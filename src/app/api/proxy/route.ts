@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Forward request to actual API
-    const apiUrl = `${process.env.API_BASE_URL || "https://api.example.com"}${sanitizedEndpoint}`;
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "https://smartmeet-ai-x6qq.onrender.com";
+    const apiUrl = `${baseUrl}${sanitizedEndpoint}`;
     
     const requestHeaders: Record<string, string> = {
       "Accept": "application/json",
