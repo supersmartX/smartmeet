@@ -165,14 +165,15 @@ function LoginContent() {
           <div className="relative w-14 h-14 group-hover:rotate-6 transition-transform">
             <Image
               src="/logoX.png"
-              alt="SupersmartX Logo"
+              alt="SupersmartX AI - Meeting Intelligence Logo"
               fill
               className="object-contain"
+              priority
             />
           </div>
           <div className="flex flex-col text-left">
             <span className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">SupersmartX</span>
-            <span className="text-[10px] font-black text-brand-via uppercase tracking-[0.2em] -mt-1">Audio-to-Code</span>
+            <span className="text-[10px] font-black text-brand-via uppercase tracking-[0.2em]">Audio-to-Code</span>
           </div>
         </Link>
         <h2 className="text-4xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight mb-2">
@@ -197,8 +198,8 @@ function LoginContent() {
         </p>
       </div>
 
-      <div className="mt-12 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl py-12 px-6 shadow-2xl shadow-black/5 sm:rounded-[40px] sm:px-12 border border-zinc-100 dark:border-zinc-800 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div className="mt-12 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4 sm:px-0">
+        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl py-12 px-6 shadow-2xl shadow-black/5 rounded-[32px] sm:rounded-[40px] sm:px-12 border border-zinc-100 dark:border-zinc-800 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
               <div 
@@ -386,7 +387,7 @@ function LoginContent() {
                 </div>
               </div>
 
-              <div className={`grid gap-4 ${Object.values(providers).filter(p => p.id !== "credentials").length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+              <div className={`grid gap-4 ${Object.values(providers).filter(p => p.id !== "credentials").length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                 {providers.google && (
                   <button
                     onClick={async () => {
