@@ -13,7 +13,9 @@ import {
   Settings,
   Layout,
   HelpCircle,
-  Shield
+  Shield,
+  Zap,
+  Users
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { LucideIcon, Loader2 } from "lucide-react"
@@ -72,6 +74,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               : [{ name: "No recordings yet", icon: Video } as WorkspaceItem]
         },
         { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
+        { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
+        { name: "Team Management", href: "/dashboard/team", icon: Users },
         { name: "API Settings", href: "/dashboard/settings", icon: Settings },
         { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
       ]
