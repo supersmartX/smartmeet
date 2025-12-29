@@ -128,7 +128,7 @@ export function RecordingTable({
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar rounded-[24px] sm:rounded-[32px]">
+          <div className="overflow-x-auto lg:overflow-visible custom-scrollbar rounded-[24px] sm:rounded-[32px]">
             <table className="w-full text-left border-collapse min-w-full">
               <thead>
                 <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">

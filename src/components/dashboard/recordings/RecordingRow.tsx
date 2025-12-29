@@ -94,7 +94,7 @@ export function RecordingRow({
   }, [recording.id, onDelete]);
 
   return (
-    <tr className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group relative border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+    <tr className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group relative border-b border-zinc-100 dark:border-zinc-800 last:border-0 ${isMenuOpen ? "z-50" : "z-0"}`}>
       <td className="px-4 sm:px-8 py-4 sm:py-6">
         <div className="flex items-center gap-3 sm:gap-5">
           <Link 

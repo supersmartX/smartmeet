@@ -242,7 +242,7 @@ export default function DashboardLayout({
                 </div>
               </div>
             </header>
-            <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-zinc-50 dark:bg-black">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-zinc-50 dark:bg-black scroll-smooth">
               {children}
             </main>
           </div>

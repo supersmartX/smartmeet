@@ -190,7 +190,7 @@ function RecordingsContent() {
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6 sm:gap-8 bg-zinc-50 dark:bg-black">
+    <div className="p-4 sm:p-8 pb-32 max-w-7xl mx-auto w-full flex flex-col gap-6 sm:gap-8 bg-zinc-50 dark:bg-black">
       <Toast {...toast} />
       <RecordingHeader
         searchQuery={searchQuery}

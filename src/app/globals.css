@@ -59,24 +59,24 @@
 
 @utility custom-scrollbar {
   &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
   &::-webkit-scrollbar-track {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
     background: #e4e4e7;
-    border-radius: 10px;
+    border-radius: 20px;
   }
   .dark &::-webkit-scrollbar-thumb {
-    background: #27272a;
+    background: #18181b;
   }
   &::-webkit-scrollbar-thumb:hover {
     background: #d4d4d8;
   }
   .dark &::-webkit-scrollbar-thumb:hover {
-    background: #3f3f46;
+    background: #27272a;
   }
 }
 
