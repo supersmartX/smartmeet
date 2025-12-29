@@ -4,7 +4,7 @@ export const meetingSchema = z.object({
   title: z.string().min(1, "Title is required").max(100, "Title is too long"),
   duration: z.string().optional(),
   code: z.string().optional(),
-  audioUrl: z.string().url("Invalid audio URL").optional(),
+  audioUrl: z.string().min(1, "Audio reference is required").optional(),
 });
 
 export const meetingIdSchema = z.object({
