@@ -61,7 +61,7 @@ export function RecordingRow({
   };
 
   return (
-    <tr className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group">
+    <tr className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group relative">
       <td className="px-4 sm:px-8 py-4 sm:py-6">
         <div className="flex items-center gap-3 sm:gap-5">
           <Link 
