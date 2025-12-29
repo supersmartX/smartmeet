@@ -13,6 +13,8 @@ export interface Meeting {
   status: string;
   userId: string;
   code?: string;
+  projectDoc?: string;
+  testResults?: string;
   audioUrl?: string;
 }
 
@@ -47,6 +49,8 @@ export interface MeetingUpdateData {
   transcription?: string;
   summary?: string;
   code?: string;
+  projectDoc?: string;
+  testResults?: string;
 }
 
 export interface DashboardStat {

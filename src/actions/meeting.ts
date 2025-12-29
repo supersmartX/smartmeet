@@ -9,7 +9,14 @@ import { logSecurityEvent } from "@/lib/audit";
 import { supabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { headers } from "next/headers";
-import { audioToCode } from "@/services/api";
+import { 
+  audioToCode, 
+  generateCode, 
+  summarizeText, 
+  buildPrompt, 
+  generatePlan,
+  testCode
+} from "@/services/api";
 import { 
   meetingSchema, 
   meetingIdSchema, 
@@ -510,7 +517,9 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       await updateMeetingStatus(meetingId, "COMPLETED", {
         transcription: pipelineResponse.data.transcription,
         summary: pipelineResponse.data.summary,
-        code: pipelineResponse.data.code
+        code: pipelineResponse.data.code,
+        projectDoc: pipelineResponse.data.project_doc,
+        testResults: pipelineResponse.data.test_output?.output || pipelineResponse.data.test_output?.error
       });
       return { success: true };
     } else {
@@ -547,6 +556,8 @@ export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PRO
         };
       };
       code?: string;
+      projectDoc?: string;
+      testResults?: string;
     } = { status };
 
     if (data) {
@@ -566,6 +577,12 @@ export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PRO
       }
       if (data.code) {
         updateData.code = data.code;
+      }
+      if (data.projectDoc) {
+        updateData.projectDoc = data.projectDoc;
+      }
+      if (data.testResults) {
+        updateData.testResults = data.testResults;
       }
     }
 
@@ -650,6 +667,95 @@ export async function getActiveSessions(): Promise<ActionResult<Session[]>> {
   }
 }
 
+export async function generateMeetingLogic(meetingId: string): Promise<ActionResult<string>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId, user: { email: session.user.email } },
+      include: { transcripts: true }
+    });
+
+    if (!meeting) return { success: false, error: "Meeting not found" };
+    
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { apiKey: true, preferredProvider: true }
+    });
+
+    if (!user?.apiKey) return { success: false, error: "API Key missing" };
+    const apiKey = decrypt(user.apiKey);
+
+    const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
+    
+    const result = await generateCode(
+      `Based on this meeting transcript, generate a structured business logic or implementation plan in TypeScript:\n\n${transcriptText}`,
+      {
+        api_key: apiKey,
+        provider: (user.preferredProvider as any) || "openai"
+      }
+    );
+
+    if (result.success && result.data) {
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { code: result.data.code }
+      });
+      revalidatePath(`/dashboard/recordings/${meetingId}`);
+      return { success: true, data: result.data.code };
+    }
+
+    return { success: false, error: result.error || "Failed to generate logic" };
+  } catch (error: unknown) {
+    console.error("Generate meeting logic error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to generate logic" };
+  }
+}
+
+export async function askAIAboutMeeting(meetingId: string, question: string): Promise<ActionResult<string>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId, user: { email: session.user.email } },
+      include: { transcripts: true, summary: true }
+    });
+
+    if (!meeting) return { success: false, error: "Meeting not found" };
+    
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { apiKey: true, preferredProvider: true }
+    });
+
+    if (!user?.apiKey) return { success: false, error: "API Key missing" };
+    const apiKey = decrypt(user.apiKey);
+
+    const context = `
+      Meeting Title: ${meeting.title}
+      Summary: ${meeting.summary?.content || "No summary available"}
+      Transcript: ${meeting.transcripts.slice(0, 50).map(t => `${t.speaker}: ${t.text}`).join("\n")}
+    `;
+
+    // Use buildPrompt or generatePlan based on the question type or just a general summary call
+    const result = await buildPrompt(
+      `Context: ${context}\n\nQuestion: ${question}\n\nProvide a concise and helpful answer based on the meeting context.`,
+      apiKey
+    );
+
+    if (result.success && result.data) {
+      return { success: true, data: result.data.prompt };
+    }
+
+    return { success: false, error: result.error || "AI failed to answer" };
+  } catch (error: unknown) {
+    console.error("Ask AI error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to get AI answer" };
+  }
+}
+
 export async function revokeSession(sessionId: string): Promise<ActionResult> {
   try {
     const session = await getServerSession(enhancedAuthOptions);
@@ -690,5 +796,128 @@ export async function revokeSession(sessionId: string): Promise<ActionResult> {
       success: false, 
       error: error instanceof Error ? error.message : "Failed to revoke session" 
     };
+  }
+}
+
+export async function generateMeetingSummary(meetingId: string): Promise<ActionResult<string>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId, user: { email: session.user.email } },
+      include: { transcripts: true }
+    });
+
+    if (!meeting) return { success: false, error: "Meeting not found" };
+    
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { apiKey: true }
+    });
+
+    if (!user?.apiKey) return { success: false, error: "API Key missing" };
+    const apiKey = decrypt(user.apiKey);
+
+    const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
+    
+    const result = await summarizeText(transcriptText, { api_key: apiKey });
+
+    if (result.success && result.data) {
+      await prisma.summary.upsert({
+        where: { meetingId },
+        update: { content: result.data.summary },
+        create: { meetingId, content: result.data.summary }
+      });
+      revalidatePath(`/dashboard/recordings/${meetingId}`);
+      return { success: true, data: result.data.summary };
+    }
+
+    return { success: false, error: result.error || "Failed to generate summary" };
+  } catch (error: unknown) {
+    console.error("Generate meeting summary error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to generate summary" };
+  }
+}
+
+export async function testMeetingCompliance(meetingId: string): Promise<ActionResult<string>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId, user: { email: session.user.email } },
+      select: { code: true }
+    });
+
+    if (!meeting || !meeting.code) return { success: false, error: "Meeting logic not found. Generate logic first." };
+    
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { apiKey: true }
+    });
+
+    if (!user?.apiKey) return { success: false, error: "API Key missing" };
+    const apiKey = decrypt(user.apiKey);
+
+    const result = await testCode(meeting.code, { api_key: apiKey });
+
+    if (result.success && result.data) {
+      const output = result.data.output || result.data.error;
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { testResults: output }
+      });
+      revalidatePath(`/dashboard/recordings/${meetingId}`);
+      return { success: true, data: output };
+    }
+
+    return { success: false, error: result.error || "Failed to run compliance tests" };
+  } catch (error: unknown) {
+    console.error("Test meeting compliance error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to run compliance tests" };
+  }
+}
+
+export async function generateMeetingPlan(meetingId: string): Promise<ActionResult<string>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId, user: { email: session.user.email } },
+      include: { transcripts: true }
+    });
+
+    if (!meeting) return { success: false, error: "Meeting not found" };
+    
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { apiKey: true }
+    });
+
+    if (!user?.apiKey) return { success: false, error: "API Key missing" };
+    const apiKey = decrypt(user.apiKey);
+
+    const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
+    
+    const result = await generatePlan(
+      `Generate a detailed implementation plan based on this meeting transcript:\n\n${transcriptText}`,
+      apiKey
+    );
+
+    if (result.success && result.data) {
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { projectDoc: result.data.plan }
+      });
+      revalidatePath(`/dashboard/recordings/${meetingId}`);
+      return { success: true, data: result.data.plan };
+    }
+
+    return { success: false, error: result.error || "Failed to generate plan" };
+  } catch (error: unknown) {
+    console.error("Generate meeting plan error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to generate plan" };
   }
 }

@@ -237,7 +237,33 @@ export async function transcribeAudio(
     formData.append("file", file, "audio.mp3");
   }
 
-  return makeApiRequest<TranscriptionResponse>("/transcribe-upload", "POST", formData, apiKey);
+  return makeApiRequest<TranscriptionResponse>("/transcribe", "POST", formData, apiKey);
+}
+
+/**
+ * Build a prompt from text
+ */
+export async function buildPrompt(
+  text: string,
+  apiKey: string = ""
+): Promise<ApiResponse<{ prompt: string }>> {
+  return makeApiRequest<{ prompt: string }>("/build-prompt", "POST", {
+    text,
+    api_key: apiKey
+  });
+}
+
+/**
+ * Generate a plan from text
+ */
+export async function generatePlan(
+  text: string,
+  apiKey: string = ""
+): Promise<ApiResponse<{ plan: string }>> {
+  return makeApiRequest<{ plan: string }>("/generate-plan", "POST", {
+    text,
+    api_key: apiKey
+  });
 }
 
 /**

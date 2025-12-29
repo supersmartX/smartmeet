@@ -65,10 +65,12 @@ export async function POST(request: NextRequest) {
     // Define allowed endpoints to prevent SSRF attacks
     const ALLOWED_ENDPOINTS = [
       '/audio-to-code',
-      '/transcribe-upload', 
+      '/transcribe', 
       '/summarize',
       '/generate-code',
-      '/test-code'
+      '/test-code',
+      '/build-prompt',
+      '/generate-plan'
     ];
     
     // Validate endpoint to prevent SSRF
