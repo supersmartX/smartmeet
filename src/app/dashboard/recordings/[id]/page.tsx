@@ -121,6 +121,7 @@ export default function RecordingDetailPage() {
           // Stop polling if completed or failed
           if (result.data.status !== 'PROCESSING' && pollInterval) {
             clearInterval(pollInterval)
+            pollInterval = null
           }
         }
       } catch (err) {
@@ -135,15 +136,14 @@ export default function RecordingDetailPage() {
 
     // Start polling if status is PROCESSING
     pollInterval = setInterval(() => {
-      if (meeting?.status === 'PROCESSING' || !meeting) {
-        fetchMeeting(true)
-      }
+      // Use a functional check to avoid stale closure of 'meeting'
+      fetchMeeting(true)
     }, 5000)
 
     return () => {
       if (pollInterval) clearInterval(pollInterval)
     }
-  }, [params.id, isAuthorized, session?.user?.id, meeting?.status])
+  }, [params.id, isAuthorized, session?.user?.id])
 
   // Check if meeting is technical based on keywords
   const isTechnicalMeeting = meeting?.transcripts?.some((item: Transcript) => 
