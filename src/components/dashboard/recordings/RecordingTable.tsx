@@ -74,7 +74,7 @@ export function RecordingTable({
         id="recording-table"
         role="region"
         aria-labelledby="recordings-heading"
-        className="bg-white dark:bg-zinc-900 rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-zinc-800 shadow-xl shadow-black/5 flex-1 flex flex-col min-h-[400px] relative overflow-hidden"
+        className="bg-white dark:bg-zinc-900 rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-zinc-800 shadow-xl shadow-black/5 flex-1 flex flex-col min-h-[400px] relative"
       >
         {isLoading ? (
           <div className="flex-1 flex flex-col p-4 sm:p-8 gap-4 sm:gap-6">
@@ -128,11 +128,11 @@ export function RecordingTable({
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar overflow-visible">
+          <div className="overflow-x-auto custom-scrollbar rounded-[24px] sm:rounded-[32px]">
             <table className="w-full text-left border-collapse min-w-full">
               <thead>
                 <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">
-                  <th className="px-4 sm:px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
+                  <th className="px-4 sm:px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] first:rounded-tl-[24px] sm:first:rounded-tl-[32px]">
                     Meeting Name
                   </th>
                   <th className="hidden sm:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
@@ -147,7 +147,7 @@ export function RecordingTable({
                   <th className="hidden sm:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
                     Status
                   </th>
-                  <th className="px-4 sm:px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">
+                  <th className="px-4 sm:px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right last:rounded-tr-[24px] sm:last:rounded-tr-[32px]">
                     Action
                   </th>
                 </tr>
