@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import Script from "next/script"
 
 import { highlightText } from "@/utils/text"
 import { getMeetingById, updateMeetingCode } from "@/actions/meeting"
@@ -23,7 +22,6 @@ import {
   ChevronRight,
   Copy,
   Loader2,
-  Zap,
   ShieldCheck
 } from "lucide-react"
 
@@ -116,14 +114,14 @@ export default function RecordingDetailPage() {
             setIsLogicGenerated(true)
           }
         }
-      } catch (err) {
+      } catch {
         setError("Failed to load meeting details. Please try again.")
       } finally {
         setIsLoading(false)
       }
     }
     fetchMeeting()
-  }, [params.id])
+  }, [params.id, isAuthorized, session?.user?.id])
 
   // Check if meeting is technical based on keywords
   const isTechnicalMeeting = meeting?.transcripts?.some((item: Transcript) => 
@@ -355,7 +353,7 @@ export default function RecordingDetailPage() {
             <ShieldCheck className="w-8 h-8 text-zinc-400" />
           </div>
           <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-2">Access Denied</h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">You don't have permission to view this meeting.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">You don&apos;t have permission to view this meeting.</p>
           <Link 
             href="/dashboard" 
             className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"

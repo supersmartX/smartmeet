@@ -1,11 +1,10 @@
 "use client"
 
 import { 
-  HelpCircle, 
   Book, 
   MessageSquare, 
   Mail, 
-  FileText, 
+  FileText,
   ChevronRight, 
   Search,
   Zap,

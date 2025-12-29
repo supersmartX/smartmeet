@@ -45,12 +45,16 @@ export default function DashboardPage() {
       try {
         setIsLoading(true)
         setError(null)
+        setShowToast(true)
         const [meetingsData, statsData] = await Promise.all([
           getMeetings(),
           getDashboardStats()
         ])
         setRecordings(meetingsData)
         if (statsData) setStats(statsData)
+        
+        // Hide toast after 3 seconds
+        setTimeout(() => setShowToast(false), 3000)
       } catch (err) {
         console.error("Dashboard fetch error:", err)
         setError("Failed to load dashboard data. Please try again.")

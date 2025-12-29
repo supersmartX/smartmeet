@@ -22,7 +22,6 @@ export default function DashboardLayout({
   const [sidebarWidth, setSidebarWidth] = useState(240)
   const [isResizing, setIsResizing] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const [isMounted, setIsMounted] = useState(true)
   const pathname = usePathname()
   const { data: session } = useSession()
   const user = session?.user

@@ -5,7 +5,7 @@ import { signIn, getProviders, ClientSafeProvider } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, User, Key, ArrowRight, Loader2, Sparkles, Github, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, User, Key, ArrowRight, Loader2, Github, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { signUp } from "@/actions/auth";
 
 function LoginContent() {

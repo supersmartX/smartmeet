@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   // Only allow ADMIN users to access debug endpoints
-  if ((session.user as any).role !== 'ADMIN') {
+  if (session.user.role !== 'ADMIN') {
     return new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' }

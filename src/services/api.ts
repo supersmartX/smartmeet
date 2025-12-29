@@ -1,12 +1,7 @@
-import { env } from "@/lib/env";
-
 /**
  * SupersmartX API Service
  * Handles all communication with the backend API
  */
-
-// Configuration - using validated environment variables
-const API_BASE_URL = env.NEXT_PUBLIC_API_BASE_URL;
 
 interface ApiResponse<T> {
   success: boolean;

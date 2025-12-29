@@ -1,6 +1,6 @@
-type Props = { title: string; description: string; icon: string; index: number }
+type Props = { title: string; description: string; icon: string }
 
-export default function FeatureCard({ title, description, icon, index }: Props) {
+export default function FeatureCard({ title, description, icon }: Props) {
   return (
     <div className="group p-8 rounded-[2rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-brand-via/50 transition-all duration-500 hover:shadow-2xl hover:shadow-brand-via/5 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gradient opacity-0 group-hover:opacity-5 blur-3xl transition-opacity" />

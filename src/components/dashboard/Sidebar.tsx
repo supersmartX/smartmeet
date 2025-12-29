@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useSession, signOut } from "next-auth/react"
 import {
   ChevronRight,
   ChevronDown,
@@ -10,16 +9,10 @@ import {
   FileText,
   Code,
   FileCode,
-  FileJson,
   Video,
-  LogOut,
   Settings,
   Layout,
-  Users,
-  Layers,
-  Search,
   HelpCircle,
-  Bell,
   Shield
 } from "lucide-react"
 import { useState } from "react"
@@ -59,9 +52,6 @@ const workspaceItems: WorkspaceItem[] = [
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
-  const { data: session } = useSession()
-  const user = session?.user
-  const logout = () => signOut()
   const [openFolders, setOpenFolders] = useState<string[]>(["SUPERSMART", "ACTIVE SESSIONS", "My Projects"])
 
   const toggleFolder = (name: string) => {

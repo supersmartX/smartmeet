@@ -10,8 +10,7 @@ import {
   Sparkles, 
   Code2, 
   CheckCircle2, 
-  ChevronRight,
-  ArrowRight
+  ChevronRight
 } from "lucide-react"
 
 export default function Hero() {

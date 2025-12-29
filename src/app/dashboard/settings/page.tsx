@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { 
   Key, 
   Shield, 
@@ -25,6 +26,18 @@ import {
 } from "lucide-react"
 import { getUserSettings, updateUserApiKey } from "@/actions/meeting"
 import { generateMFASecret, verifyAndEnableMFA, disableMFA } from "@/actions/mfa"
+
+interface UserSettings {
+  apiKey: string | null;
+  preferredProvider: string | null;
+  preferredModel: string | null;
+  allowedIps: string;
+  lastUsedAt: Date | null;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  mfaEnabled: boolean;
+}
 
 export default function SettingsPage() {
   const [apiKey, setApiKey] = useState("")
@@ -70,7 +83,7 @@ export default function SettingsPage() {
       try {
         setIsLoading(true)
         setError(null)
-        const settings = (await getUserSettings()) as any
+        const settings = (await getUserSettings()) as UserSettings | null
         if (settings) {
           setApiKey(settings.apiKey || "")
           setProvider(settings.preferredProvider || "openai")
@@ -145,8 +158,9 @@ export default function SettingsPage() {
       setMfaSecret("")
       setMfaToken("")
       showNotification("MFA enabled successfully!")
-    } catch (error: any) {
-      showNotification(error.message || "Failed to verify MFA code.", "error")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to verify MFA code."
+      showNotification(message, "error")
     } finally {
       setIsVerifyingMFA(false)
     }
@@ -458,8 +472,15 @@ export default function SettingsPage() {
               <div className="mt-8 p-6 bg-zinc-50 dark:bg-zinc-950/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 animate-in zoom-in-95 duration-300">
                 <div className="flex flex-col md:flex-row gap-8">
                   <div className="space-y-4 flex-shrink-0">
-                    <div className="w-40 h-40 bg-white p-2 rounded-2xl border border-zinc-200 shadow-sm">
-                      <img src={qrCodeUrl} alt="MFA QR Code" className="w-full h-full" />
+                    <div className="w-48 h-48 bg-white p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 mb-6">
+                      <Image 
+                        src={qrCodeUrl} 
+                        alt="MFA QR Code" 
+                        width={192} 
+                        height={192} 
+                        className="w-full h-full"
+                        unoptimized
+                      />
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Backup Code</p>

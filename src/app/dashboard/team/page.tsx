@@ -1,6 +1,6 @@
 "use client"
 
-import { Users, UserPlus, Mail, Shield, MoreHorizontal, Search, Lock } from "lucide-react"
+import { Users, UserPlus, Mail, Shield, Lock } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 export default function TeamPage() {

@@ -17,8 +17,8 @@ export default function Features() {
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f, i) => (
-            <FeatureCard key={f.title} title={f.title} description={f.description} icon={f.icon} index={i} />
+          {FEATURES.map((f) => (
+            <FeatureCard key={f.title} title={f.title} description={f.description} icon={f.icon} />
           ))}
         </div>
       </div>

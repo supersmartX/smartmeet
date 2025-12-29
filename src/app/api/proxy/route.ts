@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkApiRateLimit, type RateLimitResult } from "@/lib/rate-limit";
 import { headers } from "next/headers";
 
 /**
  * Get client IP address from request headers
  */
-async function getClientIp(request: NextRequest): Promise<string> {
+async function getClientIp(): Promise<string> {
   const headersList = await headers();
   const forwardedFor = headersList.get("x-forwarded-for");
   const realIp = headersList.get("x-real-ip");
@@ -16,7 +16,7 @@ async function getClientIp(request: NextRequest): Promise<string> {
 /**
  * Create rate limit headers for response
  */
-function createRateLimitHeaders(result: any) {
+function createRateLimitHeaders(result: RateLimitResult) {
   return {
     "X-RateLimit-Limit": result.limit?.toString() || "10",
     "X-RateLimit-Remaining": result.remaining?.toString() || "0",
@@ -29,7 +29,7 @@ function createRateLimitHeaders(result: any) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const clientIp = await getClientIp(request);
+    const clientIp = await getClientIp();
     const headersList = await headers();
     const userAgent = headersList.get("user-agent") || "unknown";
     const rateLimitKey = `${clientIp}-${userAgent}`;
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 /**
  * Handle OPTIONS requests for CORS
  */
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   const headersList = await headers();
   const origin = headersList.get("origin") || "";
   

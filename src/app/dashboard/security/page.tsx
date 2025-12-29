@@ -21,10 +21,11 @@ import {
 } from "lucide-react"
 import { getAuditLogs, getActiveSessions, revokeSession } from "@/actions/meeting"
 import { format } from "date-fns"
+import type { AuditLog, Session } from "@prisma/client"
 
 export default function SecurityPage() {
-  const [logs, setLogs] = useState<any[]>([])
-  const [sessions, setSessions] = useState<any[]>([])
+  const [logs, setLogs] = useState<AuditLog[]>([])
+  const [sessions, setSessions] = useState<Partial<Session>[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRevoking, setIsRevoking] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -105,6 +106,12 @@ export default function SecurityPage() {
       </div>
 
       <div className="grid gap-8">
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500">
+            <AlertCircle className="w-5 h-5" />
+            <p className="text-xs font-bold uppercase tracking-widest">{error}</p>
+          </div>
+        )}
         {/* Active Sessions */}
         <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-950/30">
@@ -154,14 +161,14 @@ export default function SecurityPage() {
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3 h-3 text-zinc-400" />
                           <span className="text-[10px] font-medium text-zinc-400">
-                            Expires {format(new Date(session.expires), 'MMM d, yyyy')}
+                            Expires {session.expires ? format(new Date(session.expires), 'MMM d, yyyy') : 'Never'}
                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
                   <button 
-                    onClick={() => handleRevokeSession(session.id)}
+                    onClick={() => session.id && handleRevokeSession(session.id)}
                     disabled={isRevoking === session.id}
                     className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50"
                   >

@@ -5,10 +5,8 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useState, useRef, useEffect, Suspense } from "react"
 import { highlightText } from "@/utils/text"
-import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles, Upload } from "lucide-react"
+import { Search, Video, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Loader2, Sparkles } from "lucide-react"
 import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, updateMeetingStatus, processMeetingAI } from "@/actions/meeting"
-import { supabase } from "@/lib/supabase"
-import { v4 as uuidv4 } from "uuid"
 
 interface Meeting {
   id: string;
@@ -28,7 +26,6 @@ function RecordingsContent() {
   const [recordings, setRecordings] = useState<Meeting[]>([])
   const [filter, setFilter] = useState("all meetings")
   const [searchQuery, setSearchQuery] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
@@ -141,7 +138,7 @@ function RecordingsContent() {
     try {
       // 1. Get signed URL from Supabase via Server Action
       setUploadStatus("Preparing secure channel...")
-      const { signedUrl, path, token } = await createSignedUploadUrl(file.name)
+      const { signedUrl, path } = await createSignedUploadUrl(file.name)
 
       // 2. Upload file directly to Supabase
       setUploadStatus("Uploading recording...")

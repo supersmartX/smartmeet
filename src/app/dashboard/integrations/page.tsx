@@ -1,6 +1,6 @@
 "use client"
 
-import { Layers, Plus, ExternalLink, Slack, Video, Calendar, Database, Check } from "lucide-react"
+import { Plus, ExternalLink, Slack, Video, Calendar, Database } from "lucide-react"
 
 const integrationCategories = [
   { id: 'video', name: 'Video Conferencing', icon: Video },
