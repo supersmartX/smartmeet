@@ -478,7 +478,7 @@ export default function RecordingDetailPage() {
             <ChevronRight className="w-3 h-3 shrink-0 hidden xs:inline" />
             <Link href="/dashboard/recordings" className="hover:text-brand-via transition-colors shrink-0">recordings</Link>
             <ChevronRight className="w-3 h-3 shrink-0" />
-            <span className="text-zinc-900 dark:text-zinc-100 truncate max-w-[100px] xs:max-w-none">Analysis</span>
+            <span className="text-zinc-900 dark:text-zinc-100 truncate max-w-[100px] xs:max-w-none">{meeting?.title || "Analysis"}</span>
           </div>
           
           <div className="hidden xl:flex items-center gap-6 ml-6 pl-6 border-l border-zinc-200 dark:border-zinc-800">
@@ -511,8 +511,8 @@ export default function RecordingDetailPage() {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400">
-            <Clock className="w-3 h-3" /> --m
-            <Users className="w-3 h-3 ml-2" /> --
+            <Clock className="w-3 h-3" /> {meeting?.duration || "--m"}
+            <Users className="w-3 h-3 ml-2" /> {meeting?.participants || "--"}
           </div>
           <div className="h-4 w-[1px] bg-zinc-200 dark:border-zinc-800" />
           <button className="text-[10px] font-bold text-brand-via hover:underline uppercase tracking-widest flex items-center gap-1.5">
@@ -867,6 +867,8 @@ export default function RecordingDetailPage() {
                 )}
               </div>
             )}
+          </div>
+        </div>
         <div 
           style={{ height: terminalHeight }}
           className="border-t border-zinc-200 dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-900/50 shrink-0 relative"
