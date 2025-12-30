@@ -15,7 +15,7 @@ interface Config {
 
 const LIMITER_CONFIGS: Record<LimiterType, Config> = {
   api: {
-    points: 10,
+    points: 50,
     duration: "60s", 
     durationSec: 60,
     keyPrefix: "api_rate_limit",
