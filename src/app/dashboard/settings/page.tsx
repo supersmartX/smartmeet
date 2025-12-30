@@ -20,7 +20,7 @@ import { MFASection } from "@/components/dashboard/settings/MFASection"
 export default function SettingsPage() {
   const { toast, showToast } = useToast()
   
-  const [apiKey, setApiKey] = useState("")
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
   const [showKey, setShowKey] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -37,6 +37,12 @@ export default function SettingsPage() {
   const [mfaToken, setMfaToken] = useState("")
   const [isSettingUpMFA, setIsSettingUpMFA] = useState(false)
   const [isVerifyingMFA, setIsVerifyingMFA] = useState(false)
+
+  const setApiKey = (p: string, key: string) => {
+    setApiKeys(prev => ({ ...prev, [p]: key }))
+  }
+
+  const apiKey = apiKeys[provider] || ""
 
   const providerModels = {
     openai: [
@@ -74,7 +80,7 @@ export default function SettingsPage() {
         const result = await getUserSettings()
         if (result.success && result.data) {
           const settings = result.data as UserSettings
-          setApiKey(settings.apiKey || "")
+          setApiKeys(settings.apiKeys || {})
           setProvider(settings.preferredProvider || "openai")
           setModel(settings.preferredModel || "gpt-4o")
           setAllowedIps(settings.allowedIps || "")
@@ -109,7 +115,7 @@ export default function SettingsPage() {
     setIsSaving(true)
     try {
       const result = await updateUserApiKey({
-        apiKey,
+        apiKeys,
         preferredProvider: provider,
         preferredModel: model,
         allowedIps
@@ -224,7 +230,7 @@ export default function SettingsPage() {
           setProvider={setProvider}
           model={model}
           setModel={setModel}
-          apiKey={apiKey}
+          apiKeys={apiKeys}
           setApiKey={setApiKey}
           showKey={showKey}
           setShowKey={setShowKey}

@@ -22,6 +22,7 @@ export const updateMeetingCodeSchema = z.object({
 });
 
 export const apiKeyUpdateSchema = z.object({
+  apiKeys: z.record(z.string(), z.string()).optional(),
   apiKey: z.string().optional(),
   preferredProvider: z.string().optional(),
   preferredModel: z.string().optional(),

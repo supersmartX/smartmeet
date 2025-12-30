@@ -209,9 +209,14 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
       lastUsedAt: new Date()
     };
 
-    if (validatedData.apiKey) {
-      updatePayload.apiKey = encrypt(validatedData.apiKey);
-    } else if (validatedData.apiKey === "") {
+    if (validatedData.apiKeys) {
+      // Encrypt the entire object as a JSON string
+      updatePayload.apiKey = encrypt(JSON.stringify(validatedData.apiKeys));
+    } else if (validatedData.apiKey) {
+      // Legacy support: if single apiKey is provided, wrap it in an object for the current provider
+      const currentProvider = validatedData.preferredProvider || "openai";
+      updatePayload.apiKey = encrypt(JSON.stringify({ [currentProvider]: validatedData.apiKey }));
+    } else if (validatedData.apiKey === "" || validatedData.apiKeys === null) {
       updatePayload.apiKey = null;
     }
 
@@ -265,9 +270,22 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
 
     if (!user) return { success: false, error: "User not found" };
 
+    let apiKeys: Record<string, string> = {};
+    if (user.apiKey) {
+      const decrypted = decrypt(user.apiKey);
+      try {
+        apiKeys = JSON.parse(decrypted);
+      } catch {
+        // Fallback for legacy single-string API keys
+        const provider = user.preferredProvider || "openai";
+        apiKeys = { [provider]: decrypted };
+      }
+    }
+
     const settings = {
       ...user,
-      apiKey: user.apiKey ? decrypt(user.apiKey) : null,
+      apiKeys,
+      apiKey: user.apiKey ? (apiKeys[user.preferredProvider || "openai"] || "") : null,
       allowedIps: user.allowedIps || ""
     };
 
@@ -516,7 +534,7 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       return { success: false, error: "API Key missing. Please add it in Settings." };
     }
 
-    const apiKey = decrypt(user.apiKey);
+    const decryptedKey = decrypt(user.apiKey);
 
     // Update lastUsedAt
     await prisma.user.update({
@@ -551,6 +569,16 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     // 4. Call the AI pipeline with user preferences
     const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
     
+    // Extract the correct API key for the preferred provider
+    const decrypted = decrypt(user.apiKey);
+    let effectiveApiKey = decrypted;
+    try {
+      const keys = JSON.parse(decrypted);
+      effectiveApiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
+    } catch {
+      // Legacy single key format
+    }
+    
     // Map frontend provider names to backend expectations
     const providerMap: Record<string, string> = {
       "anthropic": "claude",
@@ -564,7 +592,7 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     console.log(`Starting AI pipeline for meeting ${meetingId} using provider: ${provider}`);
 
     const pipelineResponse = await audioToCode(audioBlob, {
-      api_key: apiKey,
+      api_key: effectiveApiKey,
       summary_provider: provider.toUpperCase() as any,
       code_provider: provider as any,
       code_model: user.preferredModel || undefined,
@@ -767,7 +795,17 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
     });
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
-    const apiKey = decrypt(user.apiKey);
+    
+    // Extract the correct API key for the preferred provider
+    const rawProvider = user.preferredProvider || "openai";
+    const decrypted = decrypt(user.apiKey);
+    let apiKey = decrypted;
+    try {
+      const keys = JSON.parse(decrypted);
+      apiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
+    } catch {
+      // Legacy single key format
+    }
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
     
@@ -813,7 +851,17 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
     });
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
-    const apiKey = decrypt(user.apiKey);
+    
+    // Extract the correct API key for the preferred provider
+    const rawProvider = user.preferredProvider || "openai";
+    const decrypted = decrypt(user.apiKey);
+    let apiKey = decrypted;
+    try {
+      const keys = JSON.parse(decrypted);
+      apiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
+    } catch {
+      // Legacy single key format
+    }
 
     const context = `
       Meeting Title: ${meeting.title}

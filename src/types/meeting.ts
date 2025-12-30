@@ -100,6 +100,7 @@ export interface UserWithMeetings {
 
 export interface UserSettings {
   apiKey: string | null;
+  apiKeys?: Record<string, string>;
   preferredProvider: string | null;
   preferredModel: string | null;
   allowedIps: string;
