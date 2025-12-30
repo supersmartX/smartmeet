@@ -13,7 +13,7 @@ interface ApiResponse<T> {
 interface AudioToCodeParams {
   file: File | Blob;
   api_key?: string;
-  summary_provider?: "BART" | "GPT-4" | "CLAUDE" | "GEMINI" | "GROQ";
+  summary_provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ";
   code_provider?: "openai" | "claude" | "gemini" | "groq";
   test_provider?: "local" | "openai" | "claude" | "gemini" | "groq";
 }
@@ -219,7 +219,7 @@ export async function audioToCode(
   if (params.code_provider) formData.append("code_provider", params.code_provider);
   if (params.test_provider) formData.append("test_provider", params.test_provider);
 
-  return makeApiRequest<CompletePipelineResponse>("/audio-to-code", "POST", formData);
+  return makeApiRequest<CompletePipelineResponse>("/api/AI/audio/process", "POST", formData);
 }
 
 /**
@@ -237,7 +237,7 @@ export async function transcribeAudio(
     formData.append("file", file, "audio.mp3");
   }
 
-  return makeApiRequest<TranscriptionResponse>("/transcribe", "POST", formData, apiKey);
+  return makeApiRequest<TranscriptionResponse>("/api/AI/audio/transcribe", "POST", formData, apiKey);
 }
 
 /**
@@ -247,7 +247,7 @@ export async function buildPrompt(
   text: string,
   apiKey: string = ""
 ): Promise<ApiResponse<{ prompt: string }>> {
-  return makeApiRequest<{ prompt: string }>("/build-prompt", "POST", {
+  return makeApiRequest<{ prompt: string }>("/api/AI/prompt/build", "POST", {
     text,
     api_key: apiKey
   });
@@ -260,7 +260,7 @@ export async function generatePlan(
   text: string,
   apiKey: string = ""
 ): Promise<ApiResponse<{ plan: string }>> {
-  return makeApiRequest<{ plan: string }>("/generate-plan", "POST", {
+  return makeApiRequest<{ plan: string }>("/api/AI/plan", "POST", {
     text,
     api_key: apiKey
   });
@@ -273,13 +273,13 @@ export async function summarizeText(
   text: string,
   options: {
     api_key?: string;
-    provider?: "BART" | "GPT-4" | "CLAUDE" | "GEMINI" | "GROQ";
+    provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ";
   } = {}
 ): Promise<ApiResponse<SummaryResponse>> {
-  return makeApiRequest<SummaryResponse>("/summarize", "POST", {
+  return makeApiRequest<SummaryResponse>("/api/AI/audio/summarize", "POST", {
     transcript: text,
     api_key: options.api_key || "",
-    provider: options.provider || "GPT-4"
+    provider: options.provider || "OPENAI"
   });
 }
 
@@ -293,7 +293,7 @@ export async function generateCode(
     provider?: "openai" | "claude" | "gemini" | "groq";
   } = {}
 ): Promise<ApiResponse<CodeGenerationResponse>> {
-  return makeApiRequest<CodeGenerationResponse>("/generate-code", "POST", {
+  return makeApiRequest<CodeGenerationResponse>("/api/AI/code/generate-code", "POST", {
     task,
     provider: options.provider || "openai",
     api_key: options.api_key || ""
@@ -310,7 +310,7 @@ export async function testCode(
     provider?: "local" | "openai" | "claude" | "gemini" | "groq";
   } = {}
 ): Promise<ApiResponse<TestResponse>> {
-  return makeApiRequest<TestResponse>("/test-code", "POST", {
+  return makeApiRequest<TestResponse>("/api/AI/code/test-code", "POST", {
     code,
     provider: options.provider || "local",
     api_key: options.api_key || ""

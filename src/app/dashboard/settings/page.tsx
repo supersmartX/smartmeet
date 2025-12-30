@@ -50,6 +50,14 @@ export default function SettingsPage() {
       { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
       { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku' },
     ],
+    google: [
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+    ],
+    groq: [
+      { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B (Groq)' },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (Groq)' },
+    ],
     custom: [
       { id: 'custom-model', name: 'Use Provider Default' },
     ]

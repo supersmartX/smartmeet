@@ -75,10 +75,12 @@ export function AIConfigSection({
         {/* Provider Selection */}
         <div className="space-y-4">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">AI Provider</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
               { id: 'openai', name: 'OpenAI', desc: 'GPT-4o & o1 models', icon: Cpu },
               { id: 'anthropic', name: 'Anthropic', desc: 'Claude 3.5 Sonnet', icon: Zap },
+              { id: 'google', name: 'Google', desc: 'Gemini 1.5 Pro/Flash', icon: Zap },
+              { id: 'groq', name: 'Groq', desc: 'Llama 3.1 70B', icon: Zap },
               { id: 'custom', name: 'Custom Proxy', desc: 'Self-hosted or LiteLLM', icon: Server },
             ].map((p) => (
               <button

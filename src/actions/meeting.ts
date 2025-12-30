@@ -464,7 +464,13 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       where: { id: meetingId },
       include: {
         user: {
-          select: { id: true, apiKey: true, allowedIps: true }
+          select: { 
+            id: true, 
+            apiKey: true, 
+            allowedIps: true,
+            preferredProvider: true,
+            preferredModel: true
+          }
         }
       }
     });
@@ -538,9 +544,13 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     const audioBuffer = await audioResponse.arrayBuffer();
     const audioBlob = new Blob([audioBuffer], { type: audioResponse.headers.get("content-type") || "audio/mpeg" });
 
-    // 4. Call the AI pipeline
+    // 4. Call the AI pipeline with user preferences
+    const provider = user.preferredProvider?.toLowerCase() || "openai";
     const pipelineResponse = await audioToCode(audioBlob, {
-      api_key: apiKey
+      api_key: apiKey,
+      summary_provider: provider.toUpperCase() as any,
+      code_provider: provider as any,
+      test_provider: provider === "openai" ? "local" : provider as any // Default to local test for openai, others use provider
     });
 
     if (pipelineResponse.success && pipelineResponse.data) {
