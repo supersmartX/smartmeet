@@ -64,13 +64,13 @@ export async function POST(request: NextRequest) {
     
     // Define allowed endpoints to prevent SSRF attacks
     const ALLOWED_ENDPOINTS = [
-      '/audio-to-code',
-      '/transcribe', 
-      '/summarize',
-      '/generate-code',
-      '/test-code',
-      '/build-prompt',
-      '/generate-plan'
+      '/api/AI/audio/process',
+      '/api/AI/audio/transcribe',
+      '/api/AI/audio/summarize',
+      '/api/AI/code/generate-code',
+      '/api/AI/code/test-code',
+      '/api/AI/prompt/build',
+      '/api/AI/plan'
     ];
     
     // Validate endpoint to prevent SSRF
@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
     const requestHeaders: Record<string, string> = {
       "Accept": "application/json",
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
     };
     
     if (apiKey) {

@@ -99,6 +99,7 @@ async function makeApiRequest<T>(
       
       const headers: Record<string, string> = {
         "Accept": "application/json",
+        "ngrok-skip-browser-warning": "true",
       };
 
       if (apiKey) {
