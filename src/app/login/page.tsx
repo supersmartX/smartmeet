@@ -375,6 +375,41 @@ function LoginContent() {
             </div>
           </form>
 
+          {mode === "signin" && !mfaRequired && (
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.email) {
+                    setError("Please enter your email address first");
+                    return;
+                  }
+                  setIsSubmitting(true);
+                  try {
+                    const result = await signIn("email", {
+                      email: formData.email,
+                      redirect: false,
+                    });
+                    if (result?.error) {
+                      setError(result.error);
+                    } else {
+                      setError("");
+                      alert("Magic link sent! Check your email.");
+                    }
+                  } catch {
+                    setError("Failed to send magic link");
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+                className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-brand-via transition-colors"
+              >
+                Sign in with Magic Link
+              </button>
+            </div>
+          )}
+
           {/* Social Logins */}
           {providers && Object.values(providers).some(p => p.id !== "credentials") && (
             <div className="mt-8 space-y-4">

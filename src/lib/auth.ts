@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
+import EmailProvider from "next-auth/providers/email";
 import bcrypt from "bcryptjs";
 import speakeasy from "speakeasy";
 import { NextAuthOptions, Session } from "next-auth";
@@ -28,6 +29,46 @@ export const authOptions: NextAuthOptions = {
       clientId: githubId,
       clientSecret: githubSecret,
     })] : []),
+    EmailProvider({
+      server: {
+        host: process.env.EMAIL_SERVER_HOST,
+        port: Number(process.env.EMAIL_SERVER_PORT),
+        auth: {
+          user: process.env.EMAIL_SERVER_USER,
+          pass: process.env.EMAIL_SERVER_PASSWORD,
+        },
+      },
+      from: process.env.EMAIL_FROM,
+      // Custom send function to use Resend instead of SMTP if configured
+      async sendVerificationRequest({ identifier: email, url, provider }) {
+        if (process.env.RESEND_API_KEY) {
+          const { Resend } = await import('resend');
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          try {
+            await resend.emails.send({
+              from: provider.from || "onboarding@resend.dev",
+              to: email,
+              subject: "Sign in to Supersmart",
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2>Sign in to Supersmart</h2>
+                  <p>Click the button below to sign in to your account. This link will expire in 24 hours.</p>
+                  <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #000; color: #fff; text-decoration: none; border-radius: 6px; margin: 20px 0;">Sign In</a>
+                  <p>If you didn't request this, you can safely ignore this email.</p>
+                </div>
+              `
+            });
+          } catch (error) {
+            console.error("Error sending magic link email:", error);
+            throw new Error("SEND_VERIFICATION_EMAIL_ERROR");
+          }
+        } else {
+          // Fallback to default SMTP if Resend is not configured
+          // but we still need some config for the default provider
+          console.log(`[DEV MODE] Magic link for ${email}: ${url}`);
+        }
+      },
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -150,16 +191,42 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Initial sign in
       if (user) {
         token.id = user.id;
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-        });
-        if (dbUser && (dbUser as { role?: string }).role) {
-          token.role = (dbUser as { role: string }).role as UserRole;
+        token.role = (user as { role?: UserRole }).role || "MEMBER";
+      }
+
+      // Handle explicit session updates (e.g. from client-side update())
+      if (trigger === "update" && session?.role) {
+        token.role = session.role;
+      }
+
+      // Periodically refresh user data from DB to catch role changes
+      // or other critical updates without requiring re-login
+      if (token.id) {
+        const now = Math.floor(Date.now() / 1000);
+        const lastRefreshed = (token as { lastRefreshed?: number }).lastRefreshed || 0;
+        
+        // Refresh every 1 hour (3600 seconds)
+        if (now - lastRefreshed > 3600) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: token.id as string },
+              select: { role: true }
+            });
+            
+            if (dbUser) {
+              token.role = dbUser.role as UserRole;
+              (token as { lastRefreshed?: number }).lastRefreshed = now;
+            }
+          } catch (error) {
+            console.error("Failed to refresh user role in JWT:", error);
+          }
         }
       }
+
       return token;
     },
     async session({ session, token }: { session: Session; token: JWT }) {

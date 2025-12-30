@@ -1,10 +1,10 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import crypto from "crypto";
 
 export default withAuth(
   function middleware() {
-    const nonce = crypto.randomBytes(16).toString("base64");
+    // Generate a secure random nonce using Edge-compatible Web Crypto API
+    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
 
     const csp = `
       default-src 'self';

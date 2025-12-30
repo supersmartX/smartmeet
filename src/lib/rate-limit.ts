@@ -1,117 +1,105 @@
-import { RateLimiterMemory } from "rate-limiter-flexible";
+import { RateLimiterMemory, RateLimiterRes, RateLimiterAbstract } from "rate-limiter-flexible";
 
-// Create rate limiters for different endpoints
-const apiRateLimiter = new RateLimiterMemory({
-  keyPrefix: "api_rate_limit",
-  points: 10, // 10 requests
-  duration: 60, // per 60 seconds
-});
+// Configuration for rate limiters
+const LIMITER_CONFIGS = {
+  api: {
+    points: 10,
+    duration: 60,
+    keyPrefix: "api_rate_limit",
+  },
+  login: {
+    points: 5,
+    duration: 60 * 15,
+    keyPrefix: "login_rate_limit",
+  },
+  general: {
+    points: 100,
+    duration: 60 * 60,
+    keyPrefix: "general_rate_limit",
+  },
+};
 
-const loginRateLimiter = new RateLimiterMemory({
-  keyPrefix: "login_rate_limit",
-  points: 5, // 5 attempts
-  duration: 60 * 15, // per 15 minutes
-});
+// Memory-based limiters (default fallback)
+const apiRateLimiter = new RateLimiterMemory(LIMITER_CONFIGS.api);
+const loginRateLimiter = new RateLimiterMemory(LIMITER_CONFIGS.login);
+const generalRateLimiter = new RateLimiterMemory(LIMITER_CONFIGS.general);
 
-const generalRateLimiter = new RateLimiterMemory({
-  keyPrefix: "general_rate_limit",
-  points: 100, // 100 requests
-  duration: 60 * 60, // per hour
-});
-
+/**
+ * Interface for rate limit results
+ */
 export interface RateLimitResult {
   allowed: boolean;
   limit?: number;
   remaining?: number;
   reset?: number;
+  retryAfter?: number;
 }
 
 /**
- * Check API rate limit for a specific key (user ID, IP, etc.)
+ * Internal helper to format rate limiter results
+ */
+function formatResult(limiter: RateLimiterAbstract, res: RateLimiterRes, allowed: boolean): RateLimitResult {
+  return {
+    allowed,
+    limit: limiter.points,
+    remaining: allowed ? res.remainingPoints : 0,
+    reset: res.msBeforeNext,
+    retryAfter: !allowed ? Math.ceil(res.msBeforeNext / 1000) : 0,
+  };
+}
+
+/**
+ * Generic consume function with error handling
+ */
+async function consume(limiter: RateLimiterAbstract, key: string): Promise<RateLimitResult> {
+  try {
+    const res = await limiter.consume(key);
+    return formatResult(limiter, res, true);
+  } catch (rateLimiterRes: unknown) {
+    return formatResult(limiter, rateLimiterRes as RateLimiterRes, false);
+  }
+}
+
+/**
+ * Check API rate limit
  */
 export async function checkApiRateLimit(key: string): Promise<RateLimitResult> {
-  try {
-    const res = await apiRateLimiter.consume(key);
-    return {
-      allowed: true,
-      limit: apiRateLimiter.points,
-      remaining: res.remainingPoints,
-      reset: res.msBeforeNext,
-    };
-  } catch (rateLimiterRes: unknown) {
-    return {
-      allowed: false,
-      limit: apiRateLimiter.points,
-      remaining: 0,
-      reset: (rateLimiterRes as { msBeforeNext: number }).msBeforeNext,
-    };
-  }
+  return consume(apiRateLimiter, key);
 }
 
 /**
- * Check login rate limit for email/IP
+ * Check login rate limit
  */
 export async function checkLoginRateLimit(key: string): Promise<RateLimitResult> {
-  try {
-    const res = await loginRateLimiter.consume(key);
-    return {
-      allowed: true,
-      limit: loginRateLimiter.points,
-      remaining: res.remainingPoints,
-      reset: res.msBeforeNext,
-    };
-  } catch (rateLimiterRes: unknown) {
-    return {
-      allowed: false,
-      limit: loginRateLimiter.points,
-      remaining: 0,
-      reset: (rateLimiterRes as { msBeforeNext: number }).msBeforeNext,
-    };
-  }
+  return consume(loginRateLimiter, key);
 }
 
 /**
- * Check general rate limit for IP/user
+ * Check general rate limit
  */
 export async function checkGeneralRateLimit(key: string): Promise<RateLimitResult> {
-  try {
-    const res = await generalRateLimiter.consume(key);
-    return {
-      allowed: true,
-      limit: generalRateLimiter.points,
-      remaining: res.remainingPoints,
-      reset: res.msBeforeNext,
-    };
-  } catch (rateLimiterRes: unknown) {
-    return {
-      allowed: false,
-      limit: generalRateLimiter.points,
-      remaining: 0,
-      reset: (rateLimiterRes as { msBeforeNext: number }).msBeforeNext,
-    };
-  }
+  return consume(generalRateLimiter, key);
 }
 
 /**
  * Enhanced login rate limiting with IP tracking
  */
 export async function checkLoginRateLimitWithIP(email: string, ip?: string): Promise<RateLimitResult> {
-  // Rate limit by email first
+  // 1. Check email-based limit
   const emailResult = await checkLoginRateLimit(email);
-  if (!emailResult.allowed) {
-    return emailResult;
-  }
+  if (!emailResult.allowed) return emailResult;
   
-  // Also rate limit by IP if available (prevents email rotation attacks)
+  // 2. Check IP-based limit (prevents distributed attacks)
   if (ip) {
     const ipKey = `login:ip:${ip}`;
     const ipResult = await checkLoginRateLimit(ipKey);
-    if (!ipResult.allowed) {
-      return {
-        ...ipResult,
-        remaining: Math.min(emailResult.remaining || 0, ipResult.remaining || 0)
-      };
-    }
+    if (!ipResult.allowed) return ipResult;
+    
+    // Return the more restrictive of the two
+    return {
+      ...emailResult,
+      remaining: Math.min(emailResult.remaining || 0, ipResult.remaining || 0)
+    };
   }
   
   return emailResult;
@@ -125,5 +113,9 @@ export async function resetRateLimit(key: string, type: 'api' | 'login' | 'gener
                   type === 'login' ? loginRateLimiter : 
                   generalRateLimiter;
   
-  await limiter.delete(key);
+  try {
+    await limiter.delete(key);
+  } catch (error) {
+    console.error(`Failed to reset ${type} rate limit for ${key}:`, error);
+  }
 }
