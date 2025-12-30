@@ -64,6 +64,7 @@ export function AIConfigSection({
   // Helper to detect provider from key prefix
   const detectProvider = (key: string) => {
     if (key.startsWith("sk-ant-")) return "anthropic";
+    if (key.startsWith("sk-or-v1-")) return "openrouter";
     if (key.startsWith("sk-")) return "openai";
     if (key.startsWith("gsk_")) return "groq";
     if (key.startsWith("AIza")) return "google";
@@ -113,6 +114,7 @@ export function AIConfigSection({
               { id: 'anthropic', name: 'Anthropic', desc: 'Claude 3.5 Sonnet', icon: Zap },
               { id: 'google', name: 'Google', desc: 'Gemini 1.5 Pro/Flash', icon: Zap },
               { id: 'groq', name: 'Groq', desc: 'Llama 3.1 70B', icon: Zap },
+              { id: 'openrouter', name: 'OpenRouter', desc: 'Any model gateway', icon: ExternalLink },
               { id: 'custom', name: 'Custom Proxy', desc: 'Self-hosted or LiteLLM', icon: Server },
             ].map((p) => {
               const hasKey = !!apiKeys[p.id];
@@ -165,7 +167,8 @@ export function AIConfigSection({
                 provider === 'openai' ? "https://platform.openai.com/api-keys" :
                 provider === 'anthropic' ? "https://console.anthropic.com/settings/keys" :
                 provider === 'google' ? "https://aistudio.google.com/app/apikey" :
-                provider === 'groq' ? "https://console.groq.com/keys" : "#"
+                provider === 'groq' ? "https://console.groq.com/keys" :
+                provider === 'openrouter' ? "https://openrouter.ai/keys" : "#"
               }
               target="_blank"
               rel="noopener noreferrer"
@@ -187,7 +190,8 @@ export function AIConfigSection({
                 provider === 'openai' ? "sk-..." :
                 provider === 'anthropic' ? "sk-ant-..." :
                 provider === 'google' ? "AIza..." :
-                provider === 'groq' ? "gsk_..." : "Enter your key"
+                provider === 'groq' ? "gsk_..." :
+                provider === 'openrouter' ? "sk-or-v1-..." : "Enter your key"
               }
               className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl pl-11 pr-24 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 transition-all"
             />

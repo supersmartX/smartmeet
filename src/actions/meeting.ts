@@ -584,7 +584,8 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       "anthropic": "claude",
       "google": "gemini",
       "openai": "openai",
-      "groq": "groq"
+      "groq": "groq",
+      "openrouter": "openrouter"
     };
     
     const provider = providerMap[rawProvider] || rawProvider;
@@ -596,7 +597,7 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       summary_provider: provider.toUpperCase() as any,
       code_provider: provider as any,
       code_model: user.preferredModel || undefined,
-      test_provider: provider === "openai" ? "local" : provider as any 
+      test_provider: (provider === "openai" || provider === "openrouter") ? "local" : provider as any 
     });
 
     console.log(`Pipeline response for ${meetingId}:`, JSON.stringify(pipelineResponse, null, 2));
