@@ -162,13 +162,20 @@ function RecordingsContent() {
       }
 
       toastVisible("Recording uploaded and processing started!", "success")
-      await fetchMeetings()
       setIsModalOpen(false)
+      
+      // Re-fetch immediately to show the new "PROCESSING" row
+      await fetchMeetings(true)
 
-      // 4. Trigger AI processing (async)
-      processMeetingAI(createResult.data.id).catch(err => {
-        console.error("AI processing trigger error:", err)
-      })
+      const meetingId = createResult.data.id
+      
+      // 4. Trigger AI processing (async, detached from current execution context)
+      // We use a small delay to ensure the UI has finished its transition
+      setTimeout(() => {
+        processMeetingAI(meetingId).catch(err => {
+          console.error("Background AI processing error:", err)
+        })
+      }, 500)
 
     } catch (err) {
       console.error("Upload error:", err)

@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const providerModels = {
     openai: [
       { id: 'gpt-4o', name: 'GPT-4o (Recommended)' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
       { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
       { id: 'o1-preview', name: 'o1 Preview' },
       { id: 'o1-mini', name: 'o1 Mini' },
@@ -51,11 +52,13 @@ export default function SettingsPage() {
       { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku' },
     ],
     google: [
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Recommended)' },
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+      { id: 'gemini-pro', name: 'Gemini 1.0 Pro' },
     ],
     groq: [
       { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B (Groq)' },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Groq)' },
       { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (Groq)' },
     ],
     custom: [

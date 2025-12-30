@@ -15,6 +15,7 @@ interface AudioToCodeParams {
   api_key?: string;
   summary_provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ";
   code_provider?: "openai" | "claude" | "gemini" | "groq";
+  code_model?: string;
   test_provider?: "local" | "openai" | "claude" | "gemini" | "groq";
 }
 
@@ -219,6 +220,7 @@ export async function audioToCode(
   if (params.api_key) formData.append("api_key", params.api_key);
   if (params.summary_provider) formData.append("summary_provider", params.summary_provider);
   if (params.code_provider) formData.append("code_provider", params.code_provider);
+  if (params.code_model) formData.append("code_model", params.code_model);
   if (params.test_provider) formData.append("test_provider", params.test_provider);
 
   return makeApiRequest<CompletePipelineResponse>("/api/AI/audio/process", "POST", formData);

@@ -567,6 +567,7 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       api_key: apiKey,
       summary_provider: provider.toUpperCase() as any,
       code_provider: provider as any,
+      code_model: user.preferredModel || undefined,
       test_provider: provider === "openai" ? "local" : provider as any 
     });
 

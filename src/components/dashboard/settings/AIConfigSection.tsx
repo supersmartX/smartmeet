@@ -57,6 +57,8 @@ export function AIConfigSection({
   isSaving,
   providerModels
 }: AIConfigSectionProps) {
+  const [isCustomModel, setIsCustomModel] = React.useState(false);
+
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
@@ -87,7 +89,12 @@ export function AIConfigSection({
                 key={p.id}
                 onClick={() => {
                   setProvider(p.id)
-                  setModel(providerModels[p.id][0].id)
+                  if (p.id !== 'custom') {
+                    setModel(providerModels[p.id][0].id)
+                    setIsCustomModel(false)
+                  } else {
+                    setIsCustomModel(true)
+                  }
                 }}
                 className={`p-4 rounded-2xl border text-left transition-all group ${
                   provider === p.id 
@@ -110,23 +117,44 @@ export function AIConfigSection({
 
         {/* Model Selection */}
         <div className="space-y-4">
-          <label htmlFor="model-select" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">Preferred Model</label>
-          <div className="relative">
-            <select
-              id="model-select"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 appearance-none"
+          <div className="flex items-center justify-between">
+            <label htmlFor="model-select" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">Preferred Model</label>
+            <button 
+              onClick={() => setIsCustomModel(!isCustomModel)}
+              className="text-[9px] font-black text-brand-via uppercase tracking-widest hover:underline"
             >
-              {providerModels[provider].map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-              <ChevronRight className="w-4 h-4 text-zinc-400 rotate-90" aria-hidden="true" />
-            </div>
+              {isCustomModel ? "Choose from list" : "Enter custom model ID"}
+            </button>
+          </div>
+          
+          <div className="relative">
+            {isCustomModel ? (
+              <input 
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20"
+                placeholder="e.g. gpt-4-32k or your-custom-model"
+              />
+            ) : (
+              <>
+                <select
+                  id="model-select"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 appearance-none"
+                >
+                  {providerModels[provider]?.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  )) || <option value={model}>{model}</option>}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <ChevronRight className="w-4 h-4 text-zinc-400 rotate-90" aria-hidden="true" />
+                </div>
+              </>
+            )}
           </div>
         </div>
 
