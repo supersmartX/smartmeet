@@ -8,13 +8,17 @@ export default withAuth(
 
     const csp = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://github.com;
-      style-src 'self' 'unsafe-inline';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://github.com https://*.google.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com;
       img-src 'self' data: blob: https:;
-      font-src 'self' data:;
-      connect-src 'self' https://accounts.google.com https://github.com https://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.ngrok-free.app https://*.ngrok-free.dev;
+      font-src 'self' data: https://fonts.gstatic.com;
+      connect-src 'self' https://accounts.google.com https://github.com https://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.ngrok-free.app https://*.ngrok-free.dev https://*.supabase.co https://*.supabase.in;
       frame-src 'self' https://accounts.google.com https://github.com;
-      media-src 'self' blob: https://nifnqjfgcgdyfbsjgmlw.supabase.co;
+      media-src 'self' blob: https://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.supabase.co;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      frame-ancestors 'none';
     `.replace(/\n/g, '').replace(/\s{2,}/g, ' ').trim();
 
     const response = NextResponse.next();
