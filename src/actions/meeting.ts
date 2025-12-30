@@ -545,12 +545,23 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     const audioBlob = new Blob([audioBuffer], { type: audioResponse.headers.get("content-type") || "audio/mpeg" });
 
     // 4. Call the AI pipeline with user preferences
-    const provider = user.preferredProvider?.toLowerCase() || "openai";
+    const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
+    
+    // Map frontend provider names to backend expectations
+    const providerMap: Record<string, string> = {
+      "anthropic": "claude",
+      "google": "gemini",
+      "openai": "openai",
+      "groq": "groq"
+    };
+    
+    const provider = providerMap[rawProvider] || rawProvider;
+    
     const pipelineResponse = await audioToCode(audioBlob, {
       api_key: apiKey,
       summary_provider: provider.toUpperCase() as any,
       code_provider: provider as any,
-      test_provider: provider === "openai" ? "local" : provider as any // Default to local test for openai, others use provider
+      test_provider: provider === "openai" ? "local" : provider as any 
     });
 
     if (pipelineResponse.success && pipelineResponse.data) {
@@ -571,18 +582,28 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
         where: { id: meetingId },
         data: { 
           status: "FAILED",
-          testResults: `Pipeline Error: ${errorDetail}`
+          testResults: `Pipeline Error: ${errorDetail}. Provider used: ${provider}`
         }
       });
       
       return { success: false, error: errorDetail };
     }
   } catch (error: unknown) {
-    console.error("Process meeting AI error:", error);
-    await updateMeetingStatus(meetingId, "FAILED");
+    const errorMessage = error instanceof Error ? error.message : "Failed to process meeting with AI";
+    console.error("Process meeting AI error:", errorMessage);
+    
+    // Ensure we update the status even on catch
+    await prisma.meeting.update({
+      where: { id: meetingId },
+      data: { 
+        status: "FAILED",
+        testResults: `System Error: ${errorMessage}`
+      }
+    });
+    
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Failed to process meeting with AI" 
+      error: errorMessage
     };
   }
 }
