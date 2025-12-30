@@ -1,28 +1,49 @@
-import { RateLimiterMemory, RateLimiterRes, RateLimiterAbstract } from "rate-limiter-flexible";
+import { RateLimiterMemory, RateLimiterRedis, RateLimiterAbstract } from "rate-limiter-flexible";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis as UpstashRedis } from "@upstash/redis";
+import IORedis from "ioredis";
 
 // Configuration for rate limiters
-const LIMITER_CONFIGS = {
+type LimiterType = "api" | "login" | "general";
+
+interface Config {
+  points: number;
+  duration: string;
+  durationSec: number;
+  keyPrefix?: string;
+}
+
+const LIMITER_CONFIGS: Record<LimiterType, Config> = {
   api: {
     points: 10,
-    duration: 60,
+    duration: "60s", 
+    durationSec: 60,
     keyPrefix: "api_rate_limit",
   },
   login: {
     points: 5,
-    duration: 60 * 15,
-    keyPrefix: "login_rate_limit",
+    duration: "15m",
+    durationSec: 60 * 15,
   },
   general: {
     points: 100,
-    duration: 60 * 60,
-    keyPrefix: "general_rate_limit",
+    duration: "1h",
+    durationSec: 60 * 60,
   },
 };
 
-// Memory-based limiters (default fallback)
-const apiRateLimiter = new RateLimiterMemory(LIMITER_CONFIGS.api);
-const loginRateLimiter = new RateLimiterMemory(LIMITER_CONFIGS.login);
-const generalRateLimiter = new RateLimiterMemory(LIMITER_CONFIGS.general);
+// 1. Try Upstash REST (Best for Serverless/Edge)
+const upstashRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new UpstashRedis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
+
+// 2. Try Standard Redis (ioredis)
+const ioRedisClient = !upstashRedis && process.env.REDIS_URL 
+  ? new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: 3 }) 
+  : null;
 
 /**
  * Interface for rate limit results
@@ -36,66 +57,100 @@ export interface RateLimitResult {
 }
 
 /**
- * Internal helper to format rate limiter results
+ * Upstash Implementation
  */
-function formatResult(limiter: RateLimiterAbstract, res: RateLimiterRes, allowed: boolean): RateLimitResult {
+async function upstashConsume(type: LimiterType, key: string): Promise<RateLimitResult> {
+  const config = LIMITER_CONFIGS[type];
+  const ratelimit = new Ratelimit({
+    redis: upstashRedis!,
+    limiter: Ratelimit.slidingWindow(config.points, config.duration as `${number}s` | `${number}m` | `${number}h` | `${number}d`),
+    prefix: `@upstash/ratelimit/${type}`,
+  });
+
+  const { success, limit, remaining, reset } = await ratelimit.limit(key);
+  const now = Date.now();
+  
   return {
-    allowed,
-    limit: limiter.points,
-    remaining: allowed ? res.remainingPoints : 0,
-    reset: res.msBeforeNext,
-    retryAfter: !allowed ? Math.ceil(res.msBeforeNext / 1000) : 0,
+    allowed: success,
+    limit,
+    remaining,
+    reset: reset - now,
+    retryAfter: !success ? Math.ceil((reset - now) / 1000) : 0,
   };
 }
 
 /**
- * Generic consume function with error handling
+ * Standard Flexible Implementation (Memory or ioredis)
  */
-async function consume(limiter: RateLimiterAbstract, key: string): Promise<RateLimitResult> {
+const flexibleLimiters: Record<string, RateLimiterAbstract> = {
+  api: ioRedisClient 
+    ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec, keyPrefix: "api" })
+    : new RateLimiterMemory({ points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec }),
+  login: ioRedisClient
+    ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec, keyPrefix: "login" })
+    : new RateLimiterMemory({ points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec }),
+  general: ioRedisClient
+    ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec, keyPrefix: "general" })
+    : new RateLimiterMemory({ points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec }),
+};
+
+async function flexibleConsume(type: LimiterType, key: string): Promise<RateLimitResult> {
+  const limiter = flexibleLimiters[type];
   try {
     const res = await limiter.consume(key);
-    return formatResult(limiter, res, true);
-  } catch (rateLimiterRes: unknown) {
-    return formatResult(limiter, rateLimiterRes as RateLimiterRes, false);
+    return {
+      allowed: true,
+      limit: limiter.points,
+      remaining: res.remainingPoints,
+      reset: res.msBeforeNext,
+      retryAfter: 0,
+    };
+  } catch (err: unknown) {
+    const res = err as { msBeforeNext: number };
+    return {
+      allowed: false,
+      limit: limiter.points,
+      remaining: 0,
+      reset: res.msBeforeNext || 0,
+      retryAfter: Math.ceil((res.msBeforeNext || 0) / 1000),
+    };
   }
 }
 
 /**
- * Check API rate limit
+ * Main Check Function
  */
+async function checkRateLimit(type: LimiterType, key: string): Promise<RateLimitResult> {
+  if (upstashRedis) {
+    return upstashConsume(type, key);
+  }
+  return flexibleConsume(type, key);
+}
+
 export async function checkApiRateLimit(key: string): Promise<RateLimitResult> {
-  return consume(apiRateLimiter, key);
+  return checkRateLimit("api", key);
 }
 
-/**
- * Check login rate limit
- */
 export async function checkLoginRateLimit(key: string): Promise<RateLimitResult> {
-  return consume(loginRateLimiter, key);
+  return checkRateLimit("login", key);
 }
 
-/**
- * Check general rate limit
- */
 export async function checkGeneralRateLimit(key: string): Promise<RateLimitResult> {
-  return consume(generalRateLimiter, key);
+  return checkRateLimit("general", key);
 }
 
 /**
  * Enhanced login rate limiting with IP tracking
  */
 export async function checkLoginRateLimitWithIP(email: string, ip?: string): Promise<RateLimitResult> {
-  // 1. Check email-based limit
   const emailResult = await checkLoginRateLimit(email);
   if (!emailResult.allowed) return emailResult;
   
-  // 2. Check IP-based limit (prevents distributed attacks)
   if (ip) {
     const ipKey = `login:ip:${ip}`;
     const ipResult = await checkLoginRateLimit(ipKey);
     if (!ipResult.allowed) return ipResult;
     
-    // Return the more restrictive of the two
     return {
       ...emailResult,
       remaining: Math.min(emailResult.remaining || 0, ipResult.remaining || 0)
@@ -106,16 +161,20 @@ export async function checkLoginRateLimitWithIP(email: string, ip?: string): Pro
 }
 
 /**
- * Reset rate limit for a specific key
+ * Reset rate limit (Note: Upstash Ratelimit doesn't have a simple delete-by-key, 
+ * so we fallback to manual key deletion if needed)
  */
-export async function resetRateLimit(key: string, type: 'api' | 'login' | 'general'): Promise<void> {
-  const limiter = type === 'api' ? apiRateLimiter : 
-                  type === 'login' ? loginRateLimiter : 
-                  generalRateLimiter;
-  
+export async function resetRateLimit(key: string, type: LimiterType): Promise<void> {
   try {
-    await limiter.delete(key);
+    if (upstashRedis) {
+      const prefix = `@upstash/ratelimit/${type}`;
+      await upstashRedis.del(`${prefix}:${key}`);
+    } else if (ioRedisClient) {
+      await ioRedisClient.del(`${type}:${key}`);
+    } else {
+      await (flexibleLimiters[type] as RateLimiterMemory).delete(key);
+    }
   } catch (error) {
-    console.error(`Failed to reset ${type} rate limit for ${key}:`, error);
+    console.error(`Failed to reset ${type} rate limit:`, error);
   }
 }
