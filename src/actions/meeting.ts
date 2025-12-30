@@ -563,9 +563,19 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       });
       return { success: true };
     } else {
-      console.error("Pipeline failure details:", pipelineResponse.error || pipelineResponse.message);
-      await updateMeetingStatus(meetingId, "FAILED");
-      return { success: false, error: pipelineResponse.error || pipelineResponse.message || "AI Pipeline failed" };
+      const errorDetail = pipelineResponse.error || pipelineResponse.message || "AI Pipeline failed";
+      console.error("Pipeline failure details:", errorDetail);
+      
+      // Update status with error details if possible
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { 
+          status: "FAILED",
+          testResults: `Pipeline Error: ${errorDetail}`
+        }
+      });
+      
+      return { success: false, error: errorDetail };
     }
   } catch (error: unknown) {
     console.error("Process meeting AI error:", error);
