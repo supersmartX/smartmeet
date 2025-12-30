@@ -8,13 +8,13 @@ export default withAuth(
 
     const csp = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-${nonce}' https://accounts.google.com https://github.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://github.com;
       style-src 'self' 'unsafe-inline';
-      img-src 'self' data: https:;
+      img-src 'self' data: blob: https:;
       font-src 'self' data:;
       connect-src 'self' https://accounts.google.com https://github.com https://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.ngrok-free.app https://*.ngrok-free.dev;
       frame-src 'self' https://accounts.google.com https://github.com;
-      media-src 'self' https://nifnqjfgcgdyfbsjgmlw.supabase.co;
+      media-src 'self' blob: https://nifnqjfgcgdyfbsjgmlw.supabase.co;
     `.replace(/\n/g, '').replace(/\s{2,}/g, ' ').trim();
 
     const response = NextResponse.next();
