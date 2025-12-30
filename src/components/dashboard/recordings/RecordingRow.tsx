@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, X } from "lucide-react";
+import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, X, AlertCircle } from "lucide-react";
 import { Meeting } from "@/types/meeting";
 
 interface RecordingRowProps {
@@ -103,6 +103,8 @@ export function RecordingRow({
           >
             {status === "PROCESSING" ? (
               <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 animate-spin" />
+            ) : status === "FAILED" ? (
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
             ) : (
               <Video className="w-4 h-4 sm:w-5 sm:h-5 text-brand-via" />
             )}
@@ -183,6 +185,8 @@ export function RecordingRow({
           <div className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
             status === "COMPLETED" 
               ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+              : status === "FAILED"
+              ? "bg-red-500/10 text-red-600 border-red-500/20"
               : "bg-amber-500/10 text-amber-600 border-amber-500/20"
           }`}>
             {status}

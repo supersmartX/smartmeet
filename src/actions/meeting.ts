@@ -243,6 +243,7 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
 }
 
 export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
+  noStore();
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -560,12 +561,16 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     
     const provider = providerMap[rawProvider] || rawProvider;
     
+    console.log(`Starting AI pipeline for meeting ${meetingId} using provider: ${provider}`);
+
     const pipelineResponse = await audioToCode(audioBlob, {
       api_key: apiKey,
       summary_provider: provider.toUpperCase() as any,
       code_provider: provider as any,
       test_provider: provider === "openai" ? "local" : provider as any 
     });
+
+    console.log(`Pipeline response for ${meetingId}:`, JSON.stringify(pipelineResponse, null, 2));
 
     if (pipelineResponse.success && pipelineResponse.data) {
       await updateMeetingStatus(meetingId, "COMPLETED", {
@@ -680,6 +685,7 @@ export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PRO
 }
 
 export async function getAuditLogs(): Promise<ActionResult<AuditLog[]>> {
+  noStore();
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
