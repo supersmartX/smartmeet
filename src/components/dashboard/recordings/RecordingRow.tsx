@@ -104,7 +104,9 @@ export function RecordingRow({
             {status === "PROCESSING" ? (
               <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 animate-spin" />
             ) : status === "FAILED" ? (
-              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+              <div title={recording.testResults || "Pipeline failed. Check backend logs."}>
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+              </div>
             ) : (
               <Video className="w-4 h-4 sm:w-5 sm:h-5 text-brand-via" />
             )}
@@ -182,13 +184,16 @@ export function RecordingRow({
       </td>
       <td className="px-6 py-6 hidden sm:table-cell">
         <div className="flex items-center justify-end">
-          <div className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-            status === "COMPLETED" 
-              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-              : status === "FAILED"
-              ? "bg-red-500/10 text-red-600 border-red-500/20"
-              : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-          }`}>
+          <div 
+            className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+              status === "COMPLETED" 
+                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                : status === "FAILED"
+                ? "bg-red-500/10 text-red-600 border-red-500/20 cursor-help"
+                : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+            }`}
+            title={status === "FAILED" ? (recording.testResults || "Pipeline error") : undefined}
+          >
             {status}
           </div>
         </div>

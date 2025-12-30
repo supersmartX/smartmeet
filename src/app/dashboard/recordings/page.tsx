@@ -27,23 +27,25 @@ function RecordingsContent() {
   const { toast, showToast: toastVisible } = useToast()
   const [uploadStatus, setUploadStatus] = useState("")
 
-  const fetchMeetings = useCallback(async () => {
+  const fetchMeetings = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoading(true)
       setError(null)
       const result = await getMeetings()
       if (result.success && result.data) {
         setRecordings(result.data)
-      } else {
+      } else if (!silent) {
         setError(result.error || "Failed to load recordings")
         toastVisible(result.error || "Failed to load recordings", "error")
       }
     } catch (err) {
       console.error("Fetch meetings error:", err)
-      setError("Failed to load recordings. Please try again.")
-      toastVisible("Failed to load recordings. Please try again.", "error")
+      if (!silent) {
+        setError("Failed to load recordings. Please try again.")
+        toastVisible("Failed to load recordings. Please try again.", "error")
+      }
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }, [toastVisible])
 
@@ -87,7 +89,7 @@ function RecordingsContent() {
     if (!hasProcessing) return
 
     const interval = setInterval(() => {
-      fetchMeetings()
+      fetchMeetings(true)
     }, 5000)
 
     return () => clearInterval(interval)
