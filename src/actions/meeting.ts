@@ -30,6 +30,7 @@ import {
   ActionResult,
   Meeting,
   MeetingWithRelations,
+  Summary,
   UserWithMeetings,
   DashboardStat,
   MeetingUpdateData,
@@ -723,7 +724,7 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
       `Based on this meeting transcript, generate a structured business logic or implementation plan in TypeScript:\n\n${transcriptText}`,
       {
         api_key: apiKey,
-        provider: (user.preferredProvider as any) || "openai"
+        provider: (user.preferredProvider as "openai" | "claude" | "gemini" | "groq") || "openai"
       }
     );
 
@@ -829,7 +830,7 @@ export async function revokeSession(sessionId: string): Promise<ActionResult> {
   }
 }
 
-export async function generateMeetingSummary(meetingId: string): Promise<ActionResult<string>> {
+export async function generateMeetingSummary(meetingId: string): Promise<ActionResult<Summary>> {
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -854,13 +855,13 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
     const result = await summarizeText(transcriptText, { api_key: apiKey });
 
     if (result.success && result.data) {
-      await prisma.summary.upsert({
+      const summary = await prisma.summary.upsert({
         where: { meetingId },
         update: { content: result.data.summary },
         create: { meetingId, content: result.data.summary }
       });
       revalidatePath(`/dashboard/recordings/${meetingId}`);
-      return { success: true, data: result.data.summary };
+      return { success: true, data: summary as Summary };
     }
 
     return { success: false, error: result.error || "Failed to generate summary" };
@@ -893,7 +894,7 @@ export async function testMeetingCompliance(meetingId: string): Promise<ActionRe
     const result = await testCode(meeting.code, { api_key: apiKey });
 
     if (result.success && result.data) {
-      const output = result.data.output || result.data.error;
+      const output = (result.data.output || result.data.error || "") as string;
       await prisma.meeting.update({
         where: { id: meetingId },
         data: { testResults: output }

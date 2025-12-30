@@ -1,5 +1,4 @@
 import { Metadata } from "next"
-import HelpPage from "./page"
 
 export const metadata: Metadata = {
   title: "Help Center | Support & Documentation",

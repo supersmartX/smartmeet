@@ -1,5 +1,4 @@
 import { Search, Plus, Loader2 } from "lucide-react";
-import { RefObject } from "react";
 
 interface RecordingHeaderProps {
   searchQuery: string;

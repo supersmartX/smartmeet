@@ -55,7 +55,7 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-  }, [])
+  }, [showToast])
 
   const handleNewMeeting = () => {
     router.push("/dashboard/recordings?action=upload")

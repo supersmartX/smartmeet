@@ -1,4 +1,4 @@
-export default function StructuredData({ type = "SoftwareApplication", data = {} }: { type?: string, data?: any }) {
+export default function StructuredData({ type = "SoftwareApplication", data = {} }: { type?: string, data?: Record<string, unknown> }) {
   const baseJsonLd = type === "SoftwareApplication" ? {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",

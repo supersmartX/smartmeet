@@ -1,5 +1,5 @@
 import React from "react";
-import { Video, Search } from "lucide-react";
+import { Video } from "lucide-react";
 import { RecordingRow } from "./RecordingRow";
 
 interface Meeting {

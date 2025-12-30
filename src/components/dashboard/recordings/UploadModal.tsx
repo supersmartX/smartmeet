@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from "react"
-import { X, Upload, FileAudio, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
+import { X, Upload, FileAudio, AlertCircle } from "lucide-react"
 
 interface UploadModalProps {
   isOpen: boolean

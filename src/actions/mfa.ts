@@ -43,12 +43,12 @@ export async function verifyAndEnableMFA(token: string, secret: string) {
     crypto.randomBytes(4).toString("hex").toUpperCase()
   );
 
-  const user = await (prisma.user as any).update({
+  const user = await prisma.user.update({
     where: { email: session.user.email },
     data: {
       mfaEnabled: true,
       mfaSecret: secret,
-      mfaRecoveryCodes: recoveryCodes,
+      mfaRecoveryCodes: recoveryCodes as string[],
     },
   });
 

@@ -2,24 +2,21 @@
 
 import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
-import { useState, useRef, useEffect, Suspense } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import { highlightText } from "@/utils/text"
 import { Loader2 } from "lucide-react"
-import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, updateMeetingStatus, processMeetingAI } from "@/actions/meeting"
+import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, processMeetingAI } from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
 import { RecordingHeader } from "@/components/dashboard/recordings/RecordingHeader"
 import { RecordingTabs } from "@/components/dashboard/recordings/RecordingTabs"
 import { RecordingTable } from "@/components/dashboard/recordings/RecordingTable"
-import { RecordingPagination } from "@/components/dashboard/recordings/RecordingPagination"
-import { UploadToast } from "@/components/dashboard/recordings/UploadToast"
 import { UploadModal } from "@/components/dashboard/recordings/UploadModal"
 
 function RecordingsContent() {
-  const { data: session } = useSession()
+  useSession()
   const searchParams = useSearchParams()
-  const user = session?.user
   const [recordings, setRecordings] = useState<Meeting[]>([])
   const [filter, setFilter] = useState("all meetings")
   const [searchQuery, setSearchQuery] = useState("")
@@ -30,7 +27,7 @@ function RecordingsContent() {
   const { toast, showToast: toastVisible } = useToast()
   const [uploadStatus, setUploadStatus] = useState("")
 
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -48,7 +45,7 @@ function RecordingsContent() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toastVisible])
 
   const handleRename = async (id: string, newTitle: string) => {
     try {
@@ -82,7 +79,7 @@ function RecordingsContent() {
 
   useEffect(() => {
     fetchMeetings()
-  }, [])
+  }, [fetchMeetings])
 
   // Poll for updates if any meeting is in PROCESSING status
   useEffect(() => {
@@ -94,7 +91,7 @@ function RecordingsContent() {
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [recordings])
+  }, [recordings, fetchMeetings])
 
   useEffect(() => {
     if (searchParams.get("action") === "upload") {

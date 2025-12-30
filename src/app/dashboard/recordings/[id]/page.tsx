@@ -8,7 +8,6 @@ import { useParams, useRouter } from "next/navigation"
 import { highlightText } from "@/utils/text"
 import { 
   getMeetingById, 
-  updateMeetingCode, 
   generateMeetingLogic, 
   askAIAboutMeeting,
   generateMeetingSummary,
@@ -218,7 +217,7 @@ export default function RecordingDetailPage() {
       const result = await generateMeetingSummary(params.id as string)
       if (result.success && result.data) {
         setMeeting((prev: MeetingWithRelations | null) => 
-          prev ? { ...prev, summary: { content: result.data! } as any } : null
+          prev ? { ...prev, summary: result.data! } : null
         )
         toastVisible("Summary regenerated successfully", "success")
       } else {
