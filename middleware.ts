@@ -8,7 +8,7 @@ export default withAuth(
 
     const csp = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'nonce-${nonce}' https://accounts.google.com https://github.com;
+      script-src 'self' 'nonce-${nonce}' https://accounts.google.com https://github.com;
       style-src 'self' 'unsafe-inline';
       img-src 'self' data: https:;
       font-src 'self' data:;
