@@ -6,6 +6,7 @@ import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import { logSecurityEvent } from "@/lib/audit";
+import crypto from "crypto";
 
 export async function generateMFASecret() {
   const session = await getServerSession(enhancedAuthOptions);
@@ -37,11 +38,17 @@ export async function verifyAndEnableMFA(token: string, secret: string) {
     throw new Error("Invalid verification code. Please try again.");
   }
 
-  const user = await prisma.user.update({
+  // Generate 10 recovery codes
+  const recoveryCodes = Array.from({ length: 10 }).map(() => 
+    crypto.randomBytes(4).toString("hex").toUpperCase()
+  );
+
+  const user = await (prisma.user as any).update({
     where: { email: session.user.email },
     data: {
       mfaEnabled: true,
       mfaSecret: secret,
+      mfaRecoveryCodes: recoveryCodes,
     },
   });
 
@@ -52,7 +59,7 @@ export async function verifyAndEnableMFA(token: string, secret: string) {
     "Security"
   );
 
-  return { success: true };
+  return { success: true, recoveryCodes };
 }
 
 export async function disableMFA() {

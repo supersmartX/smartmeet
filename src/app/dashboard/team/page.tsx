@@ -2,6 +2,7 @@
 
 import { Users, UserPlus, Mail, Shield, Lock } from "lucide-react"
 import { useSession } from "next-auth/react"
+import Link from "next/link"
 
 export default function TeamPage() {
   const { data: session } = useSession()
@@ -20,12 +21,12 @@ export default function TeamPage() {
               Team management is only available for <span className="text-amber-600">Administrator</span> accounts. Please contact your organization owner.
             </p>
           </div>
-          <a 
+          <Link 
             href="/dashboard"
             className="px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-black/10"
           >
             Back to Dashboard
-          </a>
+          </Link>
         </div>
       </div>
     )

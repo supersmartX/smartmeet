@@ -14,6 +14,7 @@ import { RecordingTabs } from "@/components/dashboard/recordings/RecordingTabs"
 import { RecordingTable } from "@/components/dashboard/recordings/RecordingTable"
 import { RecordingPagination } from "@/components/dashboard/recordings/RecordingPagination"
 import { UploadToast } from "@/components/dashboard/recordings/UploadToast"
+import { UploadModal } from "@/components/dashboard/recordings/UploadModal"
 
 function RecordingsContent() {
   const { data: session } = useSession()
@@ -25,10 +26,9 @@ function RecordingsContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [showProgress, setShowProgress] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const { toast, showToast: toastVisible } = useToast()
   const [uploadStatus, setUploadStatus] = useState("")
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchMeetings = async () => {
     try {
@@ -98,21 +98,13 @@ function RecordingsContent() {
 
   useEffect(() => {
     if (searchParams.get("action") === "upload") {
-      handleNewRecording()
+      setIsModalOpen(true)
     }
   }, [searchParams])
 
-  const handleNewRecording = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  const handleUploadFile = async (file: File) => {
     try {
       setIsUploading(true)
-      setShowProgress(true)
       setUploadStatus("Getting upload permission...")
 
       // 1. Get signed URL
@@ -149,6 +141,7 @@ function RecordingsContent() {
 
       toastVisible("Recording uploaded and processing started!", "success")
       await fetchMeetings()
+      setIsModalOpen(false)
 
       // 4. Trigger AI processing (async)
       processMeetingAI(createResult.data.id).catch(err => {
@@ -160,7 +153,6 @@ function RecordingsContent() {
       toastVisible(err instanceof Error ? err.message : "Failed to upload recording", "error")
     } finally {
       setIsUploading(false)
-      setTimeout(() => setShowProgress(false), 3000)
     }
   }
 
@@ -195,17 +187,16 @@ function RecordingsContent() {
       <RecordingHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onUploadClick={() => fileInputRef.current?.click()}
+        onUploadClick={() => setIsModalOpen(true)}
         isUploading={isUploading}
       />
 
-      <input
-        type="file"
-        id="recording-upload"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="audio/*"
-        className="hidden"
+      <UploadModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onUpload={handleUploadFile}
+        isUploading={isUploading}
+        uploadStatus={uploadStatus}
       />
 
       <RecordingTabs filter={filter} setFilter={setFilter} />
@@ -222,17 +213,6 @@ function RecordingsContent() {
         fetchMeetings={fetchMeetings}
         renderHighlightedText={renderHighlightedText}
       />
-
-      {showProgress && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="bg-zinc-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10">
-            <div className={`w-2 h-2 rounded-full animate-pulse ${isUploading ? "bg-brand-via" : "bg-emerald-500"}`} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-              {uploadStatus || "Processing recording..."}
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -9,7 +9,7 @@ import { ModeToggle } from "@/components/ModeToggle"
 import { useSession, signOut } from "next-auth/react"
 import {
   Menu, Layout, FileVideo, Settings, Search, HelpCircle, LogOut, ChevronDown,
-  Bell, Command, X
+  Bell, Command, X, Sparkles, Zap
 } from "lucide-react"
 
 export default function DashboardLayout({
@@ -114,7 +114,7 @@ export default function DashboardLayout({
 
           {/* Sidebar (Workspace) */}
           <div 
-            className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 lg:z-20 flex`}
+            className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-[101] lg:z-20 flex`}
             style={{ width: isMounted && typeof window !== 'undefined' && window.innerWidth >= 1024 ? sidebarWidth : undefined }}
           >
             <Sidebar onClose={() => setIsSidebarOpen(false)} />
@@ -134,6 +134,7 @@ export default function DashboardLayout({
                 <button 
                   onClick={() => setIsSidebarOpen(true)}
                   className="p-1 lg:hidden text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded transition-colors"
+                  aria-label="Open menu"
                 >
                   <Menu className="w-4 h-4" />
                 </button>
@@ -259,18 +260,21 @@ export default function DashboardLayout({
         <footer className="h-6 bg-brand-via dark:bg-zinc-900 border-t border-brand-via/20 dark:border-zinc-800 flex items-center justify-between px-3 text-[10px] text-white/90 dark:text-zinc-400 font-medium z-50 overflow-hidden">
           <div className="flex items-center gap-4 h-full">
             <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer shrink-0">
-              <span>supersmartX.ai</span>
+              <span>supersmartx.com</span>
             </div>
             <div className="hidden sm:flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer text-emerald-300 shrink-0">
-              <span>Pipeline: Stable</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Pipeline: Active</span>
             </div>
           </div>
           <div className="flex items-center gap-4 h-full">
             <div className="hidden md:flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer shrink-0">
-              <span>AI Engine: 4.0-Turbo</span>
+              <Sparkles className="w-3 h-3 text-amber-400" />
+              <span>AI Engine: Gemini 1.5 Pro</span>
             </div>
             <div className="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-zinc-800 px-2 h-full transition-colors cursor-pointer shrink-0">
-              <span>Latency: 24ms</span>
+              <Zap className="w-3 h-3 text-blue-400" />
+              <span>v1.0.4-stable</span>
             </div>
           </div>
         </footer>

@@ -22,6 +22,8 @@ import {
 import { getAuditLogs, getActiveSessions, revokeSession } from "@/actions/meeting"
 import { format } from "date-fns"
 import type { AuditLog, Session } from "@/types/meeting"
+import { useToast } from "@/hooks/useToast"
+import { Toast } from "@/components/Toast"
 
 export default function SecurityPage() {
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -29,6 +31,7 @@ export default function SecurityPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRevoking, setIsRevoking] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { toast, showToast } = useToast()
 
   useEffect(() => {
     async function loadData() {
@@ -66,12 +69,13 @@ export default function SecurityPage() {
       const result = await revokeSession(sessionId)
       if (result.success) {
         setSessions(prev => prev.filter(s => s.id !== sessionId))
+        showToast("Session revoked successfully", "success")
       } else {
-        alert(result.error || "Failed to revoke session. Please try again.")
+        showToast(result.error || "Failed to revoke session. Please try again.", "error")
       }
     } catch (err) {
       console.error("Failed to revoke session:", err)
-      alert("An unexpected error occurred. Please try again.")
+      showToast("An unexpected error occurred. Please try again.", "error")
     } finally {
       setIsRevoking(null)
     }
@@ -327,6 +331,7 @@ export default function SecurityPage() {
           ))}
         </div>
       </div>
+      <Toast {...toast} />
     </div>
   )
 }

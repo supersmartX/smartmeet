@@ -313,6 +313,35 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
 
     const { id: validatedId } = meetingIdSchema.parse({ id });
 
+    // 1. Get meeting to find audioUrl
+    const meeting = await prisma.meeting.findUnique({
+      where: {
+        id: validatedId,
+        user: { email: session.user.email },
+      },
+      select: { audioUrl: true }
+    });
+
+    if (!meeting) return { success: false, error: "Meeting not found" };
+
+    // 2. Delete from storage if audioUrl exists
+    if (meeting.audioUrl && supabaseAdmin) {
+      try {
+        const { error: storageError } = await supabaseAdmin
+          .storage
+          .from("recordings")
+          .remove([meeting.audioUrl]);
+        
+        if (storageError) {
+          console.error("Storage deletion error:", storageError);
+          // We continue anyway to delete the DB record, but log it
+        }
+      } catch (err) {
+        console.error("Storage service error:", err);
+      }
+    }
+
+    // 3. Delete from database
     await prisma.meeting.delete({
       where: {
         id: validatedId,

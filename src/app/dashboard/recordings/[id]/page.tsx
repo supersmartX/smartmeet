@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 
 import { highlightText } from "@/utils/text"
 import { 
@@ -43,6 +43,7 @@ type EditorTab = "transcript" | "summary" | "code" | "tests" | "docs"
 
 export default function RecordingDetailPage() {
   const params = useParams()
+  const router = useRouter()
 
   const [meeting, setMeeting] = useState<MeetingWithRelations | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -85,15 +86,14 @@ export default function RecordingDetailPage() {
   useEffect(() => {
     // Check authentication
     if (status === 'unauthenticated') {
-      setError("Please sign in to view this meeting.")
-      setIsLoading(false)
+      router.push("/login?callbackUrl=" + encodeURIComponent(window.location.pathname))
       return
     }
     
     if (status === 'authenticated' && session?.user?.id) {
       setIsAuthorized(true)
     }
-  }, [status, session])
+  }, [status, session, router])
   
   useEffect(() => {
     if (!isAuthorized || !params.id) return

@@ -7,19 +7,18 @@ import {
   ChevronRight,
   ChevronDown,
   Folder,
-  FileText,
-  Code,
-  FileCode,
   Video,
   Settings,
   Layout,
   HelpCircle,
   Shield,
   Zap,
-  Users
+  Users,
+  Plus,
+  Loader2,
+  LucideIcon
 } from "lucide-react"
 import { useState, useEffect } from "react"
-import { LucideIcon, Loader2 } from "lucide-react"
 import { getMeetings } from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
 
@@ -72,7 +71,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                   href: `/dashboard/recordings/${m.id}`,
                   icon: m.status === "PROCESSING" ? Loader2 : Video
                 }))
-              : [{ name: "No recordings yet", icon: Video } as WorkspaceItem]
+              : [{ name: "Start New Project", icon: Plus, href: "/dashboard/recordings?action=upload" } as WorkspaceItem]
         },
         { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
         { name: "Integrations", href: "/dashboard/integrations", icon: Zap },

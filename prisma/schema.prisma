@@ -58,6 +58,7 @@ model User {
   lockedUntil         DateTime?
   mfaEnabled          Boolean   @default(false)
   mfaSecret           String?
+  mfaRecoveryCodes    String[]  @default([])
   role          UserRole  @default(MEMBER)
   accounts      Account[]
   sessions      Session[]
