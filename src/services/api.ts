@@ -116,6 +116,7 @@ async function makeApiRequest<T>(
         headers,
         body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
         signal: controller.signal,
+        cache: 'no-store',
       };
     } else {
       // Use proxy if on client

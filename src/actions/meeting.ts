@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_noStore as noStore } from "next/cache";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { logSecurityEvent } from "@/lib/audit";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -40,6 +40,7 @@ import {
 } from "@/types/meeting";
 
 export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>> {
+  noStore();
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -125,6 +126,7 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
 }
 
 export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
+  noStore();
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -149,6 +151,7 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
 }
 
 export async function getMeetingById(id: string): Promise<ActionResult<MeetingWithRelations>> {
+  noStore();
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };

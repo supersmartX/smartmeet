@@ -99,10 +99,32 @@ function RecordingsContent() {
     }
   }, [searchParams])
 
+  const getFileDuration = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const element = document.createElement(file.type.startsWith('video/') ? 'video' : 'audio');
+      element.src = URL.createObjectURL(file);
+      element.onloadedmetadata = () => {
+        const seconds = Math.floor(element.duration);
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        resolve(`${mins}:${secs.toString().padStart(2, '0')}`);
+        URL.revokeObjectURL(element.src);
+      };
+      element.onerror = () => {
+        resolve("0:00");
+        URL.revokeObjectURL(element.src);
+      };
+    });
+  }
+
   const handleUploadFile = async (file: File) => {
     try {
       setIsUploading(true)
       setUploadStatus("Getting upload permission...")
+
+      // 0. Detect duration
+      const duration = await getFileDuration(file);
+      setUploadStatus("Uploading recording...")
 
       // 1. Get signed URL
       const { success, data, error: uploadUrlError } = await createSignedUploadUrl(file.name)
@@ -129,7 +151,8 @@ function RecordingsContent() {
       // 3. Create database entry
       const createResult = await createMeeting({
         title: file.name.replace(/\.[^/.]+$/, ""),
-        audioUrl: key
+        audioUrl: key,
+        duration: duration
       })
 
       if (!createResult.success || !createResult.data) {
