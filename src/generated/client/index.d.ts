@@ -72,6 +72,15 @@ export namespace $Enums {
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
 
+export const UserPlan: {
+  FREE: 'FREE',
+  PRO: 'PRO',
+  ENTERPRISE: 'ENTERPRISE'
+};
+
+export type UserPlan = (typeof UserPlan)[keyof typeof UserPlan]
+
+
 export const MeetingStatus: {
   COMPLETED: 'COMPLETED',
   PROCESSING: 'PROCESSING',
@@ -80,15 +89,33 @@ export const MeetingStatus: {
 
 export type MeetingStatus = (typeof MeetingStatus)[keyof typeof MeetingStatus]
 
+
+export const ActionItemStatus: {
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  CANCELLED: 'CANCELLED'
+};
+
+export type ActionItemStatus = (typeof ActionItemStatus)[keyof typeof ActionItemStatus]
+
 }
 
 export type UserRole = $Enums.UserRole
 
 export const UserRole: typeof $Enums.UserRole
 
+export type UserPlan = $Enums.UserPlan
+
+export const UserPlan: typeof $Enums.UserPlan
+
 export type MeetingStatus = $Enums.MeetingStatus
 
 export const MeetingStatus: typeof $Enums.MeetingStatus
+
+export type ActionItemStatus = $Enums.ActionItemStatus
+
+export const ActionItemStatus: typeof $Enums.ActionItemStatus
 
 /**
  * ##  Prisma Client ʲˢ
@@ -534,7 +561,7 @@ export namespace Prisma {
   ? False
   : T extends Uint8Array
   ? False
-  : T extends bigint
+  : T extends BigInt
   ? False
   : T extends object
   ? True
@@ -3985,10 +4012,14 @@ export namespace Prisma {
 
   export type UserAvgAggregateOutputType = {
     failedLoginAttempts: number | null
+    meetingQuota: number | null
+    meetingsUsed: number | null
   }
 
   export type UserSumAggregateOutputType = {
     failedLoginAttempts: number | null
+    meetingQuota: number | null
+    meetingsUsed: number | null
   }
 
   export type UserMinAggregateOutputType = {
@@ -3997,6 +4028,9 @@ export namespace Prisma {
     email: string | null
     emailVerified: Date | null
     verificationToken: string | null
+    verificationTokenExpires: Date | null
+    resetToken: string | null
+    resetTokenExpires: Date | null
     image: string | null
     password: string | null
     apiKey: string | null
@@ -4009,6 +4043,9 @@ export namespace Prisma {
     mfaEnabled: boolean | null
     mfaSecret: string | null
     role: $Enums.UserRole | null
+    plan: $Enums.UserPlan | null
+    meetingQuota: number | null
+    meetingsUsed: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -4019,6 +4056,9 @@ export namespace Prisma {
     email: string | null
     emailVerified: Date | null
     verificationToken: string | null
+    verificationTokenExpires: Date | null
+    resetToken: string | null
+    resetTokenExpires: Date | null
     image: string | null
     password: string | null
     apiKey: string | null
@@ -4031,6 +4071,9 @@ export namespace Prisma {
     mfaEnabled: boolean | null
     mfaSecret: string | null
     role: $Enums.UserRole | null
+    plan: $Enums.UserPlan | null
+    meetingQuota: number | null
+    meetingsUsed: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -4041,6 +4084,9 @@ export namespace Prisma {
     email: number
     emailVerified: number
     verificationToken: number
+    verificationTokenExpires: number
+    resetToken: number
+    resetTokenExpires: number
     image: number
     password: number
     apiKey: number
@@ -4052,7 +4098,11 @@ export namespace Prisma {
     lockedUntil: number
     mfaEnabled: number
     mfaSecret: number
+    mfaRecoveryCodes: number
     role: number
+    plan: number
+    meetingQuota: number
+    meetingsUsed: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -4061,10 +4111,14 @@ export namespace Prisma {
 
   export type UserAvgAggregateInputType = {
     failedLoginAttempts?: true
+    meetingQuota?: true
+    meetingsUsed?: true
   }
 
   export type UserSumAggregateInputType = {
     failedLoginAttempts?: true
+    meetingQuota?: true
+    meetingsUsed?: true
   }
 
   export type UserMinAggregateInputType = {
@@ -4073,6 +4127,9 @@ export namespace Prisma {
     email?: true
     emailVerified?: true
     verificationToken?: true
+    verificationTokenExpires?: true
+    resetToken?: true
+    resetTokenExpires?: true
     image?: true
     password?: true
     apiKey?: true
@@ -4085,6 +4142,9 @@ export namespace Prisma {
     mfaEnabled?: true
     mfaSecret?: true
     role?: true
+    plan?: true
+    meetingQuota?: true
+    meetingsUsed?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -4095,6 +4155,9 @@ export namespace Prisma {
     email?: true
     emailVerified?: true
     verificationToken?: true
+    verificationTokenExpires?: true
+    resetToken?: true
+    resetTokenExpires?: true
     image?: true
     password?: true
     apiKey?: true
@@ -4107,6 +4170,9 @@ export namespace Prisma {
     mfaEnabled?: true
     mfaSecret?: true
     role?: true
+    plan?: true
+    meetingQuota?: true
+    meetingsUsed?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -4117,6 +4183,9 @@ export namespace Prisma {
     email?: true
     emailVerified?: true
     verificationToken?: true
+    verificationTokenExpires?: true
+    resetToken?: true
+    resetTokenExpires?: true
     image?: true
     password?: true
     apiKey?: true
@@ -4128,7 +4197,11 @@ export namespace Prisma {
     lockedUntil?: true
     mfaEnabled?: true
     mfaSecret?: true
+    mfaRecoveryCodes?: true
     role?: true
+    plan?: true
+    meetingQuota?: true
+    meetingsUsed?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -4226,6 +4299,9 @@ export namespace Prisma {
     email: string | null
     emailVerified: Date | null
     verificationToken: string | null
+    verificationTokenExpires: Date | null
+    resetToken: string | null
+    resetTokenExpires: Date | null
     image: string | null
     password: string | null
     apiKey: string | null
@@ -4237,7 +4313,11 @@ export namespace Prisma {
     lockedUntil: Date | null
     mfaEnabled: boolean
     mfaSecret: string | null
+    mfaRecoveryCodes: string[]
     role: $Enums.UserRole
+    plan: $Enums.UserPlan
+    meetingQuota: number
+    meetingsUsed: number
     createdAt: Date
     updatedAt: Date
     _count: UserCountAggregateOutputType | null
@@ -4267,6 +4347,9 @@ export namespace Prisma {
     email?: boolean
     emailVerified?: boolean
     verificationToken?: boolean
+    verificationTokenExpires?: boolean
+    resetToken?: boolean
+    resetTokenExpires?: boolean
     image?: boolean
     password?: boolean
     apiKey?: boolean
@@ -4278,7 +4361,11 @@ export namespace Prisma {
     lockedUntil?: boolean
     mfaEnabled?: boolean
     mfaSecret?: boolean
+    mfaRecoveryCodes?: boolean
     role?: boolean
+    plan?: boolean
+    meetingQuota?: boolean
+    meetingsUsed?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     accounts?: boolean | User$accountsArgs<ExtArgs>
@@ -4294,6 +4381,9 @@ export namespace Prisma {
     email?: boolean
     emailVerified?: boolean
     verificationToken?: boolean
+    verificationTokenExpires?: boolean
+    resetToken?: boolean
+    resetTokenExpires?: boolean
     image?: boolean
     password?: boolean
     apiKey?: boolean
@@ -4305,7 +4395,11 @@ export namespace Prisma {
     lockedUntil?: boolean
     mfaEnabled?: boolean
     mfaSecret?: boolean
+    mfaRecoveryCodes?: boolean
     role?: boolean
+    plan?: boolean
+    meetingQuota?: boolean
+    meetingsUsed?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["user"]>
@@ -4316,6 +4410,9 @@ export namespace Prisma {
     email?: boolean
     emailVerified?: boolean
     verificationToken?: boolean
+    verificationTokenExpires?: boolean
+    resetToken?: boolean
+    resetTokenExpires?: boolean
     image?: boolean
     password?: boolean
     apiKey?: boolean
@@ -4327,7 +4424,11 @@ export namespace Prisma {
     lockedUntil?: boolean
     mfaEnabled?: boolean
     mfaSecret?: boolean
+    mfaRecoveryCodes?: boolean
     role?: boolean
+    plan?: boolean
+    meetingQuota?: boolean
+    meetingsUsed?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["user"]>
@@ -4338,6 +4439,9 @@ export namespace Prisma {
     email?: boolean
     emailVerified?: boolean
     verificationToken?: boolean
+    verificationTokenExpires?: boolean
+    resetToken?: boolean
+    resetTokenExpires?: boolean
     image?: boolean
     password?: boolean
     apiKey?: boolean
@@ -4349,12 +4453,16 @@ export namespace Prisma {
     lockedUntil?: boolean
     mfaEnabled?: boolean
     mfaSecret?: boolean
+    mfaRecoveryCodes?: boolean
     role?: boolean
+    plan?: boolean
+    meetingQuota?: boolean
+    meetingsUsed?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "verificationToken" | "image" | "password" | "apiKey" | "allowedIps" | "lastUsedAt" | "preferredProvider" | "preferredModel" | "failedLoginAttempts" | "lockedUntil" | "mfaEnabled" | "mfaSecret" | "role" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "verificationToken" | "verificationTokenExpires" | "resetToken" | "resetTokenExpires" | "image" | "password" | "apiKey" | "allowedIps" | "lastUsedAt" | "preferredProvider" | "preferredModel" | "failedLoginAttempts" | "lockedUntil" | "mfaEnabled" | "mfaSecret" | "mfaRecoveryCodes" | "role" | "plan" | "meetingQuota" | "meetingsUsed" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     accounts?: boolean | User$accountsArgs<ExtArgs>
     sessions?: boolean | User$sessionsArgs<ExtArgs>
@@ -4379,6 +4487,9 @@ export namespace Prisma {
       email: string | null
       emailVerified: Date | null
       verificationToken: string | null
+      verificationTokenExpires: Date | null
+      resetToken: string | null
+      resetTokenExpires: Date | null
       image: string | null
       password: string | null
       apiKey: string | null
@@ -4390,7 +4501,11 @@ export namespace Prisma {
       lockedUntil: Date | null
       mfaEnabled: boolean
       mfaSecret: string | null
+      mfaRecoveryCodes: string[]
       role: $Enums.UserRole
+      plan: $Enums.UserPlan
+      meetingQuota: number
+      meetingsUsed: number
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["user"]>
@@ -4825,6 +4940,9 @@ export namespace Prisma {
     readonly email: FieldRef<"User", 'String'>
     readonly emailVerified: FieldRef<"User", 'DateTime'>
     readonly verificationToken: FieldRef<"User", 'String'>
+    readonly verificationTokenExpires: FieldRef<"User", 'DateTime'>
+    readonly resetToken: FieldRef<"User", 'String'>
+    readonly resetTokenExpires: FieldRef<"User", 'DateTime'>
     readonly image: FieldRef<"User", 'String'>
     readonly password: FieldRef<"User", 'String'>
     readonly apiKey: FieldRef<"User", 'String'>
@@ -4836,7 +4954,11 @@ export namespace Prisma {
     readonly lockedUntil: FieldRef<"User", 'DateTime'>
     readonly mfaEnabled: FieldRef<"User", 'Boolean'>
     readonly mfaSecret: FieldRef<"User", 'String'>
+    readonly mfaRecoveryCodes: FieldRef<"User", 'String[]'>
     readonly role: FieldRef<"User", 'UserRole'>
+    readonly plan: FieldRef<"User", 'UserPlan'>
+    readonly meetingQuota: FieldRef<"User", 'Int'>
+    readonly meetingsUsed: FieldRef<"User", 'Int'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
   }
@@ -7455,6 +7577,8 @@ export namespace Prisma {
     status: $Enums.MeetingStatus | null
     userId: string | null
     code: string | null
+    projectDoc: string | null
+    testResults: string | null
     audioUrl: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -7469,6 +7593,8 @@ export namespace Prisma {
     status: $Enums.MeetingStatus | null
     userId: string | null
     code: string | null
+    projectDoc: string | null
+    testResults: string | null
     audioUrl: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -7483,6 +7609,8 @@ export namespace Prisma {
     status: number
     userId: number
     code: number
+    projectDoc: number
+    testResults: number
     audioUrl: number
     createdAt: number
     updatedAt: number
@@ -7507,6 +7635,8 @@ export namespace Prisma {
     status?: true
     userId?: true
     code?: true
+    projectDoc?: true
+    testResults?: true
     audioUrl?: true
     createdAt?: true
     updatedAt?: true
@@ -7521,6 +7651,8 @@ export namespace Prisma {
     status?: true
     userId?: true
     code?: true
+    projectDoc?: true
+    testResults?: true
     audioUrl?: true
     createdAt?: true
     updatedAt?: true
@@ -7535,6 +7667,8 @@ export namespace Prisma {
     status?: true
     userId?: true
     code?: true
+    projectDoc?: true
+    testResults?: true
     audioUrl?: true
     createdAt?: true
     updatedAt?: true
@@ -7636,6 +7770,8 @@ export namespace Prisma {
     status: $Enums.MeetingStatus
     userId: string
     code: string | null
+    projectDoc: string | null
+    testResults: string | null
     audioUrl: string | null
     createdAt: Date
     updatedAt: Date
@@ -7669,6 +7805,8 @@ export namespace Prisma {
     status?: boolean
     userId?: boolean
     code?: boolean
+    projectDoc?: boolean
+    testResults?: boolean
     audioUrl?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -7688,6 +7826,8 @@ export namespace Prisma {
     status?: boolean
     userId?: boolean
     code?: boolean
+    projectDoc?: boolean
+    testResults?: boolean
     audioUrl?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -7703,6 +7843,8 @@ export namespace Prisma {
     status?: boolean
     userId?: boolean
     code?: boolean
+    projectDoc?: boolean
+    testResults?: boolean
     audioUrl?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -7718,12 +7860,14 @@ export namespace Prisma {
     status?: boolean
     userId?: boolean
     code?: boolean
+    projectDoc?: boolean
+    testResults?: boolean
     audioUrl?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type MeetingOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "date" | "duration" | "participants" | "status" | "userId" | "code" | "audioUrl" | "createdAt" | "updatedAt", ExtArgs["result"]["meeting"]>
+  export type MeetingOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "date" | "duration" | "participants" | "status" | "userId" | "code" | "projectDoc" | "testResults" | "audioUrl" | "createdAt" | "updatedAt", ExtArgs["result"]["meeting"]>
   export type MeetingInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     transcripts?: boolean | Meeting$transcriptsArgs<ExtArgs>
@@ -7755,6 +7899,8 @@ export namespace Prisma {
       status: $Enums.MeetingStatus
       userId: string
       code: string | null
+      projectDoc: string | null
+      testResults: string | null
       audioUrl: string | null
       createdAt: Date
       updatedAt: Date
@@ -8193,6 +8339,8 @@ export namespace Prisma {
     readonly status: FieldRef<"Meeting", 'MeetingStatus'>
     readonly userId: FieldRef<"Meeting", 'String'>
     readonly code: FieldRef<"Meeting", 'String'>
+    readonly projectDoc: FieldRef<"Meeting", 'String'>
+    readonly testResults: FieldRef<"Meeting", 'String'>
     readonly audioUrl: FieldRef<"Meeting", 'String'>
     readonly createdAt: FieldRef<"Meeting", 'DateTime'>
     readonly updatedAt: FieldRef<"Meeting", 'DateTime'>
@@ -10780,14 +10928,14 @@ export namespace Prisma {
   export type ActionItemMinAggregateOutputType = {
     id: string | null
     title: string | null
-    status: string | null
+    status: $Enums.ActionItemStatus | null
     meetingId: string | null
   }
 
   export type ActionItemMaxAggregateOutputType = {
     id: string | null
     title: string | null
-    status: string | null
+    status: $Enums.ActionItemStatus | null
     meetingId: string | null
   }
 
@@ -10897,7 +11045,7 @@ export namespace Prisma {
   export type ActionItemGroupByOutputType = {
     id: string
     title: string
-    status: string
+    status: $Enums.ActionItemStatus
     meetingId: string
     _count: ActionItemCountAggregateOutputType | null
     _min: ActionItemMinAggregateOutputType | null
@@ -10968,7 +11116,7 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       id: string
       title: string
-      status: string
+      status: $Enums.ActionItemStatus
       meetingId: string
     }, ExtArgs["result"]["actionItem"]>
     composites: {}
@@ -11396,7 +11544,7 @@ export namespace Prisma {
   interface ActionItemFieldRefs {
     readonly id: FieldRef<"ActionItem", 'String'>
     readonly title: FieldRef<"ActionItem", 'String'>
-    readonly status: FieldRef<"ActionItem", 'String'>
+    readonly status: FieldRef<"ActionItem", 'ActionItemStatus'>
     readonly meetingId: FieldRef<"ActionItem", 'String'>
   }
     
@@ -11862,6 +12010,9 @@ export namespace Prisma {
     email: 'email',
     emailVerified: 'emailVerified',
     verificationToken: 'verificationToken',
+    verificationTokenExpires: 'verificationTokenExpires',
+    resetToken: 'resetToken',
+    resetTokenExpires: 'resetTokenExpires',
     image: 'image',
     password: 'password',
     apiKey: 'apiKey',
@@ -11873,7 +12024,11 @@ export namespace Prisma {
     lockedUntil: 'lockedUntil',
     mfaEnabled: 'mfaEnabled',
     mfaSecret: 'mfaSecret',
+    mfaRecoveryCodes: 'mfaRecoveryCodes',
     role: 'role',
+    plan: 'plan',
+    meetingQuota: 'meetingQuota',
+    meetingsUsed: 'meetingsUsed',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -11913,6 +12068,8 @@ export namespace Prisma {
     status: 'status',
     userId: 'userId',
     code: 'code',
+    projectDoc: 'projectDoc',
+    testResults: 'testResults',
     audioUrl: 'audioUrl',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -12044,6 +12201,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'UserPlan'
+   */
+  export type EnumUserPlanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserPlan'>
+    
+
+
+  /**
+   * Reference to a field of type 'UserPlan[]'
+   */
+  export type ListEnumUserPlanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserPlan[]'>
+    
+
+
+  /**
    * Reference to a field of type 'MeetingStatus'
    */
   export type EnumMeetingStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MeetingStatus'>
@@ -12054,6 +12225,20 @@ export namespace Prisma {
    * Reference to a field of type 'MeetingStatus[]'
    */
   export type ListEnumMeetingStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MeetingStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'ActionItemStatus'
+   */
+  export type EnumActionItemStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActionItemStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'ActionItemStatus[]'
+   */
+  export type ListEnumActionItemStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActionItemStatus[]'>
     
 
 
@@ -12236,6 +12421,9 @@ export namespace Prisma {
     email?: StringNullableFilter<"User"> | string | null
     emailVerified?: DateTimeNullableFilter<"User"> | Date | string | null
     verificationToken?: StringNullableFilter<"User"> | string | null
+    verificationTokenExpires?: DateTimeNullableFilter<"User"> | Date | string | null
+    resetToken?: StringNullableFilter<"User"> | string | null
+    resetTokenExpires?: DateTimeNullableFilter<"User"> | Date | string | null
     image?: StringNullableFilter<"User"> | string | null
     password?: StringNullableFilter<"User"> | string | null
     apiKey?: StringNullableFilter<"User"> | string | null
@@ -12247,7 +12435,11 @@ export namespace Prisma {
     lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
     mfaEnabled?: BoolFilter<"User"> | boolean
     mfaSecret?: StringNullableFilter<"User"> | string | null
+    mfaRecoveryCodes?: StringNullableListFilter<"User">
     role?: EnumUserRoleFilter<"User"> | $Enums.UserRole
+    plan?: EnumUserPlanFilter<"User"> | $Enums.UserPlan
+    meetingQuota?: IntFilter<"User"> | number
+    meetingsUsed?: IntFilter<"User"> | number
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     accounts?: AccountListRelationFilter
@@ -12262,6 +12454,9 @@ export namespace Prisma {
     email?: SortOrderInput | SortOrder
     emailVerified?: SortOrderInput | SortOrder
     verificationToken?: SortOrderInput | SortOrder
+    verificationTokenExpires?: SortOrderInput | SortOrder
+    resetToken?: SortOrderInput | SortOrder
+    resetTokenExpires?: SortOrderInput | SortOrder
     image?: SortOrderInput | SortOrder
     password?: SortOrderInput | SortOrder
     apiKey?: SortOrderInput | SortOrder
@@ -12273,7 +12468,11 @@ export namespace Prisma {
     lockedUntil?: SortOrderInput | SortOrder
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrderInput | SortOrder
+    mfaRecoveryCodes?: SortOrder
     role?: SortOrder
+    plan?: SortOrder
+    meetingQuota?: SortOrder
+    meetingsUsed?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     accounts?: AccountOrderByRelationAggregateInput
@@ -12286,11 +12485,14 @@ export namespace Prisma {
     id?: string
     email?: string
     verificationToken?: string
+    resetToken?: string
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
     NOT?: UserWhereInput | UserWhereInput[]
     name?: StringNullableFilter<"User"> | string | null
     emailVerified?: DateTimeNullableFilter<"User"> | Date | string | null
+    verificationTokenExpires?: DateTimeNullableFilter<"User"> | Date | string | null
+    resetTokenExpires?: DateTimeNullableFilter<"User"> | Date | string | null
     image?: StringNullableFilter<"User"> | string | null
     password?: StringNullableFilter<"User"> | string | null
     apiKey?: StringNullableFilter<"User"> | string | null
@@ -12302,14 +12504,18 @@ export namespace Prisma {
     lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
     mfaEnabled?: BoolFilter<"User"> | boolean
     mfaSecret?: StringNullableFilter<"User"> | string | null
+    mfaRecoveryCodes?: StringNullableListFilter<"User">
     role?: EnumUserRoleFilter<"User"> | $Enums.UserRole
+    plan?: EnumUserPlanFilter<"User"> | $Enums.UserPlan
+    meetingQuota?: IntFilter<"User"> | number
+    meetingsUsed?: IntFilter<"User"> | number
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     accounts?: AccountListRelationFilter
     sessions?: SessionListRelationFilter
     meetings?: MeetingListRelationFilter
     auditLogs?: AuditLogListRelationFilter
-  }, "id" | "email" | "verificationToken">
+  }, "id" | "email" | "verificationToken" | "resetToken">
 
   export type UserOrderByWithAggregationInput = {
     id?: SortOrder
@@ -12317,6 +12523,9 @@ export namespace Prisma {
     email?: SortOrderInput | SortOrder
     emailVerified?: SortOrderInput | SortOrder
     verificationToken?: SortOrderInput | SortOrder
+    verificationTokenExpires?: SortOrderInput | SortOrder
+    resetToken?: SortOrderInput | SortOrder
+    resetTokenExpires?: SortOrderInput | SortOrder
     image?: SortOrderInput | SortOrder
     password?: SortOrderInput | SortOrder
     apiKey?: SortOrderInput | SortOrder
@@ -12328,7 +12537,11 @@ export namespace Prisma {
     lockedUntil?: SortOrderInput | SortOrder
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrderInput | SortOrder
+    mfaRecoveryCodes?: SortOrder
     role?: SortOrder
+    plan?: SortOrder
+    meetingQuota?: SortOrder
+    meetingsUsed?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: UserCountOrderByAggregateInput
@@ -12347,6 +12560,9 @@ export namespace Prisma {
     email?: StringNullableWithAggregatesFilter<"User"> | string | null
     emailVerified?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     verificationToken?: StringNullableWithAggregatesFilter<"User"> | string | null
+    verificationTokenExpires?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    resetToken?: StringNullableWithAggregatesFilter<"User"> | string | null
+    resetTokenExpires?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     image?: StringNullableWithAggregatesFilter<"User"> | string | null
     password?: StringNullableWithAggregatesFilter<"User"> | string | null
     apiKey?: StringNullableWithAggregatesFilter<"User"> | string | null
@@ -12358,7 +12574,11 @@ export namespace Prisma {
     lockedUntil?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     mfaEnabled?: BoolWithAggregatesFilter<"User"> | boolean
     mfaSecret?: StringNullableWithAggregatesFilter<"User"> | string | null
+    mfaRecoveryCodes?: StringNullableListFilter<"User">
     role?: EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
+    plan?: EnumUserPlanWithAggregatesFilter<"User"> | $Enums.UserPlan
+    meetingQuota?: IntWithAggregatesFilter<"User"> | number
+    meetingsUsed?: IntWithAggregatesFilter<"User"> | number
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
   }
@@ -12488,6 +12708,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusFilter<"Meeting"> | $Enums.MeetingStatus
     userId?: StringFilter<"Meeting"> | string
     code?: StringNullableFilter<"Meeting"> | string | null
+    projectDoc?: StringNullableFilter<"Meeting"> | string | null
+    testResults?: StringNullableFilter<"Meeting"> | string | null
     audioUrl?: StringNullableFilter<"Meeting"> | string | null
     createdAt?: DateTimeFilter<"Meeting"> | Date | string
     updatedAt?: DateTimeFilter<"Meeting"> | Date | string
@@ -12506,6 +12728,8 @@ export namespace Prisma {
     status?: SortOrder
     userId?: SortOrder
     code?: SortOrderInput | SortOrder
+    projectDoc?: SortOrderInput | SortOrder
+    testResults?: SortOrderInput | SortOrder
     audioUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -12527,6 +12751,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusFilter<"Meeting"> | $Enums.MeetingStatus
     userId?: StringFilter<"Meeting"> | string
     code?: StringNullableFilter<"Meeting"> | string | null
+    projectDoc?: StringNullableFilter<"Meeting"> | string | null
+    testResults?: StringNullableFilter<"Meeting"> | string | null
     audioUrl?: StringNullableFilter<"Meeting"> | string | null
     createdAt?: DateTimeFilter<"Meeting"> | Date | string
     updatedAt?: DateTimeFilter<"Meeting"> | Date | string
@@ -12545,6 +12771,8 @@ export namespace Prisma {
     status?: SortOrder
     userId?: SortOrder
     code?: SortOrderInput | SortOrder
+    projectDoc?: SortOrderInput | SortOrder
+    testResults?: SortOrderInput | SortOrder
     audioUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -12567,6 +12795,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusWithAggregatesFilter<"Meeting"> | $Enums.MeetingStatus
     userId?: StringWithAggregatesFilter<"Meeting"> | string
     code?: StringNullableWithAggregatesFilter<"Meeting"> | string | null
+    projectDoc?: StringNullableWithAggregatesFilter<"Meeting"> | string | null
+    testResults?: StringNullableWithAggregatesFilter<"Meeting"> | string | null
     audioUrl?: StringNullableWithAggregatesFilter<"Meeting"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Meeting"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Meeting"> | Date | string
@@ -12678,7 +12908,7 @@ export namespace Prisma {
     NOT?: ActionItemWhereInput | ActionItemWhereInput[]
     id?: StringFilter<"ActionItem"> | string
     title?: StringFilter<"ActionItem"> | string
-    status?: StringFilter<"ActionItem"> | string
+    status?: EnumActionItemStatusFilter<"ActionItem"> | $Enums.ActionItemStatus
     meetingId?: StringFilter<"ActionItem"> | string
     meeting?: XOR<MeetingScalarRelationFilter, MeetingWhereInput>
   }
@@ -12697,7 +12927,7 @@ export namespace Prisma {
     OR?: ActionItemWhereInput[]
     NOT?: ActionItemWhereInput | ActionItemWhereInput[]
     title?: StringFilter<"ActionItem"> | string
-    status?: StringFilter<"ActionItem"> | string
+    status?: EnumActionItemStatusFilter<"ActionItem"> | $Enums.ActionItemStatus
     meetingId?: StringFilter<"ActionItem"> | string
     meeting?: XOR<MeetingScalarRelationFilter, MeetingWhereInput>
   }, "id">
@@ -12718,7 +12948,7 @@ export namespace Prisma {
     NOT?: ActionItemScalarWhereWithAggregatesInput | ActionItemScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"ActionItem"> | string
     title?: StringWithAggregatesFilter<"ActionItem"> | string
-    status?: StringWithAggregatesFilter<"ActionItem"> | string
+    status?: EnumActionItemStatusWithAggregatesFilter<"ActionItem"> | $Enums.ActionItemStatus
     meetingId?: StringWithAggregatesFilter<"ActionItem"> | string
   }
 
@@ -12894,6 +13124,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -12905,7 +13138,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     accounts?: AccountCreateNestedManyWithoutUserInput
@@ -12920,6 +13157,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -12931,7 +13171,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
@@ -12946,6 +13190,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -12957,7 +13204,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
@@ -12972,6 +13223,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -12983,7 +13237,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -12998,6 +13256,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -13009,7 +13270,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -13020,6 +13285,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -13031,7 +13299,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -13042,6 +13314,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -13053,7 +13328,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -13184,6 +13463,8 @@ export namespace Prisma {
     participants?: number
     status?: $Enums.MeetingStatus
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -13202,6 +13483,8 @@ export namespace Prisma {
     status?: $Enums.MeetingStatus
     userId: string
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -13218,6 +13501,8 @@ export namespace Prisma {
     participants?: IntFieldUpdateOperationsInput | number
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13236,6 +13521,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     userId?: StringFieldUpdateOperationsInput | string
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13253,6 +13540,8 @@ export namespace Prisma {
     status?: $Enums.MeetingStatus
     userId: string
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -13266,6 +13555,8 @@ export namespace Prisma {
     participants?: IntFieldUpdateOperationsInput | number
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13280,6 +13571,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     userId?: StringFieldUpdateOperationsInput | string
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13384,48 +13677,48 @@ export namespace Prisma {
   export type ActionItemCreateInput = {
     id?: string
     title: string
-    status?: string
+    status?: $Enums.ActionItemStatus
     meeting: MeetingCreateNestedOneWithoutActionItemsInput
   }
 
   export type ActionItemUncheckedCreateInput = {
     id?: string
     title: string
-    status?: string
+    status?: $Enums.ActionItemStatus
     meetingId: string
   }
 
   export type ActionItemUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     title?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
+    status?: EnumActionItemStatusFieldUpdateOperationsInput | $Enums.ActionItemStatus
     meeting?: MeetingUpdateOneRequiredWithoutActionItemsNestedInput
   }
 
   export type ActionItemUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     title?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
+    status?: EnumActionItemStatusFieldUpdateOperationsInput | $Enums.ActionItemStatus
     meetingId?: StringFieldUpdateOperationsInput | string
   }
 
   export type ActionItemCreateManyInput = {
     id?: string
     title: string
-    status?: string
+    status?: $Enums.ActionItemStatus
     meetingId: string
   }
 
   export type ActionItemUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
     title?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
+    status?: EnumActionItemStatusFieldUpdateOperationsInput | $Enums.ActionItemStatus
   }
 
   export type ActionItemUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
     title?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
+    status?: EnumActionItemStatusFieldUpdateOperationsInput | $Enums.ActionItemStatus
     meetingId?: StringFieldUpdateOperationsInput | string
   }
 
@@ -13669,11 +13962,26 @@ export namespace Prisma {
     not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
+  export type StringNullableListFilter<$PrismaModel = never> = {
+    equals?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    has?: string | StringFieldRefInput<$PrismaModel> | null
+    hasEvery?: string[] | ListStringFieldRefInput<$PrismaModel>
+    hasSome?: string[] | ListStringFieldRefInput<$PrismaModel>
+    isEmpty?: boolean
+  }
+
   export type EnumUserRoleFilter<$PrismaModel = never> = {
     equals?: $Enums.UserRole | EnumUserRoleFieldRefInput<$PrismaModel>
     in?: $Enums.UserRole[] | ListEnumUserRoleFieldRefInput<$PrismaModel>
     notIn?: $Enums.UserRole[] | ListEnumUserRoleFieldRefInput<$PrismaModel>
     not?: NestedEnumUserRoleFilter<$PrismaModel> | $Enums.UserRole
+  }
+
+  export type EnumUserPlanFilter<$PrismaModel = never> = {
+    equals?: $Enums.UserPlan | EnumUserPlanFieldRefInput<$PrismaModel>
+    in?: $Enums.UserPlan[] | ListEnumUserPlanFieldRefInput<$PrismaModel>
+    notIn?: $Enums.UserPlan[] | ListEnumUserPlanFieldRefInput<$PrismaModel>
+    not?: NestedEnumUserPlanFilter<$PrismaModel> | $Enums.UserPlan
   }
 
   export type AccountListRelationFilter = {
@@ -13722,6 +14030,9 @@ export namespace Prisma {
     email?: SortOrder
     emailVerified?: SortOrder
     verificationToken?: SortOrder
+    verificationTokenExpires?: SortOrder
+    resetToken?: SortOrder
+    resetTokenExpires?: SortOrder
     image?: SortOrder
     password?: SortOrder
     apiKey?: SortOrder
@@ -13733,13 +14044,19 @@ export namespace Prisma {
     lockedUntil?: SortOrder
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrder
+    mfaRecoveryCodes?: SortOrder
     role?: SortOrder
+    plan?: SortOrder
+    meetingQuota?: SortOrder
+    meetingsUsed?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
 
   export type UserAvgOrderByAggregateInput = {
     failedLoginAttempts?: SortOrder
+    meetingQuota?: SortOrder
+    meetingsUsed?: SortOrder
   }
 
   export type UserMaxOrderByAggregateInput = {
@@ -13748,6 +14065,9 @@ export namespace Prisma {
     email?: SortOrder
     emailVerified?: SortOrder
     verificationToken?: SortOrder
+    verificationTokenExpires?: SortOrder
+    resetToken?: SortOrder
+    resetTokenExpires?: SortOrder
     image?: SortOrder
     password?: SortOrder
     apiKey?: SortOrder
@@ -13760,6 +14080,9 @@ export namespace Prisma {
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrder
     role?: SortOrder
+    plan?: SortOrder
+    meetingQuota?: SortOrder
+    meetingsUsed?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -13770,6 +14093,9 @@ export namespace Prisma {
     email?: SortOrder
     emailVerified?: SortOrder
     verificationToken?: SortOrder
+    verificationTokenExpires?: SortOrder
+    resetToken?: SortOrder
+    resetTokenExpires?: SortOrder
     image?: SortOrder
     password?: SortOrder
     apiKey?: SortOrder
@@ -13782,12 +14108,17 @@ export namespace Prisma {
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrder
     role?: SortOrder
+    plan?: SortOrder
+    meetingQuota?: SortOrder
+    meetingsUsed?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
 
   export type UserSumOrderByAggregateInput = {
     failedLoginAttempts?: SortOrder
+    meetingQuota?: SortOrder
+    meetingsUsed?: SortOrder
   }
 
   export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -13836,6 +14167,16 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumUserRoleFilter<$PrismaModel>
     _max?: NestedEnumUserRoleFilter<$PrismaModel>
+  }
+
+  export type EnumUserPlanWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.UserPlan | EnumUserPlanFieldRefInput<$PrismaModel>
+    in?: $Enums.UserPlan[] | ListEnumUserPlanFieldRefInput<$PrismaModel>
+    notIn?: $Enums.UserPlan[] | ListEnumUserPlanFieldRefInput<$PrismaModel>
+    not?: NestedEnumUserPlanWithAggregatesFilter<$PrismaModel> | $Enums.UserPlan
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumUserPlanFilter<$PrismaModel>
+    _max?: NestedEnumUserPlanFilter<$PrismaModel>
   }
 
   export type UserNullableScalarRelationFilter = {
@@ -13940,6 +14281,8 @@ export namespace Prisma {
     status?: SortOrder
     userId?: SortOrder
     code?: SortOrder
+    projectDoc?: SortOrder
+    testResults?: SortOrder
     audioUrl?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -13958,6 +14301,8 @@ export namespace Prisma {
     status?: SortOrder
     userId?: SortOrder
     code?: SortOrder
+    projectDoc?: SortOrder
+    testResults?: SortOrder
     audioUrl?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -13972,6 +14317,8 @@ export namespace Prisma {
     status?: SortOrder
     userId?: SortOrder
     code?: SortOrder
+    projectDoc?: SortOrder
+    testResults?: SortOrder
     audioUrl?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -14038,6 +14385,13 @@ export namespace Prisma {
     meetingId?: SortOrder
   }
 
+  export type EnumActionItemStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.ActionItemStatus | EnumActionItemStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ActionItemStatus[] | ListEnumActionItemStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ActionItemStatus[] | ListEnumActionItemStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumActionItemStatusFilter<$PrismaModel> | $Enums.ActionItemStatus
+  }
+
   export type ActionItemCountOrderByAggregateInput = {
     id?: SortOrder
     title?: SortOrder
@@ -14057,6 +14411,16 @@ export namespace Prisma {
     title?: SortOrder
     status?: SortOrder
     meetingId?: SortOrder
+  }
+
+  export type EnumActionItemStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ActionItemStatus | EnumActionItemStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ActionItemStatus[] | ListEnumActionItemStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ActionItemStatus[] | ListEnumActionItemStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumActionItemStatusWithAggregatesFilter<$PrismaModel> | $Enums.ActionItemStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumActionItemStatusFilter<$PrismaModel>
+    _max?: NestedEnumActionItemStatusFilter<$PrismaModel>
   }
 
   export type UserCreateNestedOneWithoutAccountsInput = {
@@ -14105,6 +14469,10 @@ export namespace Prisma {
     upsert?: UserUpsertWithoutSessionsInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutSessionsInput, UserUpdateWithoutSessionsInput>, UserUncheckedUpdateWithoutSessionsInput>
+  }
+
+  export type UserCreatemfaRecoveryCodesInput = {
+    set: string[]
   }
 
   export type AccountCreateNestedManyWithoutUserInput = {
@@ -14179,8 +14547,17 @@ export namespace Prisma {
     set?: boolean
   }
 
+  export type UserUpdatemfaRecoveryCodesInput = {
+    set?: string[]
+    push?: string | string[]
+  }
+
   export type EnumUserRoleFieldUpdateOperationsInput = {
     set?: $Enums.UserRole
+  }
+
+  export type EnumUserPlanFieldUpdateOperationsInput = {
+    set?: $Enums.UserPlan
   }
 
   export type AccountUpdateManyWithoutUserNestedInput = {
@@ -14479,6 +14856,10 @@ export namespace Prisma {
     connect?: MeetingWhereUniqueInput
   }
 
+  export type EnumActionItemStatusFieldUpdateOperationsInput = {
+    set?: $Enums.ActionItemStatus
+  }
+
   export type MeetingUpdateOneRequiredWithoutActionItemsNestedInput = {
     create?: XOR<MeetingCreateWithoutActionItemsInput, MeetingUncheckedCreateWithoutActionItemsInput>
     connectOrCreate?: MeetingCreateOrConnectWithoutActionItemsInput
@@ -14646,6 +15027,13 @@ export namespace Prisma {
     not?: NestedEnumUserRoleFilter<$PrismaModel> | $Enums.UserRole
   }
 
+  export type NestedEnumUserPlanFilter<$PrismaModel = never> = {
+    equals?: $Enums.UserPlan | EnumUserPlanFieldRefInput<$PrismaModel>
+    in?: $Enums.UserPlan[] | ListEnumUserPlanFieldRefInput<$PrismaModel>
+    notIn?: $Enums.UserPlan[] | ListEnumUserPlanFieldRefInput<$PrismaModel>
+    not?: NestedEnumUserPlanFilter<$PrismaModel> | $Enums.UserPlan
+  }
+
   export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
@@ -14705,6 +15093,16 @@ export namespace Prisma {
     _max?: NestedEnumUserRoleFilter<$PrismaModel>
   }
 
+  export type NestedEnumUserPlanWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.UserPlan | EnumUserPlanFieldRefInput<$PrismaModel>
+    in?: $Enums.UserPlan[] | ListEnumUserPlanFieldRefInput<$PrismaModel>
+    notIn?: $Enums.UserPlan[] | ListEnumUserPlanFieldRefInput<$PrismaModel>
+    not?: NestedEnumUserPlanWithAggregatesFilter<$PrismaModel> | $Enums.UserPlan
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumUserPlanFilter<$PrismaModel>
+    _max?: NestedEnumUserPlanFilter<$PrismaModel>
+  }
+
   export type NestedEnumMeetingStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.MeetingStatus | EnumMeetingStatusFieldRefInput<$PrismaModel>
     in?: $Enums.MeetingStatus[] | ListEnumMeetingStatusFieldRefInput<$PrismaModel>
@@ -14722,12 +15120,32 @@ export namespace Prisma {
     _max?: NestedEnumMeetingStatusFilter<$PrismaModel>
   }
 
+  export type NestedEnumActionItemStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.ActionItemStatus | EnumActionItemStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ActionItemStatus[] | ListEnumActionItemStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ActionItemStatus[] | ListEnumActionItemStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumActionItemStatusFilter<$PrismaModel> | $Enums.ActionItemStatus
+  }
+
+  export type NestedEnumActionItemStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ActionItemStatus | EnumActionItemStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ActionItemStatus[] | ListEnumActionItemStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ActionItemStatus[] | ListEnumActionItemStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumActionItemStatusWithAggregatesFilter<$PrismaModel> | $Enums.ActionItemStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumActionItemStatusFilter<$PrismaModel>
+    _max?: NestedEnumActionItemStatusFilter<$PrismaModel>
+  }
+
   export type UserCreateWithoutAccountsInput = {
     id?: string
     name?: string | null
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -14739,7 +15157,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     sessions?: SessionCreateNestedManyWithoutUserInput
@@ -14753,6 +15175,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -14764,7 +15189,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
@@ -14794,6 +15223,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14805,7 +15237,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: SessionUpdateManyWithoutUserNestedInput
@@ -14819,6 +15255,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14830,7 +15269,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
@@ -14844,6 +15287,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -14855,7 +15301,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     accounts?: AccountCreateNestedManyWithoutUserInput
@@ -14869,6 +15319,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -14880,7 +15333,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
@@ -14910,6 +15367,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14921,7 +15381,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
@@ -14935,6 +15399,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14946,7 +15413,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -15026,6 +15497,8 @@ export namespace Prisma {
     participants?: number
     status?: $Enums.MeetingStatus
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15042,6 +15515,8 @@ export namespace Prisma {
     participants?: number
     status?: $Enums.MeetingStatus
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15180,6 +15655,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusFilter<"Meeting"> | $Enums.MeetingStatus
     userId?: StringFilter<"Meeting"> | string
     code?: StringNullableFilter<"Meeting"> | string | null
+    projectDoc?: StringNullableFilter<"Meeting"> | string | null
+    testResults?: StringNullableFilter<"Meeting"> | string | null
     audioUrl?: StringNullableFilter<"Meeting"> | string | null
     createdAt?: DateTimeFilter<"Meeting"> | Date | string
     updatedAt?: DateTimeFilter<"Meeting"> | Date | string
@@ -15221,6 +15698,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -15232,7 +15712,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     accounts?: AccountCreateNestedManyWithoutUserInput
@@ -15246,6 +15730,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -15257,7 +15744,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
@@ -15287,6 +15778,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -15298,7 +15792,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
@@ -15312,6 +15810,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -15323,7 +15824,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -15337,6 +15842,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -15348,7 +15856,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     accounts?: AccountCreateNestedManyWithoutUserInput
@@ -15362,6 +15874,9 @@ export namespace Prisma {
     email?: string | null
     emailVerified?: Date | string | null
     verificationToken?: string | null
+    verificationTokenExpires?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
     image?: string | null
     password?: string | null
     apiKey?: string | null
@@ -15373,7 +15888,11 @@ export namespace Prisma {
     lockedUntil?: Date | string | null
     mfaEnabled?: boolean
     mfaSecret?: string | null
+    mfaRecoveryCodes?: UserCreatemfaRecoveryCodesInput | string[]
     role?: $Enums.UserRole
+    plan?: $Enums.UserPlan
+    meetingQuota?: number
+    meetingsUsed?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
@@ -15428,13 +15947,13 @@ export namespace Prisma {
   export type ActionItemCreateWithoutMeetingInput = {
     id?: string
     title: string
-    status?: string
+    status?: $Enums.ActionItemStatus
   }
 
   export type ActionItemUncheckedCreateWithoutMeetingInput = {
     id?: string
     title: string
-    status?: string
+    status?: $Enums.ActionItemStatus
   }
 
   export type ActionItemCreateOrConnectWithoutMeetingInput = {
@@ -15464,6 +15983,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -15475,7 +15997,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
@@ -15489,6 +16015,9 @@ export namespace Prisma {
     email?: NullableStringFieldUpdateOperationsInput | string | null
     emailVerified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     verificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     image?: NullableStringFieldUpdateOperationsInput | string | null
     password?: NullableStringFieldUpdateOperationsInput | string | null
     apiKey?: NullableStringFieldUpdateOperationsInput | string | null
@@ -15500,7 +16029,11 @@ export namespace Prisma {
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    mfaRecoveryCodes?: UserUpdatemfaRecoveryCodesInput | string[]
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    plan?: EnumUserPlanFieldUpdateOperationsInput | $Enums.UserPlan
+    meetingQuota?: IntFieldUpdateOperationsInput | number
+    meetingsUsed?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -15578,7 +16111,7 @@ export namespace Prisma {
     NOT?: ActionItemScalarWhereInput | ActionItemScalarWhereInput[]
     id?: StringFilter<"ActionItem"> | string
     title?: StringFilter<"ActionItem"> | string
-    status?: StringFilter<"ActionItem"> | string
+    status?: EnumActionItemStatusFilter<"ActionItem"> | $Enums.ActionItemStatus
     meetingId?: StringFilter<"ActionItem"> | string
   }
 
@@ -15590,6 +16123,8 @@ export namespace Prisma {
     participants?: number
     status?: $Enums.MeetingStatus
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15607,6 +16142,8 @@ export namespace Prisma {
     status?: $Enums.MeetingStatus
     userId: string
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15638,6 +16175,8 @@ export namespace Prisma {
     participants?: IntFieldUpdateOperationsInput | number
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15655,6 +16194,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     userId?: StringFieldUpdateOperationsInput | string
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15670,6 +16211,8 @@ export namespace Prisma {
     participants?: number
     status?: $Enums.MeetingStatus
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15687,6 +16230,8 @@ export namespace Prisma {
     status?: $Enums.MeetingStatus
     userId: string
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15718,6 +16263,8 @@ export namespace Prisma {
     participants?: IntFieldUpdateOperationsInput | number
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15735,6 +16282,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     userId?: StringFieldUpdateOperationsInput | string
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15750,6 +16299,8 @@ export namespace Prisma {
     participants?: number
     status?: $Enums.MeetingStatus
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15767,6 +16318,8 @@ export namespace Prisma {
     status?: $Enums.MeetingStatus
     userId: string
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15798,6 +16351,8 @@ export namespace Prisma {
     participants?: IntFieldUpdateOperationsInput | number
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15815,6 +16370,8 @@ export namespace Prisma {
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     userId?: StringFieldUpdateOperationsInput | string
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15852,6 +16409,8 @@ export namespace Prisma {
     participants?: number
     status?: $Enums.MeetingStatus
     code?: string | null
+    projectDoc?: string | null
+    testResults?: string | null
     audioUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -15941,6 +16500,8 @@ export namespace Prisma {
     participants?: IntFieldUpdateOperationsInput | number
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15957,6 +16518,8 @@ export namespace Prisma {
     participants?: IntFieldUpdateOperationsInput | number
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15973,6 +16536,8 @@ export namespace Prisma {
     participants?: IntFieldUpdateOperationsInput | number
     status?: EnumMeetingStatusFieldUpdateOperationsInput | $Enums.MeetingStatus
     code?: NullableStringFieldUpdateOperationsInput | string | null
+    projectDoc?: NullableStringFieldUpdateOperationsInput | string | null
+    testResults?: NullableStringFieldUpdateOperationsInput | string | null
     audioUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16018,7 +16583,7 @@ export namespace Prisma {
   export type ActionItemCreateManyMeetingInput = {
     id?: string
     title: string
-    status?: string
+    status?: $Enums.ActionItemStatus
   }
 
   export type TranscriptUpdateWithoutMeetingInput = {
@@ -16045,19 +16610,19 @@ export namespace Prisma {
   export type ActionItemUpdateWithoutMeetingInput = {
     id?: StringFieldUpdateOperationsInput | string
     title?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
+    status?: EnumActionItemStatusFieldUpdateOperationsInput | $Enums.ActionItemStatus
   }
 
   export type ActionItemUncheckedUpdateWithoutMeetingInput = {
     id?: StringFieldUpdateOperationsInput | string
     title?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
+    status?: EnumActionItemStatusFieldUpdateOperationsInput | $Enums.ActionItemStatus
   }
 
   export type ActionItemUncheckedUpdateManyWithoutMeetingInput = {
     id?: StringFieldUpdateOperationsInput | string
     title?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
+    status?: EnumActionItemStatusFieldUpdateOperationsInput | $Enums.ActionItemStatus
   }
 
 

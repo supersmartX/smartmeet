@@ -18,6 +18,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=invalid_token", req.url));
   }
 
+  // Check if token has expired
+  if (user.verificationTokenExpires && user.verificationTokenExpires < new Date()) {
+    return NextResponse.redirect(new URL("/login?error=token_expired", req.url));
+  }
+
   await prisma.user.update({
     where: {
       id: user.id,
@@ -25,6 +30,7 @@ export async function GET(req: NextRequest) {
     data: {
       emailVerified: new Date(),
       verificationToken: null,
+      verificationTokenExpires: null,
     },
   });
 

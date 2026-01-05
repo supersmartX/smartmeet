@@ -151,6 +151,9 @@ exports.Prisma.UserScalarFieldEnum = {
   email: 'email',
   emailVerified: 'emailVerified',
   verificationToken: 'verificationToken',
+  verificationTokenExpires: 'verificationTokenExpires',
+  resetToken: 'resetToken',
+  resetTokenExpires: 'resetTokenExpires',
   image: 'image',
   password: 'password',
   apiKey: 'apiKey',
@@ -162,7 +165,11 @@ exports.Prisma.UserScalarFieldEnum = {
   lockedUntil: 'lockedUntil',
   mfaEnabled: 'mfaEnabled',
   mfaSecret: 'mfaSecret',
+  mfaRecoveryCodes: 'mfaRecoveryCodes',
   role: 'role',
+  plan: 'plan',
+  meetingQuota: 'meetingQuota',
+  meetingsUsed: 'meetingsUsed',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -193,6 +200,8 @@ exports.Prisma.MeetingScalarFieldEnum = {
   status: 'status',
   userId: 'userId',
   code: 'code',
+  projectDoc: 'projectDoc',
+  testResults: 'testResults',
   audioUrl: 'audioUrl',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -239,10 +248,23 @@ exports.UserRole = exports.$Enums.UserRole = {
   VIEWER: 'VIEWER'
 };
 
+exports.UserPlan = exports.$Enums.UserPlan = {
+  FREE: 'FREE',
+  PRO: 'PRO',
+  ENTERPRISE: 'ENTERPRISE'
+};
+
 exports.MeetingStatus = exports.$Enums.MeetingStatus = {
   COMPLETED: 'COMPLETED',
   PROCESSING: 'PROCESSING',
   FAILED: 'FAILED'
+};
+
+exports.ActionItemStatus = exports.$Enums.ActionItemStatus = {
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  CANCELLED: 'CANCELLED'
 };
 
 exports.Prisma.ModelName = {

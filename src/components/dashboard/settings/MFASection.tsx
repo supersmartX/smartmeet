@@ -15,6 +15,9 @@ interface MFASectionProps {
   setMfaToken: (token: string) => void;
   isSettingUpMFA: boolean;
   isVerifyingMFA: boolean;
+  isDisablingMFA: boolean;
+  showDisableConfirm: boolean;
+  setShowDisableConfirm: (show: boolean) => void;
   handleSetupMFA: () => void;
   handleVerifyMFA: () => void;
   handleDisableMFA: () => void;
@@ -30,6 +33,9 @@ export function MFASection({
   setMfaToken,
   isSettingUpMFA,
   isVerifyingMFA,
+  isDisablingMFA,
+  showDisableConfirm,
+  setShowDisableConfirm,
   handleSetupMFA,
   handleVerifyMFA,
   handleDisableMFA,
@@ -75,15 +81,61 @@ export function MFASection({
             </button>
           )}
 
-          {mfaEnabled && (
+          {mfaEnabled && !showDisableConfirm && (
             <button
-              onClick={handleDisableMFA}
+              onClick={() => setShowDisableConfirm(true)}
               className="px-6 py-3 border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
             >
               Disable 2FA
             </button>
           )}
         </div>
+
+        {/* Disable Confirmation Flow */}
+        {mfaEnabled && showDisableConfirm && (
+          <div className="mt-8 p-6 bg-red-50/50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20 animate-in slide-in-from-top-4 duration-300">
+            <div className="max-w-md space-y-6">
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-widest text-red-600 dark:text-red-400">Confirm Deactivation</h4>
+                <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight leading-relaxed">
+                  Enter your 6-digit authenticator code or a recovery code to disable MFA.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="relative">
+                  <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <input
+                    type="text"
+                    placeholder="ENTER CODE"
+                    value={mfaToken}
+                    onChange={(e) => setMfaToken(e.target.value.toUpperCase())}
+                    className="w-full h-12 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-12 pr-4 text-sm font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleDisableMFA}
+                    disabled={isDisablingMFA || !mfaToken}
+                    className="flex-1 h-12 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isDisablingMFA ? <RefreshCcw className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                    Confirm Disable
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDisableConfirm(false)
+                      setMfaToken("")
+                    }}
+                    className="px-6 h-12 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {qrCodeUrl && !mfaEnabled && (
           <div className="mt-8 p-6 bg-zinc-50 dark:bg-zinc-950/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 animate-in zoom-in-95 duration-300">

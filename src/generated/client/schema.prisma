@@ -43,29 +43,36 @@ model Session {
 }
 
 model User {
-  id                  String     @id @default(cuid())
-  name                String?
-  email               String?    @unique
-  emailVerified       DateTime?
-  verificationToken   String?    @unique
-  image               String?
-  password            String?
-  apiKey              String?
-  allowedIps          String? // Comma-separated list of allowed IPs
-  lastUsedAt          DateTime? // Last time the API key was used
-  preferredProvider   String?    @default("openai")
-  preferredModel      String?    @default("gpt-4o")
-  failedLoginAttempts Int        @default(0)
-  lockedUntil         DateTime?
-  mfaEnabled          Boolean    @default(false)
-  mfaSecret           String?
-  role                UserRole   @default(MEMBER)
-  accounts            Account[]
-  sessions            Session[]
-  meetings            Meeting[]
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
-  auditLogs           AuditLog[]
+  id                       String     @id @default(cuid())
+  name                     String?
+  email                    String?    @unique
+  emailVerified            DateTime?
+  verificationToken        String?    @unique
+  verificationTokenExpires DateTime?
+  resetToken               String?    @unique
+  resetTokenExpires        DateTime?
+  image                    String?
+  password                 String?
+  apiKey                   String?
+  allowedIps               String? // Comma-separated list of allowed IPs
+  lastUsedAt               DateTime? // Last time the API key was used
+  preferredProvider        String?    @default("openai")
+  preferredModel           String?    @default("gpt-4o")
+  failedLoginAttempts      Int        @default(0)
+  lockedUntil              DateTime?
+  mfaEnabled               Boolean    @default(false)
+  mfaSecret                String?
+  mfaRecoveryCodes         String[]   @default([])
+  role                     UserRole   @default(MEMBER)
+  plan                     UserPlan   @default(FREE)
+  meetingQuota             Int        @default(3) // Monthly quota for FREE users
+  meetingsUsed             Int        @default(0) // Meetings used in current cycle
+  accounts                 Account[]
+  sessions                 Session[]
+  meetings                 Meeting[]
+  createdAt                DateTime   @default(now())
+  updatedAt                DateTime   @updatedAt
+  auditLogs                AuditLog[]
 }
 
 model AuditLog {
@@ -84,6 +91,12 @@ enum UserRole {
   ADMIN
   MEMBER
   VIEWER
+}
+
+enum UserPlan {
+  FREE
+  PRO
+  ENTERPRISE
 }
 
 model VerificationToken {
@@ -108,6 +121,8 @@ model Meeting {
   summary      Summary?
   actionItems  ActionItem[]
   code         String?
+  projectDoc   String?
+  testResults  String?
   audioUrl     String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -136,9 +151,16 @@ model Summary {
 }
 
 model ActionItem {
-  id        String  @id @default(cuid())
+  id        String           @id @default(cuid())
   title     String
-  status    String  @default("pending") // pending, completed
+  status    ActionItemStatus @default(PENDING)
   meetingId String
-  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meeting   Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+enum ActionItemStatus {
+  PENDING
+  COMPLETED
+  IN_PROGRESS
+  CANCELLED
 }

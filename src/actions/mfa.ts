@@ -62,22 +62,47 @@ export async function verifyAndEnableMFA(token: string, secret: string) {
   return { success: true, recoveryCodes };
 }
 
-export async function disableMFA() {
+export async function disableMFA(token: string) {
   const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
-  const user = await prisma.user.update({
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user || !user.mfaEnabled) throw new Error("MFA not enabled");
+
+  // Verify TOTP token or recovery code
+  const isTotpValid = speakeasy.totp.verify({
+    secret: user.mfaSecret || "",
+    encoding: "base32",
+    token,
+  });
+
+  const isRecoveryCodeValid = user.mfaRecoveryCodes.includes(token);
+
+  if (!isTotpValid && !isRecoveryCodeValid) {
+    throw new Error("Invalid verification code or recovery code");
+  }
+
+  // If recovery code was used, remove it from the list
+  const updatedRecoveryCodes = isRecoveryCodeValid 
+    ? user.mfaRecoveryCodes.filter(code => code !== token)
+    : user.mfaRecoveryCodes;
+
+  await prisma.user.update({
     where: { email: session.user.email },
     data: {
       mfaEnabled: false,
       mfaSecret: null,
+      mfaRecoveryCodes: isRecoveryCodeValid ? updatedRecoveryCodes : [], // Clear codes if disabling
     },
   });
 
   await logSecurityEvent(
     "MFA_DISABLED",
     user.id,
-    "Multi-factor authentication disabled",
+    isRecoveryCodeValid ? "MFA disabled using recovery code" : "MFA disabled using TOTP",
     "Security"
   );
 

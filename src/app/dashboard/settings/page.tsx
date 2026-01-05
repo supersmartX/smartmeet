@@ -37,6 +37,8 @@ export default function SettingsPage() {
   const [mfaToken, setMfaToken] = useState("")
   const [isSettingUpMFA, setIsSettingUpMFA] = useState(false)
   const [isVerifyingMFA, setIsVerifyingMFA] = useState(false)
+  const [isDisablingMFA, setIsDisablingMFA] = useState(false)
+  const [showDisableConfirm, setShowDisableConfirm] = useState(false)
 
   const setApiKey = (p: string, key: string) => {
     setApiKeys(prev => ({ ...prev, [p]: key }))
@@ -174,14 +176,20 @@ export default function SettingsPage() {
   }
 
   const handleDisableMFA = async () => {
-    if (!confirm("Are you sure you want to disable MFA? This will make your account less secure.")) return
+    if (!mfaToken) return
     try {
-      await disableMFA()
+      setIsDisablingMFA(true)
+      await disableMFA(mfaToken)
       setMfaEnabled(false)
+      setShowDisableConfirm(false)
+      setMfaToken("")
       showToast("MFA disabled.")
     } catch (error) {
       console.error("Disable MFA error:", error)
-      showToast("Failed to disable MFA.", "error")
+      const message = error instanceof Error ? error.message : "Failed to disable MFA."
+      showToast(message, "error")
+    } finally {
+      setIsDisablingMFA(false)
     }
   }
 
@@ -259,6 +267,9 @@ export default function SettingsPage() {
           setMfaToken={setMfaToken}
           isSettingUpMFA={isSettingUpMFA}
           isVerifyingMFA={isVerifyingMFA}
+          isDisablingMFA={isDisablingMFA}
+          showDisableConfirm={showDisableConfirm}
+          setShowDisableConfirm={setShowDisableConfirm}
           handleSetupMFA={handleSetupMFA}
           handleVerifyMFA={handleVerifyMFA}
           handleDisableMFA={handleDisableMFA}

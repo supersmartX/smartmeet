@@ -83,7 +83,7 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
         icon: "Video",
         color: "text-brand-via",
         bg: "bg-brand-via/10",
-        trend: "+12%",
+        trend: `${user.meetingsUsed}/${user.meetingQuota} used`,
         href: "/dashboard/recordings"
       },
       {
@@ -256,6 +256,7 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: {
+        id: true,
         apiKey: true,
         preferredProvider: true,
         preferredModel: true,
@@ -264,7 +265,10 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
         name: true,
         email: true,
         image: true,
-        mfaEnabled: true
+        mfaEnabled: true,
+        plan: true,
+        meetingQuota: true,
+        meetingsUsed: true
       },
     });
 
@@ -304,18 +308,38 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { meetingsUsed: true, meetingQuota: true, plan: true }
+    });
+
+    if (!user) return { success: false, error: "User not found" };
+
+    if (user.meetingsUsed >= user.meetingQuota) {
+      return { 
+        success: false, 
+        error: `Meeting quota exceeded. You have used ${user.meetingsUsed}/${user.meetingQuota} meetings in your ${user.plan} plan. Please upgrade for more.` 
+      };
+    }
+
     const validatedData = meetingSchema.parse(data);
 
-    const meeting = await prisma.meeting.create({
-      data: {
-        title: validatedData.title,
-        duration: validatedData.duration || "0:00",
-        status: "PROCESSING",
-        code: validatedData.code,
-        audioUrl: validatedData.audioUrl,
-        user: { connect: { email: session.user.email } },
-      },
-    });
+    const [meeting] = await prisma.$transaction([
+      prisma.meeting.create({
+        data: {
+          title: validatedData.title,
+          duration: validatedData.duration || "0:00",
+          status: "PROCESSING",
+          code: validatedData.code,
+          audioUrl: validatedData.audioUrl,
+          user: { connect: { email: session.user.email } },
+        },
+      }),
+      prisma.user.update({
+        where: { email: session.user.email },
+        data: { meetingsUsed: { increment: 1 } }
+      })
+    ]);
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/recordings");
@@ -534,8 +558,6 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       return { success: false, error: "API Key missing. Please add it in Settings." };
     }
 
-    const decryptedKey = decrypt(user.apiKey);
-
     // Update lastUsedAt
     await prisma.user.update({
       where: { id: user.id },
@@ -594,10 +616,10 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
 
     const pipelineResponse = await audioToCode(audioBlob, {
       api_key: effectiveApiKey,
-      summary_provider: provider.toUpperCase() as any,
-      code_provider: provider as any,
+      summary_provider: provider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ",
+      code_provider: provider as "openai" | "claude" | "gemini" | "groq",
       code_model: user.preferredModel || undefined,
-      test_provider: (provider === "openai" || provider === "openrouter") ? "local" : provider as any 
+      test_provider: (provider === "openai" || provider === "openrouter") ? "local" : provider as "local" | "openai" | "claude" | "gemini" | "groq"
     });
 
     console.log(`Pipeline response for ${meetingId}:`, JSON.stringify(pipelineResponse, null, 2));
@@ -610,21 +632,36 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
         projectDoc: pipelineResponse.data.project_doc,
         testResults: pipelineResponse.data.test_output?.output || pipelineResponse.data.test_output?.error
       });
+
+      // Increment meetings used count
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { meetingsUsed: { increment: 1 } }
+      });
+
       return { success: true };
     } else {
       const errorDetail = pipelineResponse.error || pipelineResponse.message || "AI Pipeline failed";
+      const isRetryable = errorDetail.toLowerCase().includes("timeout") || 
+                         errorDetail.toLowerCase().includes("rate limit") ||
+                         errorDetail.toLowerCase().includes("overloaded");
+
       console.error("Pipeline failure details:", errorDetail);
       
-      // Update status with error details if possible
+      // Update status with error details and retry suggestion
       await prisma.meeting.update({
         where: { id: meetingId },
         data: { 
           status: "FAILED",
-          testResults: `Pipeline Error: ${errorDetail}. Provider used: ${provider}`
+          testResults: `Pipeline Error: ${errorDetail}. ${isRetryable ? "This seems to be a temporary error. Please try again in a few minutes." : "Please check your API key and configuration."}`
         }
       });
       
-      return { success: false, error: errorDetail };
+      return { 
+        success: false, 
+        error: errorDetail,
+        message: isRetryable ? "Temporary AI service error. You can retry processing this recording." : "AI processing failed. Please check your settings."
+      };
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process meeting with AI";

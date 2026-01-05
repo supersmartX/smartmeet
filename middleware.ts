@@ -8,8 +8,8 @@ export default withAuth(
 
     const csp = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://github.com https://*.google.com;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com;
+      script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://github.com https://*.google.com;
+      style-src 'self' 'nonce-${nonce}' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com;
       img-src 'self' data: blob: https:;
       font-src 'self' data: https://fonts.gstatic.com;
       connect-src 'self' https://accounts.google.com https://github.com https://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.ngrok-free.app https://*.ngrok-free.dev https://*.supabase.co https://*.supabase.in;

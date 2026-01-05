@@ -2,6 +2,7 @@ export type ActionResult<T = unknown> = {
   success: boolean;
   data?: T;
   error?: string;
+  message?: string;
 };
 
 export interface Meeting {
@@ -86,6 +87,9 @@ export interface Session {
 export interface UserWithMeetings {
   id: string;
   email: string;
+  plan: string;
+  meetingQuota: number;
+  meetingsUsed: number;
   _count: {
     meetings: number;
   };

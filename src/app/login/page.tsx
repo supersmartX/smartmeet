@@ -252,9 +252,19 @@ function LoginContent() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
-                Password
-              </label>
+              <div className="flex items-center justify-between ml-1">
+                <label htmlFor="password" className="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                  Password
+                </label>
+                {mode === "signin" && (
+                  <Link
+                    href="/forgot-password"
+                    className="text-[10px] font-black text-brand-via uppercase tracking-widest hover:opacity-80 transition-opacity"
+                  >
+                    Forgot Password?
+                  </Link>
+                )}
+              </div>
               <div className="relative group">
                 <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand-via transition-colors" />
                 <input

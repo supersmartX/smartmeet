@@ -215,7 +215,7 @@ export function AIConfigSection({
           </div>
           {currentKey && !detectProvider(currentKey) && provider !== 'custom' && (
             <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1">
-              <RefreshCcw className="w-3 h-3 animate-spin-slow" /> Format doesn't match {provider} prefix. Please double-check.
+              <RefreshCcw className="w-3 h-3 animate-spin-slow" /> Format doesn&apos;t match {provider} prefix. Please double-check.
             </p>
           )}
         </div>
