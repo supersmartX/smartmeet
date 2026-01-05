@@ -193,58 +193,75 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Initial sign in
-      if (user) {
-        token.id = user.id;
-        token.role = (user as { role?: UserRole }).role || "MEMBER";
-      }
+      try {
+        // Initial sign in
+        if (user) {
+          token.id = user.id;
+          token.role = (user as { role?: UserRole }).role || "MEMBER";
+        }
 
-      // Handle explicit session updates (e.g. from client-side update())
-      if (trigger === "update" && session?.role) {
-        token.role = session.role;
-      }
+        // Handle explicit session updates (e.g. from client-side update())
+        if (trigger === "update" && session?.role) {
+          token.role = session.role;
+        }
 
-      // Periodically refresh user data from DB to catch role changes
-      // or other critical updates without requiring re-login
-      if (token.id) {
-        const now = Math.floor(Date.now() / 1000);
-        const lastRefreshed = (token as { lastRefreshed?: number }).lastRefreshed || 0;
-        
-        // Refresh every 1 hour (3600 seconds)
-        if (now - lastRefreshed > 3600) {
-          try {
-            const dbUser = await prisma.user.findUnique({
-              where: { id: token.id as string },
-              select: { role: true }
-            });
-            
-            if (dbUser) {
-              token.role = dbUser.role as UserRole;
-              (token as { lastRefreshed?: number }).lastRefreshed = now;
+        // Periodically refresh user data from DB to catch role changes
+        // or other critical updates without requiring re-login
+        if (token.id) {
+          const now = Math.floor(Date.now() / 1000);
+          const lastRefreshed = (token as { lastRefreshed?: number }).lastRefreshed || 0;
+          
+          // Refresh every 1 hour (3600 seconds)
+          if (now - lastRefreshed > 3600) {
+            try {
+              const dbUser = await prisma.user.findUnique({
+                where: { id: token.id as string },
+                select: { role: true }
+              });
+              
+              if (dbUser) {
+                token.role = dbUser.role as UserRole;
+                (token as { lastRefreshed?: number }).lastRefreshed = now;
+              }
+            } catch (error) {
+              console.error("❌ [JWT Callback] Failed to refresh user role:", error);
             }
-          } catch (error) {
-            console.error("Failed to refresh user role in JWT:", error);
           }
         }
-      }
 
-      return token;
+        return token;
+      } catch (error) {
+        console.error("❌ [JWT Callback] Critical failure:", error);
+        return token; // Return whatever we have rather than failing completely
+      }
     },
     async session({ session, token }: { session: Session; token: JWT }) {
-      if (token?.id && session.user) {
-        const extendedUser = {
-          ...session.user,
-          id: token.id,
-          role: token.role,
-        };
-        session.user = extendedUser;
+      try {
+        if (token?.id && session.user) {
+          const extendedUser = {
+            ...session.user,
+            id: token.id,
+            role: token.role,
+          };
+          session.user = extendedUser;
+        }
+        return session;
+      } catch (error) {
+        console.error("❌ [Session Callback] failure:", error);
+        return session;
       }
-      return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      else if (new URL(url).origin === baseUrl) return url;
-      return `${baseUrl}/dashboard`;
+      try {
+        // Allows relative callback URLs
+        if (url.startsWith("/")) return `${baseUrl}${url}`;
+        // Allows callback URLs on the same origin
+        else if (new URL(url).origin === baseUrl) return url;
+        return `${baseUrl}/dashboard`;
+      } catch (error) {
+        console.warn("⚠️ [Redirect Callback] fallback used:", error);
+        return `${baseUrl}/dashboard`;
+      }
     },
   },
 };

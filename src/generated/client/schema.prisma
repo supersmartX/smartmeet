@@ -25,7 +25,7 @@ model Account {
   token_type        String?
   scope             String?
   id_token          String? @db.Text
-  session_state     String?
+  session_state     String? @db.Text
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

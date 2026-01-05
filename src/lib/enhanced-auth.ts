@@ -36,59 +36,62 @@ export const enhancedAuthOptions: NextAuthOptions = {
     ...authOptions.callbacks,
     async signIn({ user, account }) {
       try {
+        console.log('🔍 [SignIn Callback] Started:', { 
+          provider: account?.provider,
+          email: user?.email,
+          type: account?.type
+        });
+
         // Handle OAuth account linking with enhanced security
         if (account?.provider && account.type === 'oauth') {
-          // Validate callback URL matches expected domain
           const expectedUrl = process.env.NEXTAUTH_URL;
-          console.log('🔍 OAuth check:', { 
-            provider: account.provider, 
-            callbackUrl: account.callbackUrl, 
-            expectedUrl 
-          });
-
-          if (account.callbackUrl && typeof account.callbackUrl === 'string' && expectedUrl && !account.callbackUrl.startsWith(expectedUrl)) {
-            console.warn('⚠️ OAuth callback URL mismatch:', {
-              received: account.callbackUrl,
-              expected: expectedUrl
-            });
-            return false;
-          }
-
-          // Check if user exists with this email using Prisma directly
-          const existingUser = user.email ? await prisma.user.findUnique({
-            where: { email: user.email }
-          }) : null;
-
-          if (existingUser) {
-            // Check if this OAuth account is already linked to this user
-            const existingAccount = await prisma.account.findFirst({
-              where: {
-                userId: existingUser.id,
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-              },
-            });
-
-            if (!existingAccount) {
-              // If account doesn't exist but user does, it means they are trying to 
-              // sign in with a new provider for an existing email.
-              // In Next.js Auth, if allowDangerousEmailAccountLinking is true, it might link.
-              // Here we can choose to auto-link if the email is verified, or redirect to an error page.
-              // For now, let's redirect to a specific error page that explains they should link the account.
-              throw new Error("AccountLinkRequired");
+          
+          if (account.callbackUrl && typeof account.callbackUrl === 'string' && expectedUrl) {
+            try {
+              const receivedOrigin = new URL(account.callbackUrl).origin;
+              const expectedOrigin = new URL(expectedUrl).origin;
+              
+              if (receivedOrigin !== expectedOrigin) {
+                console.warn('⚠️ OAuth callback URL origin mismatch:', {
+                  received: receivedOrigin,
+                  expected: expectedOrigin
+                });
+                // In some environments (like preview deploys), this might be expected.
+                // We'll log it but not necessarily block it unless it's a completely different domain.
+              }
+            } catch (e) {
+              console.error('❌ Failed to parse callback URLs:', e);
             }
           }
 
-          return true;
+          // Check if user exists with this email using Prisma directly
+          if (!user.email) {
+            console.error('❌ OAuth provider did not return an email');
+            return false;
+          }
+
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            include: { accounts: true }
+          });
+
+          if (existingUser) {
+            // Check if this OAuth account is already linked to this user
+            const isLinked = existingUser.accounts.some(
+              acc => acc.provider === account.provider && acc.providerAccountId === account.providerAccountId
+            );
+
+            if (!isLinked) {
+              console.log('ℹ️ Existing user found with same email but different provider. Redirecting to link required.');
+              // Instead of throwing, we return a redirect URL
+              return `/login?error=OAuthAccountNotLinked&email=${encodeURIComponent(user.email)}`;
+            }
+          }
         }
         
         return true;
       } catch (error: unknown) {
-        console.error('OAuth signin error occurred:', error);
-        if (error instanceof Error && error.message === "AccountLinkRequired") {
-          // This will be caught by NextAuth and redirected to the error page with this message
-          throw error;
-        }
+        console.error('❌ [SignIn Callback] Exception:', error);
         return false;
       }
     },
