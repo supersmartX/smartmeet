@@ -195,7 +195,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
-  // @ts-expect-error
+  // @ts-expect-error - trustHost is not a standard NextAuth option but is required for production deployment
   trustHost: true,
   callbacks: {
     async jwt({ token, user, trigger, session }) {

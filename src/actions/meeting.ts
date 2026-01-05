@@ -619,20 +619,20 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     const audioBlob = new Blob([audioBuffer], { type: audioResponse.headers.get("content-type") || "audio/mpeg" });
 
     // 4. Call the AI pipeline with user preferences
-    const { apiKey: effectiveApiKey, provider } = await getAIConfiguration(user);
-    
+    const { apiKey: effectiveApiKey, provider, rawProvider } = await getAIConfiguration(user);
+
     if (!effectiveApiKey) {
       return { success: false, error: "API Key missing for the selected provider." };
     }
-    
+
     console.log(`Starting AI pipeline for meeting ${meetingId} using provider: ${provider}`);
 
     const pipelineResponse = await audioToCode(audioBlob, {
       api_key: effectiveApiKey,
-      summary_provider: provider.toUpperCase() as any,
-      code_provider: provider as any,
+      summary_provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+      code_provider: provider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
       code_model: user.preferredModel || undefined,
-      test_provider: (provider === "openai" || provider === "openrouter") ? "local" : provider as any
+      test_provider: (provider === "openai" || provider === "openrouter") ? "local" : provider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
     });
 
     console.log(`Pipeline response for ${meetingId}:`, JSON.stringify(pipelineResponse, null, 2));
@@ -850,12 +850,12 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
     if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
-    
+
     const result = await generateCode(
       `Based on this meeting transcript, generate a structured business logic or implementation plan in TypeScript:\n\n${transcriptText}`,
       {
         api_key: apiKey,
-        provider: provider as any,
+        provider: provider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
         model: model
       }
     );
@@ -909,7 +909,7 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
       `Context: ${context}\n\nQuestion: ${question}\n\nProvide a concise and helpful answer based on the meeting context.`,
       {
         api_key: apiKey,
-        provider: provider as any,
+        provider: provider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
         model: model
       }
     );
@@ -991,12 +991,12 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
     if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
-    
-    const result = await summarizeText(transcriptText, { 
+
+    const result = await summarizeText(transcriptText, {
       api_key: apiKey,
-      provider: (rawProvider.toUpperCase() === "ANTHROPIC" ? "CLAUDE" : 
-                 rawProvider.toUpperCase() === "GOOGLE" ? "GEMINI" : 
-                 rawProvider.toUpperCase()) as any
+      provider: (rawProvider.toUpperCase() === "ANTHROPIC" ? "CLAUDE" :
+                 rawProvider.toUpperCase() === "GOOGLE" ? "GEMINI" :
+                 rawProvider.toUpperCase()) as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM"
     });
 
     if (result.success && result.data) {
@@ -1038,9 +1038,9 @@ export async function testMeetingCompliance(meetingId: string): Promise<ActionRe
     const { apiKey, provider } = await getAIConfiguration(user);
     if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
-    const result = await testCode(meeting.code, { 
+    const result = await testCode(meeting.code, {
       api_key: apiKey,
-      provider: provider as any
+      provider: provider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
     });
 
     if (result.success && result.data) {
@@ -1083,12 +1083,12 @@ export async function generateMeetingPlan(meetingId: string): Promise<ActionResu
     if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
-    
+
     const result = await generatePlan(
       `Generate a detailed implementation plan based on this meeting transcript:\n\n${transcriptText}`,
       {
         api_key: apiKey,
-        provider: provider as any
+        provider: provider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom"
       }
     );
 
