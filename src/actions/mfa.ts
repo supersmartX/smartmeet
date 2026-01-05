@@ -98,11 +98,6 @@ export async function disableMFA(token: string, password?: string) {
     throw new Error("Invalid verification code or recovery code");
   }
 
-  // If recovery code was used, remove it from the list
-  const updatedRecoveryCodes = isRecoveryCodeValid 
-    ? user.mfaRecoveryCodes.filter(code => code !== token)
-    : user.mfaRecoveryCodes;
-
   await prisma.user.update({
     where: { email: session.user.email },
     data: {

@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { signIn, getProviders, ClientSafeProvider } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, User, Key, ArrowRight, Loader2, Github, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, User, Key, ArrowRight, Loader2, Github, Eye, EyeOff } from "lucide-react";
 import { signUp } from "@/actions/auth";
 
 export default function LoginClient() {
@@ -32,8 +32,7 @@ export default function LoginClient() {
   };
 
   const isPasswordStrong = passwordRequirements.length && passwordRequirements.uppercase && passwordRequirements.lowercase && passwordRequirements.number && passwordRequirements.special;
-  
-  const router = useRouter();
+
   const searchParams = useSearchParams();
 
   useEffect(() => {

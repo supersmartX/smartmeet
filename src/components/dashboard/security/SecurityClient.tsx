@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { 
-  Shield, 
+  Shield,
   Clock, 
-  MapPin, 
   Monitor, 
   Activity,
-  ChevronRight,
   Loader2,
   AlertCircle,
   Lock,

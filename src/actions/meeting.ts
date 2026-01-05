@@ -782,12 +782,12 @@ export async function getAuditLogs(): Promise<ActionResult<AuditLog[]>> {
       take: 50
     });
 
-    return { success: true, data: logs as unknown as AuditLog[] };
+    return { success: true, data: logs };
   } catch (error: unknown) {
     console.error("Get audit logs error:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Failed to fetch audit logs" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch audit logs"
     };
   }
 }
@@ -817,12 +817,12 @@ export async function getActiveSessions(): Promise<ActionResult<Session[]>> {
       }
     });
 
-    return { success: true, data: sessions as unknown as Session[] };
+    return { success: true, data: sessions };
   } catch (error: unknown) {
     console.error("Get active sessions error:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Failed to fetch active sessions" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch active sessions"
     };
   }
 }

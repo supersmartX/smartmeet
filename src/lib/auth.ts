@@ -195,7 +195,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
-  // @ts-ignore
+  // @ts-expect-error
   trustHost: true,
   callbacks: {
     async jwt({ token, user, trigger, session }) {
