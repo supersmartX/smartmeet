@@ -19,6 +19,7 @@ const githubId = process.env.GITHUB_ID?.trim();
 const githubSecret = process.env.GITHUB_SECRET?.trim();
 
 export const authOptions: NextAuthOptions = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(prisma as any) as Adapter,
   providers: [
     ...(googleId && googleSecret ? [GoogleProvider({

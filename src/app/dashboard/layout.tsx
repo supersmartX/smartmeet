@@ -26,7 +26,6 @@ export default function DashboardLayout({
   const pathname = usePathname()
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true)
   }, [])
   const { data: session } = useSession()
