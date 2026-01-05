@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:auth": "jest --testPathPattern=auth"
@@ -47,6 +47,7 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "eslint": "^9",
+    "@eslint/eslintrc": "^3.2.0",
     "eslint-config-next": "15.1.0",
     "prisma": "6.19.1",
     "tailwindcss": "^4",

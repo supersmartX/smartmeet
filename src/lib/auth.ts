@@ -19,7 +19,7 @@ const githubId = process.env.GITHUB_ID?.trim();
 const githubSecret = process.env.GITHUB_SECRET?.trim();
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: PrismaAdapter(prisma as any) as Adapter,
   providers: [
     ...(googleId && googleSecret ? [GoogleProvider({
       clientId: googleId,
