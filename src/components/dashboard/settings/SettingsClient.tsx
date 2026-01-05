@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { 
-  Shield, 
   Zap, 
   Check, 
 } from "lucide-react"
@@ -30,7 +29,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
   const [provider, setProvider] = useState(initialSettings.preferredProvider || "openai")
   const [model, setModel] = useState(initialSettings.preferredModel || "gpt-4o")
   const [allowedIps, setAllowedIps] = useState(initialSettings.allowedIps || "")
-  const [lastUsedAt, setLastUsedAt] = useState<string | null>(
+  const [lastUsedAt] = useState<string | null>(
     initialSettings.lastUsedAt ? new Date(initialSettings.lastUsedAt).toLocaleString() : null
   )
   const [userProfile] = useState({ 

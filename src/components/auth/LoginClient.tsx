@@ -15,7 +15,6 @@ export default function LoginClient() {
     email: "",
     password: "",
     name: "",
-    apiKey: "",
     mfaToken: ""
   });
   const [mfaRequired, setMfaRequired] = useState(false);

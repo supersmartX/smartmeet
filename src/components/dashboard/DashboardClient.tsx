@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import Link from "next/link"
+import Image from "next/image"
 import { useState, useMemo, useEffect } from "react"
 import { highlightText } from "@/utils/text"
 import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, Calendar, HardDrive, Users } from "lucide-react"
@@ -19,14 +20,12 @@ export default function DashboardClient() {
   const [stats, setStats] = useState<DashboardStat[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const { toast, showToast } = useToast()
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        setError(null)
         
         const [meetingsResult, statsResult] = await Promise.all([
           getMeetings(),
@@ -36,19 +35,17 @@ export default function DashboardClient() {
         if (meetingsResult.success && meetingsResult.data) {
           setRecordings(meetingsResult.data)
         } else if (!meetingsResult.success) {
-          setError(meetingsResult.error || "Failed to load meetings")
           showToast(meetingsResult.error || "Failed to load meetings", "error")
         }
 
         if (statsResult.success && statsResult.data) {
           setStats(statsResult.data)
         } else if (!statsResult.success) {
-          setError(statsResult.error || "Failed to load stats")
           showToast(statsResult.error || "Failed to load stats", "error")
         }
       } catch (err) {
         console.error("Dashboard fetch error:", err)
-        setError("Failed to load dashboard data. Please try again.")
+        showToast("Failed to load dashboard data. Please try again.", "error")
       } finally {
         setIsLoading(false)
       }
@@ -176,9 +173,9 @@ export default function DashboardClient() {
                   href={`/dashboard/recordings/${rec.id}`}
                   className="group flex items-center gap-6 p-4 bg-white dark:bg-zinc-900 rounded-[28px] border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:shadow-lg transition-all"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-zinc-400 group-hover:text-brand-via transition-colors shrink-0 overflow-hidden">
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-zinc-400 group-hover:text-brand-via transition-colors shrink-0 overflow-hidden relative">
                     {rec.image ? (
-                      <img src={rec.image} alt="" className="w-full h-full object-cover" />
+                      <Image src={rec.image} alt="" fill className="object-cover" />
                     ) : (
                       <Video className="w-6 h-6" />
                     )}

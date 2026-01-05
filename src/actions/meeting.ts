@@ -987,7 +987,7 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
     
-    const { apiKey, provider, rawProvider } = await getAIConfiguration(user);
+    const { apiKey, rawProvider } = await getAIConfiguration(user);
     if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
