@@ -76,26 +76,6 @@ function LoginContent() {
       }
     };
     fetchProviders();
-    
-    // Add debug scripts
-    const debugScript = document.createElement('script');
-    debugScript.src = '/nextauth-debug.js';
-    debugScript.async = true;
-    document.head.appendChild(debugScript);
-    
-    const emergencyScript = document.createElement('script');
-    emergencyScript.src = '/emergency-oauth.js';
-    emergencyScript.async = true;
-    document.head.appendChild(emergencyScript);
-    
-    return () => {
-      if (document.head.contains(debugScript)) {
-        document.head.removeChild(debugScript);
-      }
-      if (document.head.contains(emergencyScript)) {
-        document.head.removeChild(emergencyScript);
-      }
-    };
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -438,18 +418,9 @@ function LoginContent() {
                     onClick={async () => {
                     console.log('🚀 Google OAuth clicked');
                     try {
-                      const result = await signIn("google", {
+                      await signIn("google", {
                         callbackUrl: `${window.location.origin}/dashboard`,
-                        redirect: false
                       });
-
-                      if (result?.error) {
-                        console.error('❌ Google OAuth error:', result.error);
-                        setError(`Google login failed: ${result.error}`);
-                      } else if (result?.ok) {
-                        // Successful initiation, redirect will happen
-                        console.log('✅ Google OAuth initiated successfully');
-                      }
                     } catch (error) {
                       console.error('❌ Google OAuth exception:', error);
                       setError('Failed to initiate Google login. Please try again.');
@@ -488,18 +459,9 @@ function LoginContent() {
                     onClick={async () => {
                     console.log('🚀 GitHub OAuth clicked');
                     try {
-                      const result = await signIn("github", {
+                      await signIn("github", {
                         callbackUrl: `${window.location.origin}/dashboard`,
-                        redirect: false
                       });
-
-                      if (result?.error) {
-                        console.error('❌ GitHub OAuth error:', result.error);
-                        setError(`GitHub login failed: ${result.error}`);
-                      } else if (result?.ok) {
-                        // Successful initiation, redirect will happen
-                        console.log('✅ GitHub OAuth initiated successfully');
-                      }
                     } catch (error) {
                       console.error('❌ GitHub OAuth exception:', error);
                       setError('Failed to initiate GitHub login. Please try again.');

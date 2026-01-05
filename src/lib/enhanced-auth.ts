@@ -40,8 +40,17 @@ export const enhancedAuthOptions: NextAuthOptions = {
         if (account?.provider && account.type === 'oauth') {
           // Validate callback URL matches expected domain
           const expectedUrl = process.env.NEXTAUTH_URL;
+          console.log('🔍 OAuth check:', { 
+            provider: account.provider, 
+            callbackUrl: account.callbackUrl, 
+            expectedUrl 
+          });
+
           if (account.callbackUrl && typeof account.callbackUrl === 'string' && expectedUrl && !account.callbackUrl.startsWith(expectedUrl)) {
-            console.warn('⚠️ OAuth callback URL mismatch - possible redirect attack');
+            console.warn('⚠️ OAuth callback URL mismatch:', {
+              received: account.callbackUrl,
+              expected: expectedUrl
+            });
             return false;
           }
 
