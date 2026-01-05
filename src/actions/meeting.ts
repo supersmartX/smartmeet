@@ -39,6 +39,36 @@ import {
   UserSettings
 } from "@/types/meeting";
 
+/**
+ * Helper to get decrypted API key and mapped provider for a user
+ */
+async function getAIConfiguration(user: { apiKey: string | null; preferredProvider: string | null }) {
+  if (!user.apiKey) return { apiKey: null, provider: "openai", rawProvider: "openai" };
+
+  const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
+  const decrypted = decrypt(user.apiKey);
+  let apiKey = decrypted;
+
+  try {
+    const keys = JSON.parse(decrypted);
+    apiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
+  } catch {
+    // Legacy single key format
+  }
+
+  const providerMap: Record<string, string> = {
+    "anthropic": "claude",
+    "google": "gemini",
+    "openai": "openai",
+    "groq": "groq",
+    "openrouter": "openrouter"
+  };
+
+  const provider = providerMap[rawProvider] || rawProvider;
+
+  return { apiKey, provider, rawProvider };
+}
+
 export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>> {
   noStore();
   try {
@@ -589,37 +619,20 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     const audioBlob = new Blob([audioBuffer], { type: audioResponse.headers.get("content-type") || "audio/mpeg" });
 
     // 4. Call the AI pipeline with user preferences
-    const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
+    const { apiKey: effectiveApiKey, provider } = await getAIConfiguration(user);
     
-    // Extract the correct API key for the preferred provider
-    const decrypted = decrypt(user.apiKey);
-    let effectiveApiKey = decrypted;
-    try {
-      const keys = JSON.parse(decrypted);
-      effectiveApiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
-    } catch {
-      // Legacy single key format
+    if (!effectiveApiKey) {
+      return { success: false, error: "API Key missing for the selected provider." };
     }
-    
-    // Map frontend provider names to backend expectations
-    const providerMap: Record<string, string> = {
-      "anthropic": "claude",
-      "google": "gemini",
-      "openai": "openai",
-      "groq": "groq",
-      "openrouter": "openrouter"
-    };
-    
-    const provider = providerMap[rawProvider] || rawProvider;
     
     console.log(`Starting AI pipeline for meeting ${meetingId} using provider: ${provider}`);
 
     const pipelineResponse = await audioToCode(audioBlob, {
       api_key: effectiveApiKey,
-      summary_provider: provider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ",
-      code_provider: provider as "openai" | "claude" | "gemini" | "groq",
+      summary_provider: provider.toUpperCase() as any,
+      code_provider: provider as any,
       code_model: user.preferredModel || undefined,
-      test_provider: (provider === "openai" || provider === "openrouter") ? "local" : provider as "local" | "openai" | "claude" | "gemini" | "groq"
+      test_provider: (provider === "openai" || provider === "openrouter") ? "local" : provider as any
     });
 
     console.log(`Pipeline response for ${meetingId}:`, JSON.stringify(pipelineResponse, null, 2));
@@ -834,16 +847,8 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
     
-    // Extract the correct API key for the preferred provider
-    const rawProvider = user.preferredProvider || "openai";
-    const decrypted = decrypt(user.apiKey);
-    let apiKey = decrypted;
-    try {
-      const keys = JSON.parse(decrypted);
-      apiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
-    } catch {
-      // Legacy single key format
-    }
+    const { apiKey, provider } = await getAIConfiguration(user);
+    if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
     
@@ -851,7 +856,7 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
       `Based on this meeting transcript, generate a structured business logic or implementation plan in TypeScript:\n\n${transcriptText}`,
       {
         api_key: apiKey,
-        provider: (user.preferredProvider as "openai" | "claude" | "gemini" | "groq") || "openai"
+        provider: provider as any
       }
     );
 
@@ -890,16 +895,8 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
     
-    // Extract the correct API key for the preferred provider
-    const rawProvider = user.preferredProvider || "openai";
-    const decrypted = decrypt(user.apiKey);
-    let apiKey = decrypted;
-    try {
-      const keys = JSON.parse(decrypted);
-      apiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
-    } catch {
-      // Legacy single key format
-    }
+    const { apiKey, provider } = await getAIConfiguration(user);
+    if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const context = `
       Meeting Title: ${meeting.title}
@@ -910,7 +907,10 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
     // Use buildPrompt or generatePlan based on the question type or just a general summary call
     const result = await buildPrompt(
       `Context: ${context}\n\nQuestion: ${question}\n\nProvide a concise and helpful answer based on the meeting context.`,
-      apiKey
+      {
+        api_key: apiKey,
+        provider: provider as any
+      }
     );
 
     if (result.success && result.data) {
@@ -981,15 +981,22 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
     
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { apiKey: true }
+      select: { apiKey: true, preferredProvider: true }
     });
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
-    const apiKey = decrypt(user.apiKey);
+    
+    const { apiKey, provider, rawProvider } = await getAIConfiguration(user);
+    if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
     
-    const result = await summarizeText(transcriptText, { api_key: apiKey });
+    const result = await summarizeText(transcriptText, { 
+      api_key: apiKey,
+      provider: (rawProvider.toUpperCase() === "ANTHROPIC" ? "CLAUDE" : 
+                 rawProvider.toUpperCase() === "GOOGLE" ? "GEMINI" : 
+                 rawProvider.toUpperCase()) as any
+    });
 
     if (result.success && result.data) {
       const summary = await prisma.summary.upsert({
@@ -1022,13 +1029,18 @@ export async function testMeetingCompliance(meetingId: string): Promise<ActionRe
     
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { apiKey: true }
+      select: { apiKey: true, preferredProvider: true }
     });
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
-    const apiKey = decrypt(user.apiKey);
+    
+    const { apiKey, provider } = await getAIConfiguration(user);
+    if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
-    const result = await testCode(meeting.code, { api_key: apiKey });
+    const result = await testCode(meeting.code, { 
+      api_key: apiKey,
+      provider: provider as any
+    });
 
     if (result.success && result.data) {
       const output = (result.data.output || result.data.error || "") as string;
@@ -1061,17 +1073,22 @@ export async function generateMeetingPlan(meetingId: string): Promise<ActionResu
     
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { apiKey: true }
+      select: { apiKey: true, preferredProvider: true }
     });
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
-    const apiKey = decrypt(user.apiKey);
+    
+    const { apiKey, provider } = await getAIConfiguration(user);
+    if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
     
     const result = await generatePlan(
       `Generate a detailed implementation plan based on this meeting transcript:\n\n${transcriptText}`,
-      apiKey
+      {
+        api_key: apiKey,
+        provider: provider as any
+      }
     );
 
     if (result.success && result.data) {

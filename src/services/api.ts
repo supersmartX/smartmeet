@@ -13,10 +13,10 @@ interface ApiResponse<T> {
 interface AudioToCodeParams {
   file: File | Blob;
   api_key?: string;
-  summary_provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ";
-  code_provider?: "openai" | "claude" | "gemini" | "groq";
+  summary_provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM";
+  code_provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
   code_model?: string;
-  test_provider?: "local" | "openai" | "claude" | "gemini" | "groq";
+  test_provider?: "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
 }
 
 interface TranscriptionResponse {
@@ -249,11 +249,15 @@ export async function transcribeAudio(
  */
 export async function buildPrompt(
   text: string,
-  apiKey: string = ""
+  options: {
+    api_key?: string;
+    provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+  } = {}
 ): Promise<ApiResponse<{ prompt: string }>> {
   return makeApiRequest<{ prompt: string }>("/api/AI/prompt/build", "POST", {
     text,
-    api_key: apiKey
+    api_key: options.api_key || "",
+    provider: options.provider || "openai"
   });
 }
 
@@ -262,11 +266,15 @@ export async function buildPrompt(
  */
 export async function generatePlan(
   text: string,
-  apiKey: string = ""
+  options: {
+    api_key?: string;
+    provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+  } = {}
 ): Promise<ApiResponse<{ plan: string }>> {
   return makeApiRequest<{ plan: string }>("/api/AI/plan", "POST", {
     text,
-    api_key: apiKey
+    api_key: options.api_key || "",
+    provider: options.provider || "openai"
   });
 }
 
@@ -277,7 +285,7 @@ export async function summarizeText(
   text: string,
   options: {
     api_key?: string;
-    provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ";
+    provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM";
   } = {}
 ): Promise<ApiResponse<SummaryResponse>> {
   return makeApiRequest<SummaryResponse>("/api/AI/audio/summarize", "POST", {
@@ -294,7 +302,7 @@ export async function generateCode(
   task: string,
   options: {
     api_key?: string;
-    provider?: "openai" | "claude" | "gemini" | "groq";
+    provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
   } = {}
 ): Promise<ApiResponse<CodeGenerationResponse>> {
   return makeApiRequest<CodeGenerationResponse>("/api/AI/code/generate-code", "POST", {
@@ -311,7 +319,7 @@ export async function testCode(
   code: string,
   options: {
     api_key?: string;
-    provider?: "local" | "openai" | "claude" | "gemini" | "groq";
+    provider?: "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
   } = {}
 ): Promise<ApiResponse<TestResponse>> {
   return makeApiRequest<TestResponse>("/api/AI/code/test-code", "POST", {
