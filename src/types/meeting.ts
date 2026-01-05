@@ -10,13 +10,18 @@ export interface Meeting {
   title: string;
   date: Date;
   duration?: string;
-  participants?: number;
+  participants: number;
   status: string;
   userId: string;
   code?: string;
   projectDoc?: string;
   testResults?: string;
   audioUrl?: string;
+  image?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  summary?: Summary | null;
+  attendees?: string[]; // For UI compatibility, though backend uses participants count
 }
 
 export interface MeetingWithRelations extends Meeting {
@@ -72,6 +77,7 @@ export interface AuditLog {
   details: string | null;
   ipAddress: string | null;
   userAgent: string | null;
+  location?: string;
   createdAt: Date;
 }
 

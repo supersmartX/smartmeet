@@ -6,11 +6,23 @@ import Pricing from "@/components/Pricing"
 import CTA from "@/components/CTA"
 import Footer from "@/components/Footer"
 import StructuredData from "@/components/StructuredData"
+import { Metadata } from "next"
+import { headers } from "next/headers"
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: "SupersmartX AI | Intelligent Meeting Analysis & Automation",
+  description: "Transform your meetings into actionable intelligence. Automatic transcription, summarization, and task automation for high-performance teams.",
+  alternates: {
+    canonical: "/",
+  },
+}
+
+export default async function Home() {
+  const nonce = (await headers()).get("x-nonce") || "";
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <StructuredData />
+      <StructuredData nonce={nonce} />
       <Navbar />
       <main>
         <Hero />

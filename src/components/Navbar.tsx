@@ -16,11 +16,13 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-black/80 backdrop-blur-xl">
       <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative w-9 h-9 group-hover:scale-110 transition-transform">
+          <div className="relative w-8 h-8 group-hover:scale-110 transition-transform">
             <Image
               src="/logoX.png"
               alt="SupersmartX AI - Meeting Intelligence Logo"
-              fill
+              width={32}
+              height={32}
+              sizes="32px"
               className="object-contain"
               priority
             />

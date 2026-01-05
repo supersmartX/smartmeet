@@ -1,17 +1,7 @@
 import React from "react";
 import { Video } from "lucide-react";
 import { RecordingRow } from "./RecordingRow";
-
-interface Meeting {
-  id: string;
-  title: string;
-  date: Date;
-  duration?: string;
-  participants?: number;
-  status: string;
-  userId: string;
-  audioUrl?: string;
-}
+import { Meeting } from "@/types/meeting";
 
 interface RecordingTableProps {
   isLoading: boolean;

@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
-import { revalidatePath, unstable_noStore as noStore } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { logSecurityEvent } from "@/lib/audit";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -42,10 +42,11 @@ import {
 /**
  * Helper to get decrypted API key and mapped provider for a user
  */
-async function getAIConfiguration(user: { apiKey: string | null; preferredProvider: string | null }) {
-  if (!user.apiKey) return { apiKey: null, provider: "openai", rawProvider: "openai" };
+async function getAIConfiguration(user: { apiKey: string | null; preferredProvider: string | null; preferredModel?: string | null }) {
+  if (!user.apiKey) return { apiKey: null, provider: "openai", rawProvider: "openai", model: "gpt-4o" };
 
   const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
+  const model = user.preferredModel || (rawProvider === "openai" ? "gpt-4o" : undefined);
   const decrypted = decrypt(user.apiKey);
   let apiKey = decrypted;
 
@@ -61,16 +62,16 @@ async function getAIConfiguration(user: { apiKey: string | null; preferredProvid
     "google": "gemini",
     "openai": "openai",
     "groq": "groq",
-    "openrouter": "openrouter"
+    "openrouter": "openrouter",
+    "custom": "custom"
   };
 
   const provider = providerMap[rawProvider] || rawProvider;
 
-  return { apiKey, provider, rawProvider };
+  return { apiKey, provider, rawProvider, model };
 }
 
 export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>> {
-  noStore();
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -156,7 +157,7 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
 }
 
 export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
-  noStore();
+  // noStore(); // Removed: not imported / not needed here
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -181,7 +182,7 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
 }
 
 export async function getMeetingById(id: string): Promise<ActionResult<MeetingWithRelations>> {
-  noStore();
+  // noStore(); // Removed: not imported / not needed here
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -278,7 +279,6 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
 }
 
 export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
-  noStore();
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -765,7 +765,6 @@ export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PRO
 }
 
 export async function getAuditLogs(): Promise<ActionResult<AuditLog[]>> {
-  noStore();
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
@@ -847,7 +846,7 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
     
-    const { apiKey, provider } = await getAIConfiguration(user);
+    const { apiKey, provider, model } = await getAIConfiguration(user);
     if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const transcriptText = meeting.transcripts.map(t => `${t.speaker}: ${t.text}`).join("\n");
@@ -856,7 +855,8 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
       `Based on this meeting transcript, generate a structured business logic or implementation plan in TypeScript:\n\n${transcriptText}`,
       {
         api_key: apiKey,
-        provider: provider as any
+        provider: provider as any,
+        model: model
       }
     );
 
@@ -895,7 +895,7 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
     
-    const { apiKey, provider } = await getAIConfiguration(user);
+    const { apiKey, provider, model } = await getAIConfiguration(user);
     if (!apiKey) return { success: false, error: "API Key missing for the selected provider." };
 
     const context = `
@@ -909,7 +909,8 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
       `Context: ${context}\n\nQuestion: ${question}\n\nProvide a concise and helpful answer based on the meeting context.`,
       {
         api_key: apiKey,
-        provider: provider as any
+        provider: provider as any,
+        model: model
       }
     );
 

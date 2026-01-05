@@ -62,7 +62,9 @@ export async function verifyAndEnableMFA(token: string, secret: string) {
   return { success: true, recoveryCodes };
 }
 
-export async function disableMFA(token: string) {
+import bcrypt from "bcryptjs";
+
+export async function disableMFA(token: string, password?: string) {
   const session = await getServerSession(enhancedAuthOptions);
   if (!session?.user?.email) throw new Error("Unauthorized");
 
@@ -71,6 +73,17 @@ export async function disableMFA(token: string) {
   });
 
   if (!user || !user.mfaEnabled) throw new Error("MFA not enabled");
+
+  // If user has a password, we should require it for deactivation (security best practice)
+  if (user.password) {
+    if (!password) {
+      throw new Error("PASSWORD_REQUIRED");
+    }
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      throw new Error("Invalid password");
+    }
+  }
 
   // Verify TOTP token or recovery code
   const isTotpValid = speakeasy.totp.verify({
@@ -95,7 +108,7 @@ export async function disableMFA(token: string) {
     data: {
       mfaEnabled: false,
       mfaSecret: null,
-      mfaRecoveryCodes: isRecoveryCodeValid ? updatedRecoveryCodes : [], // Clear codes if disabling
+      mfaRecoveryCodes: [], // Always clear recovery codes when MFA is disabled
     },
   });
 

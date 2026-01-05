@@ -13,6 +13,8 @@ interface MFASectionProps {
   mfaSecret: string;
   mfaToken: string;
   setMfaToken: (token: string) => void;
+  mfaPassword?: string;
+  setMfaPassword?: (password: string) => void;
   isSettingUpMFA: boolean;
   isVerifyingMFA: boolean;
   isDisablingMFA: boolean;
@@ -31,6 +33,8 @@ export function MFASection({
   mfaSecret,
   mfaToken,
   setMfaToken,
+  mfaPassword,
+  setMfaPassword,
   isSettingUpMFA,
   isVerifyingMFA,
   isDisablingMFA,
@@ -51,7 +55,7 @@ export function MFASection({
           </div>
           <div>
             <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Security</h2>
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">Two-factor authentication & account security</p>
+            <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight">Two-factor authentication & account security</p>
           </div>
         </div>
         {mfaEnabled && (
@@ -65,7 +69,7 @@ export function MFASection({
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Multi-Factor Authentication</h3>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-tight leading-relaxed max-w-md">
+            <p className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-tight leading-relaxed max-w-md">
               Add an extra layer of security to your account by requiring a code from your authenticator app when you log in.
             </p>
           </div>
@@ -74,6 +78,7 @@ export function MFASection({
             <button
               onClick={handleSetupMFA}
               disabled={isSettingUpMFA}
+              aria-label="Setup Two-Factor Authentication"
               className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center gap-2 shadow-xl shadow-black/5"
             >
               {isSettingUpMFA ? <RefreshCcw className="w-3 h-3 animate-spin" /> : <Smartphone className="w-3 h-3" />}
@@ -84,6 +89,7 @@ export function MFASection({
           {mfaEnabled && !showDisableConfirm && (
             <button
               onClick={() => setShowDisableConfirm(true)}
+              aria-label="Disable Two-Factor Authentication"
               className="px-6 py-3 border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
             >
               Disable 2FA
@@ -107,16 +113,29 @@ export function MFASection({
                   <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                   <input
                     type="text"
-                    placeholder="ENTER CODE"
+                    placeholder="ENTER MFA CODE"
                     value={mfaToken}
                     onChange={(e) => setMfaToken(e.target.value.toUpperCase())}
                     className="w-full h-12 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-12 pr-4 text-sm font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-red-500/20"
                   />
                 </div>
+
+                <div className="relative">
+                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <input
+                    type="password"
+                    placeholder="ENTER PASSWORD"
+                    value={mfaPassword}
+                    onChange={(e) => setMfaPassword?.(e.target.value)}
+                    className="w-full h-12 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-12 pr-4 text-sm font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                  />
+                </div>
+
                 <div className="flex gap-3">
                   <button
                     onClick={handleDisableMFA}
                     disabled={isDisablingMFA || !mfaToken}
+                    aria-label="Confirm disabling Two-Factor Authentication"
                     className="flex-1 h-12 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isDisablingMFA ? <RefreshCcw className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
@@ -127,6 +146,7 @@ export function MFASection({
                       setShowDisableConfirm(false)
                       setMfaToken("")
                     }}
+                    aria-label="Cancel disabling Two-Factor Authentication"
                     className="px-6 h-12 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                   >
                     Cancel
@@ -152,7 +172,7 @@ export function MFASection({
                   />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Backup Code</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Backup Code</p>
                   <code className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 block bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">
                     {mfaSecret}
                   </code>
@@ -183,6 +203,7 @@ export function MFASection({
                     <button
                       onClick={handleVerifyMFA}
                       disabled={isVerifyingMFA || mfaToken.length !== 6}
+                      aria-label="Verify and Activate Two-Factor Authentication"
                       className="flex-1 h-12 bg-brand-via text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {isVerifyingMFA ? <RefreshCcw className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
@@ -194,6 +215,7 @@ export function MFASection({
                         setMfaSecret("")
                         setMfaToken("")
                       }}
+                      aria-label="Cancel Two-Factor Authentication Setup"
                       className="px-6 h-12 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                     >
                       Cancel

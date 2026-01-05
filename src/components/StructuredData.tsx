@@ -1,4 +1,12 @@
-export default function StructuredData({ type = "SoftwareApplication", data = {} }: { type?: string, data?: Record<string, unknown> }) {
+export default function StructuredData({ 
+  type = "SoftwareApplication", 
+  data = {},
+  nonce
+}: { 
+  type?: string, 
+  data?: Record<string, unknown>,
+  nonce?: string
+}) {
   const baseJsonLd = type === "SoftwareApplication" ? {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -25,6 +33,7 @@ export default function StructuredData({ type = "SoftwareApplication", data = {}
   return (
     <script
       type="application/ld+json"
+      nonce={nonce}
       dangerouslySetInnerHTML={{ __html: JSON.stringify(baseJsonLd) }}
     />
   )

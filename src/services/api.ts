@@ -252,12 +252,14 @@ export async function buildPrompt(
   options: {
     api_key?: string;
     provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+    model?: string;
   } = {}
 ): Promise<ApiResponse<{ prompt: string }>> {
   return makeApiRequest<{ prompt: string }>("/api/AI/prompt/build", "POST", {
     text,
     api_key: options.api_key || "",
-    provider: options.provider || "openai"
+    provider: options.provider || "openai",
+    model: options.model
   });
 }
 
@@ -269,12 +271,14 @@ export async function generatePlan(
   options: {
     api_key?: string;
     provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+    model?: string;
   } = {}
 ): Promise<ApiResponse<{ plan: string }>> {
   return makeApiRequest<{ plan: string }>("/api/AI/plan", "POST", {
     text,
     api_key: options.api_key || "",
-    provider: options.provider || "openai"
+    provider: options.provider || "openai",
+    model: options.model
   });
 }
 
@@ -286,12 +290,14 @@ export async function summarizeText(
   options: {
     api_key?: string;
     provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM";
+    model?: string;
   } = {}
 ): Promise<ApiResponse<SummaryResponse>> {
   return makeApiRequest<SummaryResponse>("/api/AI/audio/summarize", "POST", {
     transcript: text,
     api_key: options.api_key || "",
-    provider: options.provider || "OPENAI"
+    provider: options.provider || "OPENAI",
+    model: options.model
   });
 }
 
@@ -303,12 +309,14 @@ export async function generateCode(
   options: {
     api_key?: string;
     provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+    model?: string;
   } = {}
 ): Promise<ApiResponse<CodeGenerationResponse>> {
   return makeApiRequest<CodeGenerationResponse>("/api/AI/code/generate-code", "POST", {
     task,
     provider: options.provider || "openai",
-    api_key: options.api_key || ""
+    api_key: options.api_key || "",
+    model: options.model
   });
 }
 

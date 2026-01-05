@@ -148,6 +148,8 @@ export default function Hero() {
                     src="/logoX.png"
                     alt="SupersmartX Logo"
                     fill
+                    sizes="96px"
+                    priority
                     className="object-contain"
                   />
                 </div>

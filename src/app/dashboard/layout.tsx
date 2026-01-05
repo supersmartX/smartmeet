@@ -75,12 +75,12 @@ export default function DashboardLayout({
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Editor-style Activity Bar (Narrow Left Strip) */}
           <aside className="hidden lg:flex w-16 flex-col items-center py-4 bg-zinc-100 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 shrink-0 z-50">
-            <div className="w-10 h-10 mb-8 relative">
+            <div className="w-8 h-8 mb-8 relative">
               <Image 
                 src="/logoX.png" 
                 alt="SupersmartX AI Navigation Logo" 
-                width={40} 
-                height={40} 
+                width={32} 
+                height={32} 
                 className="object-contain"
                 priority 
               />

@@ -147,11 +147,12 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* Workspace Header */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/50 dark:bg-zinc-950/50" role="presentation">
         <div className="flex items-center gap-2">
-          <div className="relative w-8 h-8">
+          <div className="w-8 h-8 relative">
             <Image 
               src="/logoX.png" 
               alt="SupersmartX AI Dashboard Logo" 
-              fill 
+              width={32}
+              height={32}
               className="object-contain"
               priority 
             />

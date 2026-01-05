@@ -91,14 +91,14 @@ export function AIConfigSection({
           </div>
           <div>
             <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">AI Configuration</h2>
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">AI model and provider settings</p>
+            <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight">AI model and provider settings</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {lastUsedAt && (
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tight">Last active: {lastUsedAt}</span>
+              <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-tight">Last active: {lastUsedAt}</span>
             </div>
           )}
         </div>
@@ -107,7 +107,7 @@ export function AIConfigSection({
       <div className="p-8 space-y-8">
         {/* Provider Selection */}
         <div className="space-y-4">
-          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">AI Provider</label>
+          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">AI Provider</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
               { id: 'openai', name: 'OpenAI', desc: 'GPT-4o & o1 models', icon: Cpu },
@@ -146,10 +146,10 @@ export function AIConfigSection({
                       </div>
                     )}
                   </div>
-                  <p className={`text-xs font-black uppercase tracking-widest mb-1 ${provider === p.id ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500"}`}>
+                  <p className={`text-xs font-black uppercase tracking-widest mb-1 ${provider === p.id ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-600 dark:text-zinc-400"}`}>
                     {p.name}
                   </p>
-                  <p className="text-[10px] font-medium text-zinc-400 leading-tight">{p.desc}</p>
+                  <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">{p.desc}</p>
                 </button>
               );
             })}
@@ -159,7 +159,7 @@ export function AIConfigSection({
         {/* API Key Input */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">
+            <label htmlFor="api-key-input" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">
               {provider === 'custom' ? 'Proxy URL / API Key' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} API Key`}
             </label>
             <a 
@@ -183,6 +183,7 @@ export function AIConfigSection({
               <Shield className={`w-4 h-4 ${currentKey ? "text-brand-via" : "text-zinc-300"}`} />
             </div>
             <input
+              id="api-key-input"
               type={showKey ? "text" : "password"}
               value={currentKey}
               onChange={onKeyChange}
@@ -200,6 +201,7 @@ export function AIConfigSection({
                 onClick={() => setShowKey(!showKey)}
                 className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors group/btn"
                 title={showKey ? "Hide key" : "Show key"}
+                aria-label={showKey ? "Hide key" : "Show key"}
               >
                 {showKey ? <EyeOff className="w-3.5 h-3.5 text-zinc-400" /> : <Eye className="w-3.5 h-3.5 text-zinc-400" />}
               </button>
@@ -208,6 +210,7 @@ export function AIConfigSection({
                 disabled={!currentKey}
                 className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
                 title="Copy key"
+                aria-label="Copy key"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
               </button>
