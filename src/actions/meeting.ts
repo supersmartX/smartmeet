@@ -5,6 +5,7 @@ import { MeetingStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "./notification";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { logSecurityEvent } from "@/lib/audit";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -398,6 +399,13 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
       "Settings"
     );
 
+    await createNotification(user.id, {
+      title: "Security Update",
+      message: "Your API key and AI preferences have been updated successfully.",
+      type: "SUCCESS",
+      link: "/dashboard/settings"
+    });
+
     return { success: true, data: updatedUser };
   } catch (error: unknown) {
     console.error("Update API key error:", error);
@@ -774,6 +782,13 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
           data: { status: "FAILED" }
         });
 
+        await createNotification(user.id, {
+          title: "Processing Failed",
+          message: `Blocked request from unauthorized IP: ${clientIp}`,
+          type: "ERROR",
+          link: `/dashboard/recordings/${meetingId}`
+        });
+
         return { success: false, error: `Unauthorized IP: ${clientIp}. Please update your settings if this is you.` };
       }
     }
@@ -783,6 +798,14 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
         where: { id: meetingId },
         data: { status: "FAILED" }
       });
+
+      await createNotification(user.id, {
+        title: "Processing Failed",
+        message: "API Key missing. Please add it in Settings.",
+        type: "ERROR",
+        link: "/dashboard/settings"
+      });
+
       return { success: false, error: "API Key missing. Please add it in Settings." };
     }
 
@@ -932,6 +955,14 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
         }
       });
 
+      // Send success notification
+      await createNotification(user.id, {
+        title: "Processing Complete",
+        message: `Your meeting "${meeting.title}" has been successfully processed.`,
+        type: "SUCCESS",
+        link: `/dashboard/recordings/${meetingId}`
+      });
+
       // Increment meetings used count
       await prisma.user.update({
         where: { id: user.id },
@@ -955,6 +986,14 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
             ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
             : `System Error: ${errorDetail}`
         }
+      });
+      
+      // Send failure notification
+      await createNotification(user.id, {
+        title: "Processing Failed",
+        message: `Failed to process meeting "${meeting.title}": ${errorDetail}`,
+        type: "ERROR",
+        link: `/dashboard/recordings/${meetingId}`
       });
       
       return { 

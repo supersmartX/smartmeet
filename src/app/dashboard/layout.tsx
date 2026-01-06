@@ -9,13 +9,15 @@ import { ModeToggle } from "@/components/ModeToggle"
 import { useSession, signOut } from "next-auth/react"
 import {
   Menu, Layout, FileVideo, Settings, Search, HelpCircle, LogOut, ChevronDown,
-  Bell, Command, X, Sparkles, Zap
+  Command, X, Sparkles, Zap
 } from "lucide-react"
+
+import { NotificationCenter } from "@/components/dashboard/NotificationCenter";
 
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -196,10 +198,7 @@ export default function DashboardLayout({
                     >
                       <Search className="w-4 h-4" />
                     </button>
-                    <button className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all relative group">
-                      <Bell className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand-via rounded-full border border-white dark:border-zinc-950" />
-                    </button>
+                    <NotificationCenter />
                     <ModeToggle />
                   </div>
                   <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-1" />

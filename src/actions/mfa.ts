@@ -6,6 +6,7 @@ import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import { logSecurityEvent } from "@/lib/audit";
+import { createNotification } from "./notification";
 import crypto from "crypto";
 
 export async function generateMFASecret() {
@@ -58,6 +59,13 @@ export async function verifyAndEnableMFA(token: string, secret: string) {
     "Multi-factor authentication enabled",
     "Security"
   );
+
+  await createNotification(user.id, {
+    title: "MFA Enabled",
+    message: "Multi-factor authentication has been successfully enabled on your account.",
+    type: "SUCCESS",
+    link: "/dashboard/security"
+  });
 
   return { success: true, recoveryCodes };
 }
@@ -113,6 +121,13 @@ export async function disableMFA(token: string, password?: string) {
     isRecoveryCodeValid ? "MFA disabled using recovery code" : "MFA disabled using TOTP",
     "Security"
   );
+
+  await createNotification(user.id, {
+    title: "MFA Disabled",
+    message: "Multi-factor authentication has been disabled on your account. We recommend keeping it enabled for better security.",
+    type: "WARNING",
+    link: "/dashboard/security"
+  });
 
   return { success: true };
 }

@@ -80,6 +80,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   meetings      Meeting[]
+  notifications Notification[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   auditLogs     AuditLog[]
@@ -193,4 +194,26 @@ enum ActionItemStatus {
   COMPLETED
   IN_PROGRESS
   CANCELLED
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
 }

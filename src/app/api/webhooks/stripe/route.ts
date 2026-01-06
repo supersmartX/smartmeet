@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/actions/notification";
 import Stripe from "stripe";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +61,13 @@ export async function POST(req: Request) {
       },
     });
     /* eslint-enable @typescript-eslint/no-explicit-any */
+
+    await createNotification(session.metadata.userId, {
+      title: "Subscription Activated",
+      message: `Your ${planInfo.plan} plan is now active! Enjoy your enhanced features.`,
+      type: "SUCCESS",
+      link: "/dashboard/settings"
+    });
   }
 
   if (event.type === "invoice.payment_succeeded") {
@@ -74,7 +82,7 @@ export async function POST(req: Request) {
       invoice.subscription
     );
 
-    await (prisma.user.update as any)({
+    const updatedUser = await (prisma.user.update as any)({
       where: {
         stripeSubscriptionId: subscription.id,
       },
@@ -84,6 +92,13 @@ export async function POST(req: Request) {
           (subscription as any).current_period_end * 1000
         ),
       },
+    });
+
+    await createNotification(updatedUser.id, {
+      title: "Payment Successful",
+      message: "Your subscription has been successfully renewed.",
+      type: "SUCCESS",
+      link: "/dashboard/settings"
     });
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }
