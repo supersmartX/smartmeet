@@ -55,7 +55,7 @@ export default function RecordingDetailPage() {
   const [isAnswering, setIsAnswering] = useState(false)
   const [answer, setAnswer] = useState<string | null>(null)
 
-  const { toast, showToast: toastVisible } = useToast()
+  const { toast, showToast: toastVisible, hideToast } = useToast()
 
   // Logic Generation State
   const [isLogicGenerated, setIsLogicGenerated] = useState(false)
@@ -378,7 +378,7 @@ export default function RecordingDetailPage() {
   if (isLoading) {
     return (
       <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-500">
-        <Toast {...toast} />
+        <Toast {...toast} onClose={hideToast} />
         {/* Header Skeleton */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3">
@@ -418,7 +418,7 @@ export default function RecordingDetailPage() {
   if (error || !meeting) {
     return (
       <div className="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-black p-8">
-        <Toast {...toast} />
+        <Toast {...toast} onClose={hideToast} />
         <div className="flex flex-col items-center gap-6 max-w-sm text-center">
           <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center border transition-all ${
             error ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
@@ -471,7 +471,7 @@ export default function RecordingDetailPage() {
   if (status === 'unauthenticated') {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-zinc-950">
-        <Toast {...toast} />
+        <Toast {...toast} onClose={hideToast} />
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <ShieldCheck className="w-8 h-8 text-zinc-400" />
@@ -492,7 +492,7 @@ export default function RecordingDetailPage() {
   if (error && error.includes("permission")) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-zinc-950">
-        <Toast {...toast} />
+        <Toast {...toast} onClose={hideToast} />
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <ShieldCheck className="w-8 h-8 text-zinc-400" />
@@ -512,7 +512,7 @@ export default function RecordingDetailPage() {
 
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden ${isResizing ? 'cursor-row-resize select-none' : ''}`}>
-      <Toast {...toast} />
+      <Toast {...toast} onClose={hideToast} />
       {/* Editor Header / Breadcrumbs (Local) */}
       <div className="h-auto min-h-10 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 shrink-0 gap-3">
         <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">

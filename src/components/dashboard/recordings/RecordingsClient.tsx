@@ -23,7 +23,7 @@ export default function RecordingsClient() {
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { toast, showToast: toastVisible } = useToast()
+  const { toast, showToast: toastVisible, hideToast } = useToast()
   const [uploadStatus, setUploadStatus] = useState("")
 
   const fetchMeetings = useCallback(async (silent = false) => {
@@ -210,7 +210,7 @@ export default function RecordingsClient() {
 
   return (
     <div className="p-4 sm:p-8 pb-32 max-w-7xl mx-auto w-full flex flex-col gap-6 sm:gap-8 bg-zinc-50 dark:bg-black">
-      <Toast {...toast} />
+      <Toast {...toast} onClose={hideToast} />
       <RecordingHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}

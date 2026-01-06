@@ -29,7 +29,7 @@ export default function SecurityClient() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRevoking, setIsRevoking] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const { toast, showToast } = useToast()
+  const { toast, showToast, hideToast } = useToast()
 
   useEffect(() => {
     async function loadData() {
@@ -107,7 +107,7 @@ export default function SecurityClient() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 lg:p-10 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <Toast {...toast} />
+      <Toast {...toast} onClose={hideToast} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Security Activity</h1>

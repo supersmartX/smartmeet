@@ -8,7 +8,6 @@ import { Loader2 } from "lucide-react"
 import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, enqueueMeetingAI } from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
-import { Toast } from "@/components/Toast"
 import { RecordingHeader } from "@/components/dashboard/recordings/RecordingHeader"
 import { RecordingTabs } from "@/components/dashboard/recordings/RecordingTabs"
 import { RecordingTable } from "@/components/dashboard/recordings/RecordingTable"
@@ -24,7 +23,7 @@ function RecordingsContent() {
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { toast, showToast: toastVisible } = useToast()
+  const { showToast: toastVisible } = useToast()
   const [uploadStatus, setUploadStatus] = useState("")
 
   const fetchMeetings = useCallback(async (silent = false) => {
@@ -211,7 +210,6 @@ function RecordingsContent() {
 
   return (
     <div className="p-4 sm:p-8 pb-32 max-w-7xl mx-auto w-full flex flex-col gap-6 sm:gap-8 bg-zinc-50 dark:bg-black">
-      <Toast {...toast} />
       <RecordingHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}

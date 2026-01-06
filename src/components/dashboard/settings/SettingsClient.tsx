@@ -21,7 +21,7 @@ interface SettingsClientProps {
 }
 
 export function SettingsClient({ initialSettings }: SettingsClientProps) {
-  const { toast, showToast } = useToast()
+  const { toast, showToast, hideToast } = useToast()
   
   const [apiKeys, setApiKeys] = useState<Record<string, string>>(initialSettings.apiKeys || {})
   const [showKey, setShowKey] = useState(false)
@@ -176,7 +176,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
 
   return (
     <div className="max-w-4xl mx-auto p-6 lg:p-10 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <Toast {...toast} />
+      <Toast {...toast} onClose={hideToast} />
       <div className="space-y-2">
         <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Account Settings</h1>
         <p className="text-zinc-500 dark:text-zinc-400 font-medium">Manage your personal profile and AI provider configurations.</p>
@@ -281,13 +281,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
             </div>
           </section>
         </div>
-      </div>
-
-      <Toast 
-        show={toast.show} 
-        message={toast.message} 
-        type={toast.type} 
-      />
+     </div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
-import React from "react";
-import { Check, AlertCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Check, AlertCircle, X } from "lucide-react";
 
 interface ToastProps {
   show: boolean;
@@ -8,27 +8,67 @@ interface ToastProps {
   onClose?: () => void;
 }
 
-export function Toast({ show, message, type }: ToastProps) {
-  if (!show) return null;
+export function Toast({ show, message, type, onClose }: ToastProps) {
+  const [isRendered, setIsRendered] = useState(show);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (show) {
+      setIsRendered(true);
+      // Small delay to trigger entry animation
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+      // Wait for exit animation to finish before unmounting
+      const timer = setTimeout(() => setIsRendered(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [show]);
+
+  if (!isRendered) return null;
 
   return (
     <div 
-      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300" 
-      role="status" 
-      aria-live="polite"
+      className={`
+        fixed bottom-8 right-8 z-[100] transition-all duration-300 ease-out transform
+        ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+      `}
+      role="alert" 
+      aria-live={type === "error" ? "assertive" : "polite"}
     >
       <div className={`${
-        type === "success" ? "bg-zinc-900 border-white/10" : "bg-red-950 border-red-500/20"
-      } backdrop-blur-xl border px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-          type === "success" ? "bg-emerald-500/20 text-emerald-500" : "bg-red-500/20 text-red-500"
+        type === "success" 
+          ? "bg-zinc-900 border-emerald-500/20 shadow-emerald-500/5" 
+          : "bg-red-950 border-red-500/20 shadow-red-500/5"
+      } backdrop-blur-xl border px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[340px] max-w-md group`}>
+        
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+          type === "success" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
         }`}>
-          {type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {type === "success" ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
         </div>
-        <div className="flex-1">
-          <p className="text-[10px] font-black text-white uppercase tracking-widest">{type === "success" ? "Success" : "Error"}</p>
-          <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-tight">{message}</p>
+
+        <div className="flex-1 min-w-0">
+          <p className={`text-[11px] font-black uppercase tracking-widest mb-0.5 ${
+            type === "success" ? "text-emerald-500" : "text-red-400"
+          }`}>
+            {type === "success" ? "Success" : "Error Occurred"}
+          </p>
+          <p className="text-sm font-medium text-zinc-200 leading-tight">
+            {message}
+          </p>
         </div>
+
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors text-zinc-500 hover:text-white"
+            aria-label="Close notification"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );

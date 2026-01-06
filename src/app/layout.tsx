@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { ToastProvider } from "@/context/ToastContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { headers } from "next/headers";
 
@@ -109,9 +110,11 @@ export default async function RootLayout({
             nonce={nonce}
             disableTransitionOnChange
           >
-            <main id="main-content">
-              {children}
-            </main>
+            <ToastProvider>
+              <main id="main-content">
+                {children}
+              </main>
+            </ToastProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

@@ -22,7 +22,7 @@ export default function DashboardClient() {
   const [stats, setStats] = useState<DashboardStat[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
-  const { toast, showToast } = useToast()
+  const { toast, showToast, hideToast } = useToast()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -123,7 +123,7 @@ export default function DashboardClient() {
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-8 animate-in fade-in duration-500">
-      <Toast {...toast} />
+      <Toast {...toast} onClose={hideToast} />
       {/* Welcome Header */}
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-2">

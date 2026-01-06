@@ -1,39 +1,19 @@
-import { useState, useCallback } from "react";
+import { useToastContext } from "@/context/ToastContext";
 
-export type ToastType = "success" | "error";
-
-interface ToastState {
-  show: boolean;
-  message: string;
-  type: ToastType;
-}
+export type { ToastType } from "@/context/ToastContext";
 
 export function useToast() {
-  const [toast, setToast] = useState<ToastState>({
-    show: false,
-    message: "",
-    type: "success",
-  });
-
-  const showToast = useCallback((message: string, type: ToastType = "success") => {
-    setToast({
-      show: true,
-      message,
-      type,
-    });
-
-    setTimeout(() => {
-      setToast((prev) => ({ ...prev, show: false }));
-    }, 3000);
-  }, []);
-
-  const hideToast = useCallback(() => {
-    setToast((prev) => ({ ...prev, show: false }));
-  }, []);
-
+  const { showToast, hideToast } = useToastContext();
+  
+  // Note: We don't return the 'toast' state anymore as it's managed globally
+  // and rendered by the ToastProvider. This fixes the issue where toasts 
+  // wouldn't show if the local component didn't render the <Toast />.
+  
   return {
-    toast,
     showToast,
     hideToast,
+    // Provide a dummy toast state for backward compatibility if needed, 
+    // but components should stop rendering <Toast /> manually.
+    toast: { show: false, message: "", type: "success" as const }
   };
 }
