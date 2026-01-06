@@ -92,6 +92,8 @@ model AuditLog {
   userAgent String?
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
 
 enum UserRole {
@@ -134,6 +136,8 @@ model Meeting {
   audioUrl     String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+
+  @@index([userId])
 }
 
 enum MeetingStatus {
@@ -159,6 +163,8 @@ model Transcript {
   text      String
   meetingId String
   meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
 }
 
 model Summary {
@@ -174,6 +180,8 @@ model ActionItem {
   status    ActionItemStatus @default(PENDING)
   meetingId String
   meeting   Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
 }
 
 enum ActionItemStatus {

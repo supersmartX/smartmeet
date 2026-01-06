@@ -9,6 +9,8 @@ import { logSecurityEvent } from "@/lib/audit";
 import { supabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { headers } from "next/headers";
+import { cache } from "@/lib/cache";
+import { checkApiRateLimit, checkGeneralRateLimit } from "@/lib/rate-limit";
 import { 
   generateCode, 
   summarizeText, 
@@ -72,10 +74,38 @@ async function getAIConfiguration(user: { apiKey: string | null; preferredProvid
   return { apiKey, provider, rawProvider, model };
 }
 
+/**
+ * Helper to check rate limit for the current user/IP
+ */
+async function enforceRateLimit(type: "api" | "general" = "general") {
+  const headerList = await headers();
+  const ip = headerList.get("x-forwarded-for")?.split(',')[0] || 
+             headerList.get("x-real-ip") || 
+             "unknown";
+  
+  const session = await getServerSession(enhancedAuthOptions);
+  const userId = session?.user?.id || "anonymous";
+  const key = `${userId}:${ip}`;
+  
+  const result = type === "api" ? await checkApiRateLimit(key) : await checkGeneralRateLimit(key);
+  
+  if (!result.allowed) {
+    throw new Error(`Rate limit exceeded. Please try again in ${result.retryAfter} seconds.`);
+  }
+  
+  return result;
+}
+
 export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>> {
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const cacheKey = `user:${session.user.id}:stats`;
+    const cachedStats = await cache.get<DashboardStat[]>(cacheKey);
+    if (cachedStats) {
+      return { success: true, data: cachedStats };
+    }
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const user = await (prisma.user.findUnique as any)({
@@ -154,6 +184,8 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
       }
     ];
 
+    await cache.set(cacheKey, stats, 300); // Cache for 5 minutes
+
     return { success: true, data: stats };
   } catch (error: unknown) {
     console.error("Get dashboard stats error:", error);
@@ -165,10 +197,15 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
 }
 
 export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
-  // noStore(); // Removed: not imported / not needed here
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const cacheKey = `user:${session.user.id}:meetings`;
+    const cachedMeetings = await cache.get<Meeting[]>(cacheKey);
+    if (cachedMeetings) {
+      return { success: true, data: cachedMeetings };
+    }
 
     const meetings = await prisma.meeting.findMany({
       where: {
@@ -185,6 +222,7 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
       }
     });
 
+    await cache.set(cacheKey, meetings, 60); // Cache for 1 minute (meetings change more frequently than stats)
     return { success: true, data: meetings as unknown as Meeting[] };
   } catch (error: unknown) {
     console.error("Get meetings error:", error);
@@ -432,6 +470,7 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
 
 export async function createMeeting(data: MeetingInput): Promise<ActionResult<Meeting>> {
   try {
+    await enforceRateLimit("api");
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
@@ -490,6 +529,10 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/recordings");
+    await Promise.all([
+      cache.delete(`user:${user.id}:stats`),
+      cache.delete(`user:${user.id}:meetings`)
+    ]);
     return { success: true, data: meeting as unknown as Meeting };
   } catch (error: unknown) {
     console.error("Create meeting error:", error);
@@ -502,6 +545,7 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
 
 export async function deleteMeeting(id: string): Promise<ActionResult> {
   try {
+    await enforceRateLimit("api");
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
@@ -536,15 +580,20 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
     }
 
     // 3. Delete from database
-    await prisma.meeting.delete({
+    const deletedMeeting = await prisma.meeting.delete({
       where: {
         id: validatedId,
         user: { email: session.user.email },
       },
+      select: { userId: true }
     });
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/recordings");
+    await Promise.all([
+      cache.delete(`user:${deletedMeeting.userId}:stats`),
+      cache.delete(`user:${deletedMeeting.userId}:meetings`)
+    ]);
     return { success: true };
   } catch (error: unknown) {
     console.error("Delete meeting error:", error);
@@ -557,6 +606,7 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
 
 export async function updateMeetingTitle(id: string, title: string): Promise<ActionResult<Meeting>> {
   try {
+    await enforceRateLimit("general");
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
@@ -571,6 +621,10 @@ export async function updateMeetingTitle(id: string, title: string): Promise<Act
     });
 
     revalidatePath("/dashboard/recordings");
+    await Promise.all([
+      cache.delete(`user:${meeting.userId}:stats`),
+      cache.delete(`user:${meeting.userId}:meetings`)
+    ]);
     return { success: true, data: meeting as unknown as Meeting };
   } catch (error: unknown) {
     console.error("Update meeting title error:", error);
@@ -583,6 +637,7 @@ export async function updateMeetingTitle(id: string, title: string): Promise<Act
 
 export async function updateMeetingCode(id: string, code: string): Promise<ActionResult<Meeting>> {
   try {
+    await enforceRateLimit("general");
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
@@ -597,6 +652,7 @@ export async function updateMeetingCode(id: string, code: string): Promise<Actio
     });
 
     revalidatePath(`/dashboard/recordings/${id}`);
+    await cache.delete(`user:${meeting.userId}:meetings`);
     return { success: true, data: meeting as unknown as Meeting };
   } catch (error: unknown) {
     console.error("Update meeting code error:", error);
@@ -609,6 +665,7 @@ export async function updateMeetingCode(id: string, code: string): Promise<Actio
 
 export async function createSignedUploadUrl(fileName: string): Promise<ActionResult<{ signedUrl: string; path: string; token: string }>> {
   try {
+    await enforceRateLimit("api");
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
@@ -890,44 +947,45 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
 }
 
 export async function processMeetingAI(meetingId: string): Promise<ActionResult> {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+  try {
+    await enforceRateLimit("api");
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-  // Get client IP for restrictions
-  const headerList = await headers();
-  const clientIp = headerList.get("x-forwarded-for")?.split(',')[0] || 
-                  headerList.get("x-real-ip") || 
-                  "unknown";
+    // Get client IP for restrictions
+    const headerList = await headers();
+    const clientIp = headerList.get("x-forwarded-for")?.split(',')[0] || 
+                    headerList.get("x-real-ip") || 
+                    "unknown";
 
-  return internalProcessMeetingAI(meetingId, clientIp);
+    // Start background processing without blocking the request
+    // Note: Since we're in a Server Action, this will continue in the background
+    // even after the response is sent in most serverless environments.
+    (async () => {
+      try {
+        console.log(`[Background] Starting AI processing for meeting ${meetingId}`);
+        await internalProcessMeetingAI(meetingId, clientIp);
+      } catch (err) {
+        console.error(`[Background] Failed to process meeting ${meetingId}:`, err);
+      }
+    })();
+
+    return { success: true, message: "AI processing started in the background" };
+  } catch (error: unknown) {
+    console.error("Process meeting AI error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to process meeting" 
+    };
+  }
 }
 
 /**
  * Enqueue AI processing to be handled by a background worker
  */
 export async function enqueueMeetingAI(meetingId: string): Promise<ActionResult> {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) return { success: false, error: "Unauthorized" };
-
-  try {
-    const { enqueueTask } = await import("@/lib/queue");
-    const enqueued = await enqueueTask({
-      id: uuidv4(),
-      type: "PROCESS_MEETING",
-      data: { meetingId }
-    });
-
-    if (enqueued) {
-      return { success: true, message: "Task enqueued for background processing" };
-    } else {
-      // Fallback to direct processing if queue fails
-      console.warn("Queue failed, falling back to direct processing");
-      return processMeetingAI(meetingId);
-    }
-  } catch (error) {
-    console.error("Enqueue error:", error);
-    return processMeetingAI(meetingId);
-  }
+  // Simply delegate to processMeetingAI which now uses after() for background processing
+  return processMeetingAI(meetingId);
 }
 
 
