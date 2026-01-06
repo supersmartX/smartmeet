@@ -8,7 +8,6 @@ interface RecordingTableProps {
   error: string | null;
   recordings: Meeting[];
   searchQuery: string;
-  setSearchQuery: (query: string) => void;
   setFilter: (filter: string) => void;
   fetchMeetings: () => void;
   onRename: (id: string, newTitle: string) => Promise<void>;
@@ -21,7 +20,6 @@ export function RecordingTable({
   error,
   recordings,
   searchQuery,
-  setSearchQuery,
   setFilter,
   fetchMeetings,
   onRename,

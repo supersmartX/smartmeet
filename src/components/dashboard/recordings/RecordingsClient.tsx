@@ -167,7 +167,7 @@ export default function RecordingsClient() {
       await fetchMeetings(true)
 
       const meetingId = createResult.data.id
-      const autoProcess = (createResult.data as any).autoProcess !== false;
+      const autoProcess = (createResult.data as unknown as { autoProcess: boolean }).autoProcess !== false;
       
       // 4. Trigger AI processing (enqueued for background worker) if autoProcess is enabled
       if (autoProcess) {
@@ -246,7 +246,6 @@ export default function RecordingsClient() {
         searchQuery={searchQuery}
         onRename={handleRename}
         onDelete={handleDelete}
-        setSearchQuery={setSearchQuery}
         setFilter={setFilter}
         fetchMeetings={fetchMeetings}
         renderHighlightedText={renderHighlightedText}

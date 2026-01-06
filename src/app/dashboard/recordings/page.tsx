@@ -234,7 +234,6 @@ function RecordingsContent() {
         searchQuery={searchQuery}
         onRename={handleRename}
         onDelete={handleDelete}
-        setSearchQuery={setSearchQuery}
         setFilter={setFilter}
         fetchMeetings={fetchMeetings}
         renderHighlightedText={renderHighlightedText}

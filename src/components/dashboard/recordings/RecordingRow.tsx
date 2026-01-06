@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, X, AlertCircle, RefreshCw } from "lucide-react";
+import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, AlertCircle, RefreshCw } from "lucide-react";
 import { Meeting } from "@/types/meeting";
 import { enqueueMeetingAI } from "@/actions/meeting";
 import { useToast } from "@/hooks/useToast";
