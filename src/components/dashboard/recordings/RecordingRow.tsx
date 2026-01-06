@@ -139,178 +139,178 @@ export function RecordingRow({
     }
   }, [recording.id, onDelete]);
 
+  const matchesSummary = searchQuery && recording.summary?.content?.toLowerCase().includes(searchQuery.toLowerCase());
+  const matchesTranscript = searchQuery && recording.transcripts?.some(t => t.text.toLowerCase().includes(searchQuery.toLowerCase()));
+
   return (
-    <tr className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group relative border-b border-zinc-100 dark:border-zinc-800 last:border-0 ${isMenuOpen ? "z-50" : "z-0"}`}>
-      <td className="px-4 sm:px-8 py-4 sm:py-6">
-        <div className="flex items-center gap-3 sm:gap-5">
-          <Link 
-            href={`/dashboard/recordings/${recording.id}`}
-            className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm shrink-0"
-          >
-            {status === "PROCESSING" ? (
-              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 animate-spin" />
-            ) : status === "FAILED" ? (
-              <div title={recording.testResults || "Pipeline failed. Check backend logs."}>
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
-              </div>
-            ) : (
-              <Video className="w-4 h-4 sm:w-5 sm:h-5 text-brand-via" />
-            )}
-          </Link>
-          <div className="flex flex-col min-w-0 flex-1">
+    <div className="flex flex-col border-b border-zinc-50 dark:border-zinc-800 last:border-0">
+      <div className="flex items-center justify-between p-4 sm:p-6 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
+        <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-zinc-100 dark:bg-zinc-800 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <Video className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400 dark:text-zinc-500" />
+          </div>
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
             {isEditing ? (
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleRenameSubmit();
-                      if (e.key === "Escape") {
-                        setIsEditing(false);
-                        setEditTitle(recording.title);
-                      }
-                    }}
-                    autoFocus
-                    disabled={isRenaming}
-                    className="bg-white dark:bg-zinc-900 border border-brand-via rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-bold w-full focus:outline-none focus:ring-2 focus:ring-brand-via/20 text-zinc-900 dark:text-zinc-100 pr-16"
-                  />
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button 
-                      onClick={handleRenameSubmit}
-                      disabled={isRenaming}
-                      className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded text-emerald-500 transition-colors"
-                    >
-                      {isRenaming ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setIsEditing(false);
-                        setEditTitle(recording.title);
-                      }}
-                      disabled={isRenaming}
-                      className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded text-zinc-400 transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRenameSubmit();
+                    if (e.key === "Escape") {
+                      setIsEditing(false);
+                      setEditTitle(recording.title);
+                    }
+                  }}
+                  className="bg-transparent border-b-2 border-zinc-900 dark:border-white focus:outline-none text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 w-full"
+                />
+                <button
+                  disabled={isRenaming}
+                  onClick={handleRenameSubmit}
+                  className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                >
+                  {isRenaming ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4 text-green-600" />
+                  )}
+                </button>
               </div>
             ) : (
               <Link
                 href={`/dashboard/recordings/${recording.id}`}
-                className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-brand-via transition-colors text-sm sm:text-base truncate"
+                className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
               >
                 {renderHighlightedText(recording.title, searchQuery)}
               </Link>
             )}
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] sm:text-xs text-zinc-400 font-medium">
+                {formattedDate}
+              </span>
+              <span className="text-[10px] sm:text-xs text-zinc-300 dark:text-zinc-700">•</span>
+              <span className="text-[10px] sm:text-xs text-zinc-400 font-medium">
+                {recording.duration || "0:00"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-8 mx-6">
+          <div className="w-32 flex flex-col items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300 dark:text-zinc-600 mb-1">Status</span>
+            <div className="flex items-center gap-2">
               {status === "PROCESSING" ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-amber-500 font-bold animate-pulse">
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-1.5 text-blue-500 font-black text-[10px] uppercase tracking-wider">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Processing</span>
+                  </div>
+                  <span className="text-[8px] text-zinc-400 font-bold uppercase mt-0.5">
                     {getProgressLabel(recording.processingStep)}
                   </span>
                 </div>
+              ) : status === "FAILED" ? (
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-1.5 text-red-500 font-black text-[10px] uppercase tracking-wider">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Failed</span>
+                  </div>
+                  <button 
+                    onClick={handleRetry}
+                    disabled={isRetrying}
+                    className="flex items-center gap-1 text-[8px] text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-bold uppercase mt-0.5 transition-colors"
+                  >
+                    <RefreshCw className={`w-2 h-2 ${isRetrying ? 'animate-spin' : ''}`} />
+                    Retry
+                  </button>
+                </div>
               ) : (
-                <div className="flex items-center gap-2 mt-1 sm:hidden">
-                  <span className="text-[10px] text-zinc-500 font-bold">
-                    {formattedDate}
-                  </span>
-                  <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-                    {status}
-                  </span>
+                <div className="flex items-center gap-1.5 text-green-500 font-black text-[10px] uppercase tracking-wider">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                  <span>Completed</span>
                 </div>
               )}
             </div>
           </div>
-        </div>
-      </td>
-      <td className="px-6 py-6 hidden sm:table-cell">
-        <span className="text-sm text-zinc-500 font-bold">
-          {formattedDate}
-        </span>
-      </td>
-      <td className="px-6 py-6 hidden md:table-cell">
-        <span className="text-sm text-zinc-500 font-bold">{recording.duration || "0:00"}</span>
-      </td>
-      <td className="px-6 py-6 hidden lg:table-cell">
-        <span className="text-sm text-zinc-500 font-bold">{recording.participants || 0}</span>
-      </td>
-      <td className="px-6 py-6 hidden sm:table-cell">
-        <div className="flex items-center justify-end">
-          <div 
-            className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-              status === "COMPLETED" 
-                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                : status === "FAILED"
-                ? "bg-red-500/10 text-red-600 border-red-500/20 cursor-help"
-                : "bg-amber-500/10 text-amber-600 border-amber-500/20 animate-pulse"
-            }`}
-            title={status === "FAILED" ? (recording.testResults || "Pipeline error") : undefined}
-          >
-            {status === "PROCESSING" ? getProgressLabel(recording.processingStep) : status}
+
+          <div className="w-20 flex flex-col items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300 dark:text-zinc-600 mb-1">Type</span>
+            <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase">
+              Meeting
+            </span>
           </div>
         </div>
-      </td>
-      <td className="px-4 sm:px-8 py-4 sm:py-6 text-right">
-        <div className="flex items-center justify-end">
-          <div className="relative" ref={menuRef}>
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-              aria-label="More options"
-              aria-haspopup="true"
-              aria-expanded={isMenuOpen}
-            >
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
-            
-            {isMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
-                <div className="p-2">
-                  {status === "FAILED" && (
-                    <>
-                      <button
-                        onClick={handleRetry}
-                        disabled={isRetrying}
-                        className="w-full px-3 py-2.5 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl flex items-center gap-2 transition-colors disabled:opacity-50"
-                      >
-                        {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                        Retry processing
-                      </button>
-                      <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
-                    </>
+
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+
+          {isMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <button
+                onClick={() => {
+                  setIsEditing(true);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2 text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+                Rename
+              </button>
+              <button
+                disabled={isDeleting}
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this recording?")) {
+                    handleDeleteClick();
+                  }
+                  setIsMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {(matchesSummary || matchesTranscript) && (
+        <div className="px-4 pb-4 sm:px-6 sm:pb-6 -mt-2">
+          <div className="pl-13 sm:pl-17 bg-zinc-50/50 dark:bg-zinc-800/20 rounded-2xl p-3 sm:p-4 border border-zinc-100 dark:border-zinc-800/50">
+            {matchesSummary && (
+              <div className="mb-2 last:mb-0">
+                <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 block mb-1">Matched in Summary</span>
+                <p className="text-[10px] sm:text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed italic line-clamp-2">
+                  {renderHighlightedText(recording.summary!.content, searchQuery)}
+                </p>
+              </div>
+            )}
+            {matchesTranscript && (
+              <div>
+                <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 block mb-1">Matched in Transcript</span>
+                <p className="text-[10px] sm:text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed italic line-clamp-2">
+                  {renderHighlightedText(
+                    recording.transcripts!.find(t => t.text.toLowerCase().includes(searchQuery.toLowerCase()))!.text,
+                    searchQuery
                   )}
-                  <button
-                    onClick={() => {
-                      setIsEditing(true);
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full px-3 py-2.5 text-left text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl flex items-center gap-2 transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Rename recording
-                  </button>
-                  <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
-                  <button
-                    onClick={() => {
-                      handleDeleteClick();
-                      setIsMenuOpen(false);
-                    }}
-                    disabled={isDeleting}
-                    className="w-full px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl flex items-center gap-2 disabled:opacity-50 transition-colors"
-                  >
-                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    Delete recording
-                  </button>
-                </div>
+                </p>
               </div>
             )}
           </div>
         </div>
-      </td>
-    </tr>
+      )}
+    </div>
   );
 }

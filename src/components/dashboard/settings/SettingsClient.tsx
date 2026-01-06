@@ -14,6 +14,7 @@ import { Toast } from "@/components/Toast"
 import { ProfileSection } from "@/components/dashboard/settings/ProfileSection"
 import { AIConfigSection } from "@/components/dashboard/settings/AIConfigSection"
 import { MFASection } from "@/components/dashboard/settings/MFASection"
+import { PreferenceSection } from "@/components/dashboard/settings/PreferenceSection"
 import { BillingSection } from "./BillingSection"
 
 interface SettingsClientProps {
@@ -30,6 +31,9 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
   const [provider, setProvider] = useState(initialSettings.preferredProvider || "openai")
   const [model, setModel] = useState(initialSettings.preferredModel || "gpt-4o")
   const [allowedIps, setAllowedIps] = useState(initialSettings.allowedIps || "")
+  const [defaultLanguage, setDefaultLanguage] = useState(initialSettings.defaultLanguage || "en")
+  const [summaryLength, setSummaryLength] = useState(initialSettings.summaryLength || "medium")
+  const [autoProcess, setAutoProcess] = useState(initialSettings.autoProcess ?? true)
   const [lastUsedAt] = useState<string | null>(
     initialSettings.lastUsedAt ? new Date(initialSettings.lastUsedAt).toLocaleString() : null
   )
@@ -99,11 +103,14 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const result = await updateUserApiKey({
-        apiKeys,
-        preferredProvider: provider,
+      const result = await updateUserApiKey({ 
+        apiKeys, 
+        preferredProvider: provider, 
         preferredModel: model,
-        allowedIps
+        allowedIps,
+        defaultLanguage,
+        summaryLength,
+        autoProcess
       })
       
       if (result.success) {
@@ -205,6 +212,15 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
           handleSave={handleSave}
           isSaving={isSaving}
           providerModels={providerModels}
+        />
+
+        <PreferenceSection
+          defaultLanguage={defaultLanguage}
+          setDefaultLanguage={setDefaultLanguage}
+          summaryLength={summaryLength}
+          setSummaryLength={setSummaryLength}
+          autoProcess={autoProcess}
+          setAutoProcess={setAutoProcess}
         />
 
         <MFASection 

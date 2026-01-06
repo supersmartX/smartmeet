@@ -22,7 +22,11 @@ export interface Meeting {
   createdAt: Date;
   updatedAt: Date;
   summary?: Summary | null;
+  transcripts?: { text: string }[];
   attendees?: string[]; // For UI compatibility, though backend uses participants count
+  _count?: {
+    actionItems: number;
+  };
 }
 
 export interface MeetingWithRelations extends Meeting {
@@ -120,6 +124,9 @@ export interface UserSettings {
   email: string | null;
   image: string | null;
   mfaEnabled: boolean;
+  defaultLanguage?: string;
+  summaryLength?: string;
+  autoProcess?: boolean;
   plan: "FREE" | "PRO" | "ENTERPRISE";
   meetingQuota: number;
   meetingsUsed: number;

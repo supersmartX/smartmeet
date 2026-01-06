@@ -91,9 +91,14 @@ export default function DashboardClient() {
   }
 
   const filteredRecordings = useMemo(() =>
-    recordings.filter(rec =>
-      rec.title.toLowerCase().includes(searchQuery.toLowerCase())
-    ), [recordings, searchQuery]
+    recordings.filter(rec => {
+      const query = searchQuery.toLowerCase();
+      const matchesTitle = rec.title.toLowerCase().includes(query);
+      const matchesSummary = rec.summary?.content?.toLowerCase().includes(query);
+      const matchesTranscript = rec.transcripts?.some(t => t.text.toLowerCase().includes(query));
+      
+      return matchesTitle || matchesSummary || matchesTranscript;
+    }), [recordings, searchQuery]
   )
 
   const renderHighlightedText = (text: string, query: string) => {
@@ -201,42 +206,68 @@ export default function DashboardClient() {
               ))
             ) : filteredRecordings.length > 0 ? (
               filteredRecordings.slice(0, 5).map((rec) => (
-                <Link 
-                  key={rec.id}
-                  href={`/dashboard/recordings/${rec.id}`}
-                  className="group flex items-center gap-6 p-4 bg-white dark:bg-zinc-900 rounded-[28px] border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:shadow-lg transition-all"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-zinc-400 group-hover:text-brand-via transition-colors shrink-0 overflow-hidden relative">
-                    {rec.image ? (
-                      <Image src={rec.image} alt="" fill className="object-cover" />
-                    ) : (
-                      <Video className="w-6 h-6" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-black text-zinc-900 dark:text-zinc-100 truncate uppercase tracking-tight">
-                      {renderHighlightedText(rec.title, searchQuery)}
-                    </h3>
-                    <div className="flex items-center gap-4 mt-1">
-              <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> {new Date(rec.createdAt).toLocaleDateString()}
-              </span>
-              <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                <Users className="w-3 h-3" /> {rec.participants || 0} Attendees
-              </span>
-            </div>
-                  </div>
-                  <div className="hidden sm:flex items-center gap-2">
-                    {rec.summary && (
-                      <div className="px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-500 uppercase">
-                        AI Processed
-                      </div>
-                    )}
-                    <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950 text-zinc-400 group-hover:bg-brand-via group-hover:text-white transition-all">
-                      <ArrowRight className="w-4 h-4" />
+                <div key={rec.id} className="flex flex-col">
+                  <Link 
+                    href={`/dashboard/recordings/${rec.id}`}
+                    className="group flex items-center gap-6 p-4 bg-white dark:bg-zinc-900 rounded-[28px] border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:shadow-lg transition-all"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-zinc-400 group-hover:text-brand-via transition-colors shrink-0 overflow-hidden relative">
+                      {rec.image ? (
+                        <Image src={rec.image} alt="" fill className="object-cover" />
+                      ) : (
+                        <Video className="w-6 h-6" />
+                      )}
                     </div>
-                  </div>
-                </Link>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-black text-zinc-900 dark:text-zinc-100 truncate uppercase tracking-tight">
+                        {renderHighlightedText(rec.title, searchQuery)}
+                      </h3>
+                      <div className="flex items-center gap-4 mt-1">
+                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {new Date(rec.createdAt).toLocaleDateString()}
+                        </span>
+                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                          <Users className="w-3 h-3" /> {rec.participants || 0} Attendees
+                        </span>
+                      </div>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-2">
+                      {rec.summary && (
+                        <div className="px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-500 uppercase">
+                          AI Processed
+                        </div>
+                      )}
+                      <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950 text-zinc-400 group-hover:bg-brand-via group-hover:text-white transition-all">
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </Link>
+                  
+                  {/* Search Match Snippets */}
+                  {searchQuery && (rec.summary?.content?.toLowerCase().includes(searchQuery.toLowerCase()) || rec.transcripts?.some(t => t.text.toLowerCase().includes(searchQuery.toLowerCase()))) && (
+                    <div className="mx-6 -mt-2 mb-2 p-3 bg-zinc-50/50 dark:bg-zinc-800/20 rounded-b-2xl border-x border-b border-zinc-100 dark:border-zinc-800/50">
+                      {rec.summary?.content?.toLowerCase().includes(searchQuery.toLowerCase()) && (
+                        <div className="mb-2 last:mb-0">
+                          <span className="text-[7px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Summary Match</span>
+                          <p className="text-[9px] text-zinc-500 dark:text-zinc-400 italic line-clamp-1">
+                            {renderHighlightedText(rec.summary.content, searchQuery)}
+                          </p>
+                        </div>
+                      )}
+                      {rec.transcripts?.some(t => t.text.toLowerCase().includes(searchQuery.toLowerCase())) && (
+                        <div>
+                          <span className="text-[7px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Transcript Match</span>
+                          <p className="text-[9px] text-zinc-500 dark:text-zinc-400 italic line-clamp-1">
+                            {renderHighlightedText(
+                              rec.transcripts.find(t => t.text.toLowerCase().includes(searchQuery.toLowerCase()))!.text,
+                              searchQuery
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               ))
             ) : (
               <div className="p-12 text-center bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">

@@ -27,6 +27,9 @@ export const apiKeyUpdateSchema = z.object({
   preferredProvider: z.string().optional(),
   preferredModel: z.string().optional(),
   allowedIps: z.string().optional(),
+  defaultLanguage: z.string().optional(),
+  summaryLength: z.string().optional(),
+  autoProcess: z.boolean().optional(),
 });
 
 export type MeetingInput = z.infer<typeof meetingSchema>;

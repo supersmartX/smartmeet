@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { MeetingStatus, ProcessingStep } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
@@ -216,6 +217,11 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
       },
       include: {
         summary: true,
+        transcripts: {
+          select: {
+            text: true
+          }
+        },
         _count: {
           select: { actionItems: true }
         }
@@ -349,6 +355,9 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
       preferredProvider?: string;
       preferredModel?: string;
       allowedIps?: string;
+      defaultLanguage?: string;
+      summaryLength?: string;
+      autoProcess?: boolean;
       lastUsedAt: Date;
     } = {
       lastUsedAt: new Date()
@@ -368,6 +377,9 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
     if (validatedData.preferredProvider) updatePayload.preferredProvider = validatedData.preferredProvider;
     if (validatedData.preferredModel) updatePayload.preferredModel = validatedData.preferredModel;
     if (validatedData.allowedIps !== undefined) updatePayload.allowedIps = validatedData.allowedIps;
+    if (validatedData.defaultLanguage !== undefined) updatePayload.defaultLanguage = validatedData.defaultLanguage;
+    if (validatedData.summaryLength !== undefined) updatePayload.summaryLength = validatedData.summaryLength;
+    if (validatedData.autoProcess !== undefined) updatePayload.autoProcess = validatedData.autoProcess;
 
     // Quota reset logic (optional but good for testing)
     // If the user is downgraded or upgraded, we might want to adjust meetingsUsed
@@ -415,6 +427,9 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
         email: true,
         image: true,
         mfaEnabled: true,
+        defaultLanguage: true,
+        summaryLength: true,
+        autoProcess: true,
         plan: true,
         meetingQuota: true,
         meetingsUsed: true,
@@ -515,7 +530,7 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
         data: {
           title: validatedData.title,
           duration: validatedData.duration || "0:00",
-          status: "PROCESSING",
+          status: (user.autoProcess === false ? "PENDING" : "PROCESSING") as MeetingStatus,
           code: validatedData.code,
           audioUrl: validatedData.audioUrl,
           user: { connect: { email: session.user.email } },
@@ -533,7 +548,14 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
       cache.delete(`user:${user.id}:stats`),
       cache.delete(`user:${user.id}:meetings`)
     ]);
-    return { success: true, data: meeting as unknown as Meeting };
+    
+    // Include autoProcess in the response data so the client knows whether to enqueue
+    const meetingWithPrefs = {
+      ...meeting,
+      autoProcess: user.autoProcess
+    };
+    
+    return { success: true, data: meetingWithPrefs as unknown as Meeting & { autoProcess: boolean } };
   } catch (error: unknown) {
     console.error("Create meeting error:", error);
     return { 
@@ -723,6 +745,8 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
             allowedIps: true,
             preferredProvider: true,
             preferredModel: true,
+            defaultLanguage: true,
+            summaryLength: true,
             plan: true
           }
         }
@@ -824,7 +848,7 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
       });
 
       const transcriptionResult = await aiCircuitBreaker.execute(async () => {
-        const res = await transcribeAudio(audioBlob, effectiveApiKey);
+        const res = await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
         if (!res.success) throw new Error(res.error || "Transcription failed");
         return res.data;
       });
@@ -841,7 +865,9 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
       const summaryResult = await aiCircuitBreaker.execute(async () => {
         const res = await summarizeText(transcription, { 
           api_key: effectiveApiKey, 
-          provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM" 
+          provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+          summary_length: user.summaryLength || undefined,
+          language: user.defaultLanguage || undefined
         });
         if (!res.success) throw new Error(res.error || "Summarization failed");
         return res.data;
@@ -989,13 +1015,13 @@ export async function enqueueMeetingAI(meetingId: string): Promise<ActionResult>
 }
 
 
-export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PROCESSING" | "FAILED", data?: MeetingUpdateData): Promise<ActionResult<Meeting>> {
+export async function updateMeetingStatus(id: string, status: MeetingStatus, data?: MeetingUpdateData): Promise<ActionResult<Meeting>> {
   try {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const updateData: {
-      status: "COMPLETED" | "PROCESSING" | "FAILED";
+      status: MeetingStatus;
       transcripts?: {
         create: {
           speaker: string;

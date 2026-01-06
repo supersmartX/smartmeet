@@ -231,7 +231,8 @@ export async function audioToCode(
  */
 export async function transcribeAudio(
   file: File | Blob,
-  apiKey: string = ""
+  apiKey: string = "",
+  language?: string
 ): Promise<ApiResponse<TranscriptionResponse>> {
   const formData = new FormData();
   
@@ -240,6 +241,8 @@ export async function transcribeAudio(
   } else {
     formData.append("file", file, "audio.mp3");
   }
+
+  if (language) formData.append("language", language);
 
   return makeApiRequest<TranscriptionResponse>("/api/AI/audio/transcribe", "POST", formData, apiKey);
 }
@@ -253,13 +256,15 @@ export async function buildPrompt(
     api_key?: string;
     provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
     model?: string;
+    language?: string;
   } = {}
 ): Promise<ApiResponse<{ prompt: string }>> {
   return makeApiRequest<{ prompt: string }>("/api/AI/prompt/build", "POST", {
     text,
     api_key: options.api_key || "",
     provider: options.provider || "openai",
-    model: options.model
+    model: options.model,
+    language: options.language
   });
 }
 
@@ -272,13 +277,15 @@ export async function generatePlan(
     api_key?: string;
     provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
     model?: string;
+    language?: string;
   } = {}
 ): Promise<ApiResponse<{ plan: string }>> {
   return makeApiRequest<{ plan: string }>("/api/AI/plan", "POST", {
     text,
     api_key: options.api_key || "",
     provider: options.provider || "openai",
-    model: options.model
+    model: options.model,
+    language: options.language
   });
 }
 
@@ -291,13 +298,17 @@ export async function summarizeText(
     api_key?: string;
     provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM";
     model?: string;
+    summary_length?: string;
+    language?: string;
   } = {}
 ): Promise<ApiResponse<SummaryResponse>> {
   return makeApiRequest<SummaryResponse>("/api/AI/audio/summarize", "POST", {
     transcript: text,
     api_key: options.api_key || "",
     provider: options.provider || "OPENAI",
-    model: options.model
+    model: options.model,
+    summary_length: options.summary_length,
+    language: options.language
   });
 }
 

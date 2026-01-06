@@ -167,13 +167,18 @@ export default function RecordingsClient() {
       await fetchMeetings(true)
 
       const meetingId = createResult.data.id
+      const autoProcess = (createResult.data as any).autoProcess !== false;
       
-      // 4. Trigger AI processing (enqueued for background worker)
-      setTimeout(() => {
-        enqueueMeetingAI(meetingId).catch(err => {
-          console.error("Background AI processing error:", err)
-        })
-      }, 500)
+      // 4. Trigger AI processing (enqueued for background worker) if autoProcess is enabled
+      if (autoProcess) {
+        setTimeout(() => {
+          enqueueMeetingAI(meetingId).catch(err => {
+            console.error("Background AI processing error:", err)
+          })
+        }, 500)
+      } else {
+        toastVisible("Recording uploaded! You can start processing manually from the list.", "success")
+      }
 
     } catch (err) {
       console.error("Upload error:", err)
@@ -184,7 +189,13 @@ export default function RecordingsClient() {
   }
 
   const filteredRecordings = recordings.filter(rec => {
-    const matchesSearch = rec.title.toLowerCase().includes(searchQuery.toLowerCase())
+    const query = searchQuery.toLowerCase()
+    const matchesTitle = rec.title.toLowerCase().includes(query)
+    const matchesSummary = rec.summary?.content?.toLowerCase().includes(query)
+    const matchesTranscript = rec.transcripts?.some(t => t.text.toLowerCase().includes(query))
+    
+    const matchesSearch = matchesTitle || matchesSummary || matchesTranscript
+
     if (filter === "all meetings") return matchesSearch
     if (filter === "recent") {
       // Logic for recent: meetings from the last 7 days
@@ -193,7 +204,7 @@ export default function RecordingsClient() {
       const recordingDate = new Date(rec.date)
       return matchesSearch && recordingDate >= sevenDaysAgo
     }
-    if (filter === "action items") return matchesSearch && rec.status?.toUpperCase() === "COMPLETED" // Simplified for now
+    if (filter === "action items") return matchesSearch && (rec._count?.actionItems ?? 0) > 0
     return matchesSearch
   })
 

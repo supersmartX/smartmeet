@@ -98,64 +98,27 @@ export function RecordingTable({
                 : "You haven't uploaded any recordings yet. Start by uploading your first meeting recording."}
             </p>
             {!searchQuery && (
-              <button 
-                onClick={() => document.getElementById("recording-upload")?.click()}
-                className="mt-8 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-black/10"
-              >
-                Upload Recording
-              </button>
-            )}
-            {searchQuery && (
               <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setFilter("all meetings");
-                }}
-                className="mt-8 text-[10px] font-black text-brand-via uppercase tracking-widest hover:underline"
+                onClick={() => setFilter("all meetings")}
+                className="mt-6 px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-black/10"
               >
-                Clear all filters
+                Show All Meetings
               </button>
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto lg:overflow-visible custom-scrollbar rounded-[24px] sm:rounded-[32px]">
-            <table className="w-full text-left border-collapse min-w-full">
-              <thead>
-                <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">
-                  <th className="px-4 sm:px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] first:rounded-tl-[24px] sm:first:rounded-tl-[32px]">
-                    Meeting Name
-                  </th>
-                  <th className="hidden sm:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
-                    Date
-                  </th>
-                  <th className="hidden md:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
-                    Duration
-                  </th>
-                  <th className="hidden lg:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
-                    Participants
-                  </th>
-                  <th className="hidden sm:table-cell px-6 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
-                    Status
-                  </th>
-                  <th className="px-4 sm:px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right last:rounded-tr-[24px] sm:last:rounded-tr-[32px]">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {recordings.map((recording) => (
-                  <RecordingRow
-                    key={recording.id}
-                    recording={recording}
-                    searchQuery={searchQuery}
-                    onRename={onRename}
-                    onDelete={onDelete}
-                    renderHighlightedText={renderHighlightedText}
-                    fetchMeetings={fetchMeetings}
-                  />
-                ))}
-              </tbody>
-            </table>
+          <div className="flex-1 flex flex-col">
+            {recordings.map((recording) => (
+              <RecordingRow
+                key={recording.id}
+                recording={recording}
+                searchQuery={searchQuery}
+                onRename={onRename}
+                onDelete={onDelete}
+                renderHighlightedText={renderHighlightedText}
+                fetchMeetings={fetchMeetings}
+              />
+            ))}
           </div>
         )}
       </div>
