@@ -9,10 +9,11 @@ import { ModeToggle } from "@/components/ModeToggle"
 import { useSession, signOut } from "next-auth/react"
 import {
   Menu, Layout, FileVideo, Settings, Search, HelpCircle, LogOut, ChevronDown,
-  Command, X, Sparkles, Zap
+  Command, Sparkles, Zap
 } from "lucide-react"
 
 import { NotificationCenter } from "@/components/dashboard/NotificationCenter";
+import { SearchCommand } from "@/components/dashboard/SearchCommand";
 
 export default function DashboardLayout({
   children,
@@ -163,29 +164,21 @@ export default function DashboardLayout({
               </div>
 
               {/* Center: Global Search Bar */}
-              <div className={`${isSearchOpen ? 'flex absolute inset-x-0 mx-4' : 'hidden'} md:flex md:relative flex-1 max-w-md md:mx-8 group z-50`}>
+              <div 
+                onClick={() => setIsSearchOpen(true)}
+                className="hidden md:flex relative flex-1 max-w-md mx-8 group cursor-pointer"
+              >
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <Search className="w-3.5 h-3.5 text-zinc-400 group-focus-within:text-brand-via transition-colors" />
+                  <Search className="w-3.5 h-3.5 text-zinc-400 group-hover:text-brand-via transition-colors" />
                 </div>
-                <input 
-                  type="text"
-                  placeholder="Search recordings, logic, or help..."
-                  autoFocus={isSearchOpen}
-                  className="w-full pl-9 pr-12 h-7 bg-zinc-100/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[11px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-brand-via/20 focus:border-brand-via transition-all"
-                />
+                <div className="w-full pl-9 pr-12 h-7 bg-zinc-100/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[11px] text-zinc-500 flex items-center transition-all group-hover:border-brand-via/30">
+                  Search recordings, logic, or help...
+                </div>
                 <div className="absolute inset-y-0 right-3 flex items-center gap-2">
-                  <div className="hidden md:flex items-center gap-1 opacity-50 pointer-events-none">
+                  <div className="flex items-center gap-1 opacity-50 pointer-events-none">
                     <Command className="w-2.5 h-2.5" />
                     <span className="text-[9px] font-black">K</span>
                   </div>
-                  {isSearchOpen && (
-                    <button 
-                      onClick={() => setIsSearchOpen(false)}
-                      className="md:hidden p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
-                    >
-                      <X className="w-3 h-3 text-zinc-500" />
-                    </button>
-                  )}
                 </div>
               </div>
               
@@ -276,6 +269,7 @@ export default function DashboardLayout({
             </div>
           </div>
         </footer>
-      </div>
+        <SearchCommand isOpen={isSearchOpen} setIsOpen={setIsSearchOpen} />
+    </div>
   )
 }
