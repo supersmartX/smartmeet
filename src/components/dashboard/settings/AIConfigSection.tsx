@@ -107,7 +107,7 @@ export function AIConfigSection({
       <div className="p-8 space-y-8">
         {/* Provider Selection */}
         <div className="space-y-4">
-          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">AI Provider</label>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">AI Provider</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
               { id: 'openai', name: 'OpenAI', desc: 'GPT-4o & o1 models', icon: Cpu },
@@ -237,15 +237,16 @@ export function AIConfigSection({
             </div>
             
             <div className="relative">
-              {isCustomModel ? (
-                <input 
-                  type="text"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20"
-                  placeholder="e.g. gpt-4-32k or your-custom-model"
-                />
-              ) : (
+            {isCustomModel ? (
+              <input 
+                id="model-select"
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20"
+                placeholder="e.g. gpt-4-32k or your-custom-model"
+              />
+            ) : (
                 <>
                   <select
                     id="model-select"
@@ -268,9 +269,10 @@ export function AIConfigSection({
           </div>
 
           <div className="space-y-4">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">IP Restrictions (Security)</label>
+            <label htmlFor="ip-restrictions" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">IP Restrictions (Security)</label>
             <div className="relative">
               <input 
+                id="ip-restrictions"
                 type="text"
                 value={allowedIps}
                 onChange={(e) => setAllowedIps(e.target.value)}

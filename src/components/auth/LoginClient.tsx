@@ -171,10 +171,11 @@ export default function LoginClient() {
             {mfaRequired ? (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">6-Digit Auth Code</label>
+                  <label htmlFor="mfaToken" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">6-Digit Auth Code</label>
                   <div className="relative">
                     <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                     <input
+                      id="mfaToken"
                       name="mfaToken"
                       type="text"
                       required
@@ -190,10 +191,11 @@ export default function LoginClient() {
               <>
                 {mode === "signup" && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Full Name</label>
+                    <label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Full Name</label>
                     <div className="relative">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                       <input
+                        id="name"
                         name="name"
                         type="text"
                         required
@@ -206,10 +208,11 @@ export default function LoginClient() {
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Email Address</label>
+                  <label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                     <input
+                      id="email"
                       name="email"
                       type="email"
                       required
@@ -222,7 +225,7 @@ export default function LoginClient() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between ml-1">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Password</label>
+                    <label htmlFor="password" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Password</label>
                     {mode === "signin" && (
                       <Link href="/forgot-password" className="text-[10px] font-black text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 uppercase tracking-widest transition-colors">
                         Forgot?
@@ -232,6 +235,7 @@ export default function LoginClient() {
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                     <input
+                      id="password"
                       name="password"
                       type={showPassword ? "text" : "password"}
                       required
