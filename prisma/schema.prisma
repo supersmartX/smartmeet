@@ -65,7 +65,7 @@ model User {
   mfaRecoveryCodes    String[]  @default([])
   role          UserRole  @default(MEMBER)
   plan          UserPlan  @default(FREE)
-  meetingQuota  Int       @default(3) // Monthly quota for FREE users
+  meetingQuota  Int       @default(100) // Increased quota for FREE users for testing/demo
   meetingsUsed  Int       @default(0) // Meetings used in current cycle
   accounts      Account[]
   sessions      Session[]
