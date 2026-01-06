@@ -6,17 +6,19 @@ import Image from "next/image"
 import { useState, useMemo, useEffect } from "react"
 import { highlightText } from "@/utils/text"
 import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, Calendar, HardDrive, Users } from "lucide-react"
-import { getMeetings, getDashboardStats } from "@/actions/meeting"
-import { Meeting, DashboardStat } from "@/types/meeting"
+import { getMeetings, getDashboardStats, getActionItems, updateActionItemStatus } from "@/actions/meeting"
+import { Meeting, DashboardStat, ActionItem } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
 import { useRouter } from "next/navigation"
+import { Activity, CheckCircle2, Circle } from "lucide-react"
 
 export default function DashboardClient() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user
   const [recordings, setRecordings] = useState<Meeting[]>([])
+  const [actionItems, setActionItems] = useState<(ActionItem & { meetingTitle: string; meetingDate: Date })[]>([])
   const [stats, setStats] = useState<DashboardStat[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
@@ -27,9 +29,10 @@ export default function DashboardClient() {
       try {
         setIsLoading(true)
         
-        const [meetingsResult, statsResult] = await Promise.all([
+        const [meetingsResult, statsResult, actionItemsResult] = await Promise.all([
           getMeetings(),
-          getDashboardStats()
+          getDashboardStats(),
+          getActionItems()
         ])
 
         if (meetingsResult.success && meetingsResult.data) {
@@ -43,6 +46,10 @@ export default function DashboardClient() {
         } else if (!statsResult.success) {
           showToast(statsResult.error || "Failed to load stats", "error")
         }
+
+        if (actionItemsResult.success && actionItemsResult.data) {
+          setActionItems(actionItemsResult.data)
+        }
       } catch (err) {
         console.error("Dashboard fetch error:", err)
         showToast("Failed to load dashboard data. Please try again.", "error")
@@ -52,6 +59,32 @@ export default function DashboardClient() {
     }
     fetchData()
   }, [showToast])
+
+  const toggleActionItem = async (itemId: string, currentStatus: ActionItem["status"]) => {
+    const newStatus = currentStatus === "COMPLETED" ? "PENDING" : "COMPLETED";
+    
+    // Optimistic update
+    setActionItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, status: newStatus } : item
+    ));
+
+    try {
+      const result = await updateActionItemStatus(itemId, newStatus);
+      if (!result.success) {
+        // Revert on failure
+        setActionItems(prev => prev.map(item => 
+          item.id === itemId ? { ...item, status: currentStatus } : item
+        ));
+        showToast(result.error || "Failed to update status", "error");
+      }
+    } catch (err) {
+      console.error("Action item update error:", err);
+      // Revert on failure
+      setActionItems(prev => prev.map(item => 
+        item.id === itemId ? { ...item, status: currentStatus } : item
+      ));
+    }
+  };
 
   const handleNewMeeting = () => {
     router.push("/dashboard/recordings?action=upload")
@@ -276,21 +309,76 @@ export default function DashboardClient() {
             </div>
           </div>
         </div>
+        {/* Unified Action Stream */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Action Stream
+            </h2>
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+            <div className="p-2 space-y-1">
+              {isLoading ? (
+                Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="h-16 bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl animate-pulse" />
+                ))
+              ) : actionItems.length > 0 ? (
+                actionItems.slice(0, 8).map((item) => (
+                  <div 
+                    key={item.id}
+                    className="group flex items-start gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-2xl transition-all"
+                  >
+                    <button 
+                      onClick={() => toggleActionItem(item.id, item.status)}
+                      className={`mt-0.5 shrink-0 transition-colors ${
+                        item.status === "COMPLETED" 
+                          ? "text-emerald-500" 
+                          : "text-zinc-300 hover:text-brand-via"
+                      }`}
+                    >
+                      {item.status === "COMPLETED" ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        <Circle className="w-5 h-5" />
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-bold transition-all ${
+                        item.status === "COMPLETED" 
+                          ? "text-zinc-400 line-through" 
+                          : "text-zinc-900 dark:text-zinc-100"
+                      }`}>
+                        {item.title}
+                      </p>
+                      <Link 
+                        href={`/dashboard/recordings/${item.meetingId}`}
+                        className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1 hover:text-brand-via transition-colors block truncate"
+                      >
+                        {item.meetingTitle}
+                      </Link>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-12 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-zinc-300 mx-auto mb-4">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">No actions detected</p>
+                </div>
+              )}
+            </div>
+            {actionItems.length > 8 && (
+              <div className="p-4 bg-zinc-50/50 dark:bg-zinc-950/50 border-t border-zinc-100 dark:border-zinc-800">
+                <button className="w-full py-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                  View All Actions
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
 }
-
-const Activity = ({ className }: { className?: string }) => (
-  <svg 
-    className={className}
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
-  >
-    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-  </svg>
-);

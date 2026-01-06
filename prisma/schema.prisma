@@ -122,6 +122,7 @@ model Meeting {
   duration     String?
   participants Int            @default(1)
   status       MeetingStatus  @default(PROCESSING)
+  processingStep ProcessingStep @default(IDLE)
   userId       String
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   transcripts  Transcript[]
@@ -138,6 +139,16 @@ model Meeting {
 enum MeetingStatus {
   COMPLETED
   PROCESSING
+  FAILED
+}
+
+enum ProcessingStep {
+  IDLE
+  TRANSCRIPTION
+  SUMMARIZATION
+  CODE_GENERATION
+  TESTING
+  COMPLETED
   FAILED
 }
 

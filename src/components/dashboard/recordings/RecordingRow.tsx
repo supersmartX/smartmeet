@@ -33,7 +33,30 @@ export function RecordingRow({
   const { showToast } = useToast();
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Avoid hydration mismatch by formatting date only on client
+  const status = recording.status?.toUpperCase();
+
+  // Polling for status updates if processing
+  useEffect(() => {
+    if (status !== "PROCESSING") return;
+
+    const interval = setInterval(() => {
+      if (fetchMeetings) fetchMeetings();
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [status, fetchMeetings]);
+
+  const getProgressLabel = (step: string) => {
+    switch (step) {
+      case "TRANSCRIPTION": return "Transcribing Audio...";
+      case "SUMMARIZATION": return "Summarizing Meeting...";
+      case "CODE_GENERATION": return "Generating Logic...";
+      case "TESTING": return "Verifying Code...";
+      case "COMPLETED": return "Completed";
+      case "FAILED": return "Failed";
+      default: return "Processing...";
+    }
+  };
   useEffect(() => {
     const date = recording.date instanceof Date ? recording.date : new Date(recording.date);
     setFormattedDate(date.toLocaleDateString());
@@ -68,8 +91,6 @@ export function RecordingRow({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isEditing, recording.title]);
-
-  const status = recording.status?.toUpperCase();
 
   const handleRenameSubmit = useCallback(async () => {
     if (!editTitle.trim() || editTitle === recording.title) {
@@ -184,14 +205,24 @@ export function RecordingRow({
                 {renderHighlightedText(recording.title, searchQuery)}
               </Link>
             )}
-            <div className="flex items-center gap-2 mt-1 sm:hidden">
-              <span className="text-[10px] text-zinc-500 font-bold">
-                {formattedDate}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-                {status}
-              </span>
+            <div className="flex items-center gap-2 mt-1">
+              {status === "PROCESSING" ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-amber-500 font-bold animate-pulse">
+                    {getProgressLabel(recording.processingStep)}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mt-1 sm:hidden">
+                  <span className="text-[10px] text-zinc-500 font-bold">
+                    {formattedDate}
+                  </span>
+                  <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                    {status}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -215,11 +246,11 @@ export function RecordingRow({
                 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                 : status === "FAILED"
                 ? "bg-red-500/10 text-red-600 border-red-500/20 cursor-help"
-                : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                : "bg-amber-500/10 text-amber-600 border-amber-500/20 animate-pulse"
             }`}
             title={status === "FAILED" ? (recording.testResults || "Pipeline error") : undefined}
           >
-            {status}
+            {status === "PROCESSING" ? getProgressLabel(recording.processingStep) : status}
           </div>
         </div>
       </td>

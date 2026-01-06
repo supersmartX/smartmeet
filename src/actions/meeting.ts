@@ -10,12 +10,12 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { headers } from "next/headers";
 import { 
-  audioToCode, 
   generateCode, 
   summarizeText, 
   buildPrompt, 
   generatePlan,
-  testCode
+  testCode,
+  transcribeAudio
 } from "@/services/api";
 import { 
   meetingSchema, 
@@ -36,7 +36,8 @@ import {
   MeetingUpdateData,
   AuditLog,
   Session,
-  UserSettings
+  UserSettings,
+  ActionItem
 } from "@/types/meeting";
 
 /**
@@ -176,14 +177,82 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
       orderBy: {
         date: "desc",
       },
-    }) as Meeting[];
+      include: {
+        summary: true,
+        _count: {
+          select: { actionItems: true }
+        }
+      }
+    });
 
-    return { success: true, data: meetings };
+    return { success: true, data: meetings as unknown as Meeting[] };
   } catch (error: unknown) {
     console.error("Get meetings error:", error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to fetch meetings" 
+    };
+  }
+}
+
+export async function getActionItems(): Promise<ActionResult<(ActionItem & { meetingTitle: string; meetingDate: Date })[]>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const actionItems = await prisma.actionItem.findMany({
+      where: {
+        meeting: {
+          user: { email: session.user.email }
+        }
+      },
+      include: {
+        meeting: {
+          select: {
+            title: true,
+            date: true
+          }
+        }
+      },
+      orderBy: {
+        meeting: {
+          date: "desc"
+        }
+      }
+    });
+
+    const formattedActionItems = actionItems.map(item => ({
+      ...item,
+      meetingTitle: item.meeting.title,
+      meetingDate: item.meeting.date
+    }));
+
+    return { success: true, data: formattedActionItems };
+  } catch (error: unknown) {
+    console.error("Get action items error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to fetch action items" 
+    };
+  }
+}
+
+export async function updateActionItemStatus(id: string, status: "PENDING" | "COMPLETED" | "IN_PROGRESS" | "CANCELLED"): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    await prisma.actionItem.update({
+      where: { id },
+      data: { status }
+    });
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Update action item status error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to update action item status" 
     };
   }
 }
@@ -690,52 +759,93 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
 
     const { aiCircuitBreaker } = await import("@/lib/circuit-breaker");
 
-    const pipelineResponse = await aiCircuitBreaker.execute(async () => {
-      const response = await audioToCode(audioBlob, {
-        api_key: effectiveApiKey,
-        summary_provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
-        code_provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
-        code_model: finalModel || undefined,
-        test_provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
+    try {
+      // Step 1: TRANSCRIPTION
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { processingStep: "TRANSCRIPTION" }
       });
 
-      if (!response.success) {
-        // If it's a transient error, we want to record it as a failure for the circuit breaker
-        const errorMsg = response.error || response.message || "";
-        const isTransient = errorMsg.toLowerCase().includes("timeout") || 
-                           errorMsg.toLowerCase().includes("rate limit") ||
-                           errorMsg.toLowerCase().includes("overloaded") ||
-                           errorMsg.toLowerCase().includes("503") ||
-                           errorMsg.toLowerCase().includes("504");
-        
-        if (isTransient) {
-          throw new Error(errorMsg);
-        }
-      }
-      return response;
-    });
+      const transcriptionResult = await aiCircuitBreaker.execute(async () => {
+        const res = await transcribeAudio(audioBlob, effectiveApiKey);
+        if (!res.success) throw new Error(res.error || "Transcription failed");
+        return res.data;
+      });
 
-    console.log(`Pipeline response for ${meetingId}:`, JSON.stringify(pipelineResponse, null, 2));
+      if (!transcriptionResult) throw new Error("Transcription failed");
+      const transcription = transcriptionResult.transcription;
 
-    if (pipelineResponse.success && pipelineResponse.data) {
-      // Update meeting in DB (internal call, no session needed for DB update if we have the ID)
+      // Step 2: SUMMARIZATION
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { processingStep: "SUMMARIZATION" }
+      });
+
+      const summaryResult = await aiCircuitBreaker.execute(async () => {
+        const res = await summarizeText(transcription, { 
+          api_key: effectiveApiKey, 
+          provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM" 
+        });
+        if (!res.success) throw new Error(res.error || "Summarization failed");
+        return res.data;
+      });
+
+      if (!summaryResult) throw new Error("Summarization failed");
+      const { summary, project_doc } = summaryResult;
+
+      // Step 3: CODE_GENERATION
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { processingStep: "CODE_GENERATION" }
+      });
+
+      const codeResult = await aiCircuitBreaker.execute(async () => {
+        const res = await generateCode(transcription, { 
+          api_key: effectiveApiKey, 
+          provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+          model: finalModel || undefined
+        });
+        if (!res.success) throw new Error(res.error || "Code generation failed");
+        return res.data;
+      });
+
+      if (!codeResult) throw new Error("Code generation failed");
+      const { code } = codeResult;
+
+      // Step 4: TESTING
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { processingStep: "TESTING" }
+      });
+
+      const testResult = await aiCircuitBreaker.execute(async () => {
+        const res = await testCode(code, { 
+          api_key: effectiveApiKey, 
+          provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
+        });
+        // We don't throw error if test fails, just record it
+        return res.data;
+      });
+
+      // Final Save
       await prisma.meeting.update({
         where: { id: meetingId },
         data: {
           status: "COMPLETED",
+          processingStep: "COMPLETED",
           transcripts: {
             create: [{
               speaker: "AI Assistant",
               time: "0:00",
-              text: pipelineResponse.data.transcription
+              text: transcription
             }]
           },
           summary: {
-            create: { content: pipelineResponse.data.summary }
+            create: { content: summary }
           },
-          code: pipelineResponse.data.code,
-          projectDoc: pipelineResponse.data.project_doc,
-          testResults: pipelineResponse.data.test_output?.output || pipelineResponse.data.test_output?.error
+          code: code,
+          projectDoc: project_doc,
+          testResults: testResult?.output || testResult?.error || "No test results"
         }
       });
 
@@ -746,52 +856,36 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
       });
 
       return { success: true };
-    } else {
-      const errorDetail = pipelineResponse.error || pipelineResponse.message || "AI Pipeline failed";
-      const isRetryable = errorDetail.toLowerCase().includes("timeout") || 
-                         errorDetail.toLowerCase().includes("rate limit") ||
-                         errorDetail.toLowerCase().includes("overloaded");
 
+    } catch (error: unknown) {
+      const errorDetail = error instanceof Error ? error.message : "AI Pipeline failed";
+      const isCircuitOpen = errorDetail.toLowerCase().includes("circuit breaker is open");
+      
       console.error("Pipeline failure details:", errorDetail);
       
-      // Update status with error details and retry suggestion
       await prisma.meeting.update({
         where: { id: meetingId },
         data: { 
           status: "FAILED",
-          testResults: `Pipeline Error: ${errorDetail}. ${isRetryable ? "This seems to be a temporary error. Please try again in a few minutes." : "Please check your API key and configuration."}`
+          processingStep: "FAILED",
+          testResults: isCircuitOpen 
+            ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
+            : `System Error: ${errorDetail}`
         }
       });
       
       return { 
         success: false, 
         error: errorDetail,
-        message: isRetryable ? "Temporary AI service error. You can retry processing this recording." : "AI processing failed. Please check your settings."
+        message: isCircuitOpen 
+          ? "AI service is temporarily unavailable. Please try again shortly."
+          : "AI processing failed. Please check your settings."
       };
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process meeting with AI";
-    const isCircuitOpen = errorMessage.toLowerCase().includes("circuit breaker is open");
-    
-    console.error("Internal process meeting AI error:", errorMessage);
-    
-    await prisma.meeting.update({
-      where: { id: meetingId },
-      data: { 
-        status: "FAILED",
-        testResults: isCircuitOpen 
-          ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
-          : `System Error: ${errorMessage}`
-      }
-    });
-    
-    return { 
-      success: false, 
-      error: errorMessage,
-      message: isCircuitOpen 
-        ? "AI service is temporarily unavailable. Please try again shortly."
-        : undefined
-    };
+    console.error("Internal process meeting AI outer error:", errorMessage);
+    return { success: false, error: errorMessage };
   }
 }
 

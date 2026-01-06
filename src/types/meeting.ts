@@ -12,6 +12,7 @@ export interface Meeting {
   duration?: string;
   participants: number;
   status: string;
+  processingStep: string;
   userId: string;
   code?: string;
   projectDoc?: string;
