@@ -1,42 +1,47 @@
 "use client"
 
-import Button from "@/components/Button"
+import { useState } from "react"
+import Button from "./Button"
+import { createCheckoutSession } from "@/actions/stripe"
 
 const plans = [
   {
     name: "Beta Free",
     price: "$0",
+    priceId: "", // No price ID for free
     description: "Experience the core pipeline during our beta period.",
     features: [
-      "5 recordings per month (Beta bonus)",
+      "10 recordings per month",
       "Standard AI Transcription",
       "Basic Summary generation",
       "Python code generation",
       "Export to .py and .txt",
     ],
-    cta: "Start for free",
+    cta: "Current Plan",
     variant: "secondary" as const,
   },
   {
     name: "Beta Pro",
     price: "$9",
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || "price_BETA_PRO_ID",
     period: "/month",
     description: "Full power for early adopters. 50% off for life.",
     features: [
-      "Unlimited recordings",
+      "1,000 recordings per month",
       "Advanced AI Pipeline (GPT-4/Claude)",
       "Comprehensive Project Documentation",
       "Automated Test generation",
       "Priority AI processing",
       "Custom API Key integration",
     ],
-    cta: "Get started",
+    cta: "Upgrade to Pro",
     variant: "primary" as const,
     popular: true,
   },
   {
     name: "Enterprise",
     price: "Custom",
+    priceId: "", 
     description: "Tailored solutions for large engineering teams.",
     features: [
       "Everything in Pro",
@@ -51,6 +56,22 @@ const plans = [
 ]
 
 export default function Pricing() {
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleUpgrade = async (priceId: string) => {
+    if (!priceId) return;
+    setLoading(priceId);
+    try {
+      const { url } = await createCheckoutSession(priceId);
+      window.location.href = url;
+    } catch (error) {
+      console.error("Upgrade error:", error);
+      alert("Failed to initiate checkout. Please try again.");
+    } finally {
+      setLoading(null);
+    }
+  };
+
   return (
     <section id="pricing" className="py-24 sm:py-32 bg-white dark:bg-black relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6">
@@ -101,24 +122,20 @@ export default function Pricing() {
                   )}
                 </div>
                 <p className={`text-sm font-medium leading-relaxed ${
-                  plan.popular ? "text-zinc-400" : "text-zinc-500 dark:text-zinc-400"
+                  plan.popular ? "text-zinc-400" : "text-zinc-500"
                 }`}>
                   {plan.description}
                 </p>
               </div>
 
-              <div className="h-[1px] w-full bg-zinc-200 dark:bg-zinc-800 mb-8" />
-
-              <ul className="space-y-4 mb-10 flex-1">
+              <div className="flex-1 space-y-4 mb-8">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <div className={`mt-1 flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center ${
-                      plan.popular ? "bg-brand-via/20" : "bg-zinc-100 dark:bg-zinc-800"
+                  <div key={feature} className="flex items-start gap-3 group/item">
+                    <div className={`mt-1 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                      plan.popular ? "bg-brand-primary/20 text-brand-primary" : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500"
                     }`}>
-                      <svg className={`w-2.5 h-2.5 ${
-                        plan.popular ? "text-brand-via" : "text-zinc-400"
-                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
                     <span className={`text-sm font-medium ${
@@ -126,17 +143,17 @@ export default function Pricing() {
                     }`}>
                       {feature}
                     </span>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
 
               <Button
-                href={plan.name === "Team" ? "mailto:sales@smartmeet.ai" : "/login"}
-                className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
-                  plan.popular
-                    ? "bg-brand-gradient text-white shadow-glow hover:scale-[1.02]"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                }`}
+                variant={plan.variant}
+                fullWidth
+                onClick={() => handleUpgrade(plan.priceId)}
+                loading={loading === plan.priceId}
+                disabled={!plan.priceId || (plan.name === "Beta Free")}
+                className={plan.popular ? "bg-white text-black hover:bg-zinc-200" : ""}
               >
                 {plan.cta}
               </Button>

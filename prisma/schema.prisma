@@ -67,6 +67,13 @@ model User {
   plan          UserPlan  @default(FREE)
   meetingQuota  Int       @default(100) // Increased quota for FREE users for testing/demo
   meetingsUsed  Int       @default(0) // Meetings used in current cycle
+  
+  // Stripe Integration
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+
   accounts      Account[]
   sessions      Session[]
   meetings      Meeting[]

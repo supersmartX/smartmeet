@@ -1,10 +1,23 @@
 import { Resend } from 'resend';
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+let resendInstance: Resend | null = null;
+
+function getResend() {
+  if (resendInstance) return resendInstance;
+  
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    resendInstance = new Resend(apiKey);
+  }
+  
+  return resendInstance;
+}
+
 const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
 
 export async function sendVerificationEmail(email: string, token: string) {
   const verifyLink = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${token}`;
+  const resend = getResend();
 
   if (!resend) {
     console.log(`[DEV MODE] Verification link for ${email}: ${verifyLink}`);
@@ -34,6 +47,7 @@ export async function sendVerificationEmail(email: string, token: string) {
 
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetLink = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`;
+  const resend = getResend();
 
   if (!resend) {
     console.log(`[DEV MODE] Password reset link for ${email}: ${resetLink}`);

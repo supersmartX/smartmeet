@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, X, AlertCircle } from "lucide-react";
+import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, X, AlertCircle, RefreshCw } from "lucide-react";
 import { Meeting } from "@/types/meeting";
+import { enqueueMeetingAI } from "@/actions/meeting";
+import { useToast } from "@/hooks/useToast";
 
 interface RecordingRowProps {
   recording: Meeting;
@@ -9,6 +11,7 @@ interface RecordingRowProps {
   onRename: (id: string, newTitle: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   renderHighlightedText: (text: string, query: string) => React.ReactNode;
+  fetchMeetings?: () => void;
 }
 
 export function RecordingRow({
@@ -17,14 +20,17 @@ export function RecordingRow({
   onRename,
   onDelete,
   renderHighlightedText,
+  fetchMeetings,
 }: RecordingRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(recording.title);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [formattedDate, setFormattedDate] = useState<string>("");
   
+  const { showToast } = useToast();
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Avoid hydration mismatch by formatting date only on client
@@ -80,6 +86,25 @@ export function RecordingRow({
       setIsRenaming(false);
     }
   }, [editTitle, recording.id, recording.title, onRename]);
+
+  const handleRetry = useCallback(async () => {
+     setIsRetrying(true);
+     try {
+       const result = await enqueueMeetingAI(recording.id);
+       if (result.success) {
+         showToast("Recording re-enqueued for processing", "success");
+         if (fetchMeetings) fetchMeetings();
+       } else {
+         showToast(result.error || "Failed to retry processing", "error");
+       }
+     } catch (error) {
+       console.error("Retry error:", error);
+       showToast("An unexpected error occurred", "error");
+     } finally {
+       setIsRetrying(false);
+       setIsMenuOpen(false);
+     }
+   }, [recording.id, showToast, fetchMeetings]);
 
   const handleDeleteClick = useCallback(async () => {
     if (!window.confirm("Are you sure you want to delete this recording?")) return;
@@ -214,6 +239,19 @@ export function RecordingRow({
             {isMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
                 <div className="p-2">
+                  {status === "FAILED" && (
+                    <>
+                      <button
+                        onClick={handleRetry}
+                        disabled={isRetrying}
+                        className="w-full px-3 py-2.5 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl flex items-center gap-2 transition-colors disabled:opacity-50"
+                      >
+                        {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        Retry processing
+                      </button>
+                      <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
+                    </>
+                  )}
                   <button
                     onClick={() => {
                       setIsEditing(true);

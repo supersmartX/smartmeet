@@ -14,6 +14,7 @@ import { Toast } from "@/components/Toast"
 import { ProfileSection } from "@/components/dashboard/settings/ProfileSection"
 import { AIConfigSection } from "@/components/dashboard/settings/AIConfigSection"
 import { MFASection } from "@/components/dashboard/settings/MFASection"
+import { BillingSection } from "./BillingSection"
 
 interface SettingsClientProps {
   initialSettings: UserSettings
@@ -224,6 +225,13 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
           handleDisableMFA={handleDisableMFA}
           setQrCodeUrl={setQrCodeUrl}
           setMfaSecret={setMfaSecret}
+        />
+
+        <BillingSection 
+          plan={initialSettings.plan}
+          meetingQuota={initialSettings.meetingQuota}
+          meetingsUsed={initialSettings.meetingsUsed}
+          stripeSubscriptionId={initialSettings.stripeSubscriptionId}
         />
 
         {/* Usage & Limits */}

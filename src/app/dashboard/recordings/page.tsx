@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { highlightText } from "@/utils/text"
 import { Loader2 } from "lucide-react"
-import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, processMeetingAI } from "@/actions/meeting"
+import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, enqueueMeetingAI } from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
@@ -169,10 +169,9 @@ function RecordingsContent() {
 
       const meetingId = createResult.data.id
       
-      // 4. Trigger AI processing (async, detached from current execution context)
-      // We use a small delay to ensure the UI has finished its transition
+      // 4. Trigger AI processing (enqueued for background worker)
       setTimeout(() => {
-        processMeetingAI(meetingId).catch(err => {
+        enqueueMeetingAI(meetingId).catch(err => {
           console.error("Background AI processing error:", err)
         })
       }, 500)

@@ -151,6 +151,7 @@ export function RecordingTable({
                     onRename={onRename}
                     onDelete={onDelete}
                     renderHighlightedText={renderHighlightedText}
+                    fetchMeetings={fetchMeetings}
                   />
                 ))}
               </tbody>

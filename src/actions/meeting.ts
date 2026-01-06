@@ -76,9 +76,15 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-    const user = await prisma.user.findUnique({
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const user = await (prisma.user.findUnique as any)({
       where: { email: session.user.email },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        plan: true,
+        meetingQuota: true,
+        meetingsUsed: true,
         meetings: {
           include: {
             _count: {
@@ -92,6 +98,7 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
         },
       },
     }) as UserWithMeetings | null;
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     if (!user) return { success: false, error: "User not found" };
 
@@ -255,6 +262,10 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
     if (validatedData.preferredModel) updatePayload.preferredModel = validatedData.preferredModel;
     if (validatedData.allowedIps !== undefined) updatePayload.allowedIps = validatedData.allowedIps;
 
+    // Quota reset logic (optional but good for testing)
+    // If the user is downgraded or upgraded, we might want to adjust meetingsUsed
+    // For now, we keep it as is.
+
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
       data: updatePayload,
@@ -283,7 +294,8 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-    const user = await prisma.user.findUnique({
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const user = await (prisma.user.findUnique as any)({
       where: { email: session.user.email },
       select: {
         id: true,
@@ -298,29 +310,45 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
         mfaEnabled: true,
         plan: true,
         meetingQuota: true,
-        meetingsUsed: true
-      },
+        meetingsUsed: true,
+        stripeSubscriptionId: true
+      }
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     if (!user) return { success: false, error: "User not found" };
 
     let apiKeys: Record<string, string> = {};
-    if (user.apiKey) {
-      const decrypted = decrypt(user.apiKey);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userTyped = user as any;
+    const userApiKey = userTyped.apiKey as string | null;
+    
+    if (userApiKey) {
+      const decrypted = decrypt(userApiKey);
       try {
         apiKeys = JSON.parse(decrypted);
       } catch {
         // Fallback for legacy single-string API keys
-        const provider = user.preferredProvider || "openai";
+        const provider = userTyped.preferredProvider || "openai";
         apiKeys = { [provider]: decrypted };
       }
     }
 
-    const settings = {
-      ...user,
+    const settings: UserSettings = {
+      apiKey: userApiKey ? (apiKeys[userTyped.preferredProvider || "openai"] || "") : null,
       apiKeys,
-      apiKey: user.apiKey ? (apiKeys[user.preferredProvider || "openai"] || "") : null,
-      allowedIps: user.allowedIps || ""
+      preferredProvider: userTyped.preferredProvider,
+      preferredModel: userTyped.preferredModel,
+      allowedIps: userTyped.allowedIps || "",
+      lastUsedAt: userTyped.lastUsedAt,
+      name: userTyped.name,
+      email: userTyped.email,
+      image: userTyped.image,
+      mfaEnabled: userTyped.mfaEnabled,
+      plan: userTyped.plan as "FREE" | "PRO" | "ENTERPRISE",
+      meetingQuota: userTyped.meetingQuota,
+      meetingsUsed: userTyped.meetingsUsed,
+      stripeSubscriptionId: userTyped.stripeSubscriptionId
     };
 
     return { success: true, data: settings };
@@ -338,12 +366,32 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
     const session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-    const user = await prisma.user.findUnique({
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const user = await (prisma.user.findUnique as any)({
       where: { email: session.user.email },
-      select: { meetingsUsed: true, meetingQuota: true, plan: true }
+      select: { 
+        id: true, 
+        meetingsUsed: true, 
+        meetingQuota: true, 
+        plan: true,
+        stripeSubscriptionId: true,
+        stripeCurrentPeriodEnd: true
+      }
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     if (!user) return { success: false, error: "User not found" };
+
+    // Strict Plan & Quota Check
+    const isPlanActive = user.plan === "FREE" || 
+                        (user.stripeSubscriptionId && user.stripeCurrentPeriodEnd && user.stripeCurrentPeriodEnd > new Date());
+
+    if (!isPlanActive) {
+      return { 
+        success: false, 
+        error: "Your subscription has expired. Please renew to continue creating meetings." 
+      };
+    }
 
     if (user.meetingsUsed >= user.meetingQuota) {
       return { 
@@ -530,37 +578,37 @@ export async function createSignedUploadUrl(fileName: string): Promise<ActionRes
   }
 }
 
-export async function processMeetingAI(meetingId: string): Promise<ActionResult> {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) return { success: false, error: "Unauthorized" };
-
+/**
+ * Internal AI processing logic that can be called by both Server Actions and Background Workers
+ */
+export async function internalProcessMeetingAI(meetingId: string, clientIp?: string): Promise<ActionResult> {
   try {
     // 1. Get meeting and user details
-    const meeting = await prisma.meeting.findUnique({
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const meeting = await (prisma.meeting.findUnique as any)({
       where: { id: meetingId },
-      include: {
+      select: {
+        id: true,
+        audioUrl: true,
         user: {
           select: { 
             id: true, 
             apiKey: true, 
             allowedIps: true,
             preferredProvider: true,
-            preferredModel: true
+            preferredModel: true,
+            plan: true
           }
         }
       }
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     if (!meeting || !meeting.user) return { success: false, error: "Meeting or user not found" };
     const user = meeting.user;
 
-    // 2. Check IP Restriction if enabled
-    if (user.allowedIps) {
-      const headerList = await headers();
-      const clientIp = headerList.get("x-forwarded-for")?.split(',')[0] || 
-                      headerList.get("x-real-ip") || 
-                      "unknown";
-
+    // 2. Check IP Restriction if enabled (only if clientIp is provided)
+    if (user.allowedIps && clientIp) {
       const allowedIps = user.allowedIps.split(',').map((ip: string) => ip.trim());
 
       if (clientIp !== "unknown" && !allowedIps.includes(clientIp)) {
@@ -621,29 +669,74 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     // 4. Call the AI pipeline with user preferences
     const { apiKey: effectiveApiKey, provider, rawProvider } = await getAIConfiguration(user);
 
+    // Feature gating based on plan
+    const isPro = user.plan === "PRO" || user.plan === "ENTERPRISE";
+    
+    // If not pro, restrict expensive models even if they set them in settings
+    const finalProvider = provider;
+    let finalModel = user.preferredModel;
+
+    if (!isPro && (provider === "openai" || provider === "claude")) {
+      // Force cheaper models for free users to maintain capacity plan margins
+      if (provider === "openai") finalModel = "gpt-4o-mini";
+      // (Note: Add more restrictions as needed based on costs)
+    }
+
     if (!effectiveApiKey) {
       return { success: false, error: "API Key missing for the selected provider." };
     }
 
     console.log(`Starting AI pipeline for meeting ${meetingId} using provider: ${provider}`);
 
-    const pipelineResponse = await audioToCode(audioBlob, {
-      api_key: effectiveApiKey,
-      summary_provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
-      code_provider: provider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
-      code_model: user.preferredModel || undefined,
-      test_provider: (provider === "openai" || provider === "openrouter") ? "local" : provider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
+    const { aiCircuitBreaker } = await import("@/lib/circuit-breaker");
+
+    const pipelineResponse = await aiCircuitBreaker.execute(async () => {
+      const response = await audioToCode(audioBlob, {
+        api_key: effectiveApiKey,
+        summary_provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+        code_provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+        code_model: finalModel || undefined,
+        test_provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
+      });
+
+      if (!response.success) {
+        // If it's a transient error, we want to record it as a failure for the circuit breaker
+        const errorMsg = response.error || response.message || "";
+        const isTransient = errorMsg.toLowerCase().includes("timeout") || 
+                           errorMsg.toLowerCase().includes("rate limit") ||
+                           errorMsg.toLowerCase().includes("overloaded") ||
+                           errorMsg.toLowerCase().includes("503") ||
+                           errorMsg.toLowerCase().includes("504");
+        
+        if (isTransient) {
+          throw new Error(errorMsg);
+        }
+      }
+      return response;
     });
 
     console.log(`Pipeline response for ${meetingId}:`, JSON.stringify(pipelineResponse, null, 2));
 
     if (pipelineResponse.success && pipelineResponse.data) {
-      await updateMeetingStatus(meetingId, "COMPLETED", {
-        transcription: pipelineResponse.data.transcription,
-        summary: pipelineResponse.data.summary,
-        code: pipelineResponse.data.code,
-        projectDoc: pipelineResponse.data.project_doc,
-        testResults: pipelineResponse.data.test_output?.output || pipelineResponse.data.test_output?.error
+      // Update meeting in DB (internal call, no session needed for DB update if we have the ID)
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: {
+          status: "COMPLETED",
+          transcripts: {
+            create: [{
+              speaker: "AI Assistant",
+              time: "0:00",
+              text: pipelineResponse.data.transcription
+            }]
+          },
+          summary: {
+            create: { content: pipelineResponse.data.summary }
+          },
+          code: pipelineResponse.data.code,
+          projectDoc: pipelineResponse.data.project_doc,
+          testResults: pipelineResponse.data.test_output?.output || pipelineResponse.data.test_output?.error
+        }
       });
 
       // Increment meetings used count
@@ -678,23 +771,71 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process meeting with AI";
-    console.error("Process meeting AI error:", errorMessage);
+    const isCircuitOpen = errorMessage.toLowerCase().includes("circuit breaker is open");
     
-    // Ensure we update the status even on catch
+    console.error("Internal process meeting AI error:", errorMessage);
+    
     await prisma.meeting.update({
       where: { id: meetingId },
       data: { 
         status: "FAILED",
-        testResults: `System Error: ${errorMessage}`
+        testResults: isCircuitOpen 
+          ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
+          : `System Error: ${errorMessage}`
       }
     });
     
     return { 
       success: false, 
-      error: errorMessage
+      error: errorMessage,
+      message: isCircuitOpen 
+        ? "AI service is temporarily unavailable. Please try again shortly."
+        : undefined
     };
   }
 }
+
+export async function processMeetingAI(meetingId: string): Promise<ActionResult> {
+  const session = await getServerSession(enhancedAuthOptions);
+  if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+  // Get client IP for restrictions
+  const headerList = await headers();
+  const clientIp = headerList.get("x-forwarded-for")?.split(',')[0] || 
+                  headerList.get("x-real-ip") || 
+                  "unknown";
+
+  return internalProcessMeetingAI(meetingId, clientIp);
+}
+
+/**
+ * Enqueue AI processing to be handled by a background worker
+ */
+export async function enqueueMeetingAI(meetingId: string): Promise<ActionResult> {
+  const session = await getServerSession(enhancedAuthOptions);
+  if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+  try {
+    const { enqueueTask } = await import("@/lib/queue");
+    const enqueued = await enqueueTask({
+      id: uuidv4(),
+      type: "PROCESS_MEETING",
+      data: { meetingId }
+    });
+
+    if (enqueued) {
+      return { success: true, message: "Task enqueued for background processing" };
+    } else {
+      // Fallback to direct processing if queue fails
+      console.warn("Queue failed, falling back to direct processing");
+      return processMeetingAI(meetingId);
+    }
+  } catch (error) {
+    console.error("Enqueue error:", error);
+    return processMeetingAI(meetingId);
+  }
+}
+
 
 export async function updateMeetingStatus(id: string, status: "COMPLETED" | "PROCESSING" | "FAILED", data?: MeetingUpdateData): Promise<ActionResult<Meeting>> {
   try {

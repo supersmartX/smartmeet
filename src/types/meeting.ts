@@ -119,4 +119,8 @@ export interface UserSettings {
   email: string | null;
   image: string | null;
   mfaEnabled: boolean;
+  plan: "FREE" | "PRO" | "ENTERPRISE";
+  meetingQuota: number;
+  meetingsUsed: number;
+  stripeSubscriptionId?: string | null;
 }

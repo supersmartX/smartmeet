@@ -1,7 +1,6 @@
 import { RateLimiterMemory, RateLimiterRedis, RateLimiterAbstract } from "rate-limiter-flexible";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis as UpstashRedis } from "@upstash/redis";
-import IORedis from "ioredis";
+import type { Redis as UpstashRedis } from "@upstash/redis";
+import type IORedis from "ioredis";
 
 // Configuration for rate limiters
 type LimiterType = "api" | "login" | "general";
@@ -33,17 +32,39 @@ const LIMITER_CONFIGS: Record<LimiterType, Config> = {
 };
 
 // 1. Try Upstash REST (Best for Serverless/Edge)
-const upstashRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-  ? new UpstashRedis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
-  : null;
+let upstashRedisInstance: UpstashRedis | null = null;
+
+async function getUpstashRedis() {
+  if (upstashRedisInstance) return upstashRedisInstance;
+  
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  
+  if (url && token) {
+    const { Redis } = await import("@upstash/redis");
+    upstashRedisInstance = new Redis({
+      url,
+      token,
+    });
+  }
+  
+  return upstashRedisInstance;
+}
 
 // 2. Try Standard Redis (ioredis)
-const ioRedisClient = !upstashRedis && process.env.REDIS_URL 
-  ? new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: 3 }) 
-  : null;
+let ioRedisClientInstance: IORedis | null = null;
+
+async function getIORedisClient() {
+  if (ioRedisClientInstance) return ioRedisClientInstance;
+  
+  const upstash = await getUpstashRedis();
+  if (!upstash && process.env.REDIS_URL) {
+    const { default: IORedisClient } = await import("ioredis");
+    ioRedisClientInstance = new IORedisClient(process.env.REDIS_URL, { maxRetriesPerRequest: 3 });
+  }
+  
+  return ioRedisClientInstance;
+}
 
 /**
  * Interface for rate limit results
@@ -61,8 +82,15 @@ export interface RateLimitResult {
  */
 async function upstashConsume(type: LimiterType, key: string): Promise<RateLimitResult> {
   const config = LIMITER_CONFIGS[type];
+  const redis = await getUpstashRedis();
+  
+  if (!redis) {
+    throw new Error("Upstash Redis not initialized");
+  }
+
+  const { Ratelimit } = await import("@upstash/ratelimit");
   const ratelimit = new Ratelimit({
-    redis: upstashRedis!,
+    redis,
     limiter: Ratelimit.slidingWindow(config.points, config.duration as `${number}s` | `${number}m` | `${number}h` | `${number}d`),
     prefix: `@upstash/ratelimit/${type}`,
   });
@@ -82,20 +110,28 @@ async function upstashConsume(type: LimiterType, key: string): Promise<RateLimit
 /**
  * Standard Flexible Implementation (Memory or ioredis)
  */
-const flexibleLimiters: Record<string, RateLimiterAbstract> = {
-  api: ioRedisClient 
-    ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec, keyPrefix: "api" })
-    : new RateLimiterMemory({ points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec }),
-  login: ioRedisClient
-    ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec, keyPrefix: "login" })
-    : new RateLimiterMemory({ points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec }),
-  general: ioRedisClient
-    ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec, keyPrefix: "general" })
-    : new RateLimiterMemory({ points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec }),
-};
+let flexibleLimiters: Record<string, RateLimiterAbstract> | null = null;
+
+async function getFlexibleLimiter(type: LimiterType): Promise<RateLimiterAbstract> {
+  if (!flexibleLimiters) {
+    const ioRedisClient = await getIORedisClient();
+    flexibleLimiters = {
+      api: ioRedisClient 
+        ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec, keyPrefix: "api" })
+        : new RateLimiterMemory({ points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec }),
+      login: ioRedisClient
+        ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec, keyPrefix: "login" })
+        : new RateLimiterMemory({ points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec }),
+      general: ioRedisClient
+        ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec, keyPrefix: "general" })
+        : new RateLimiterMemory({ points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec }),
+    };
+  }
+  return flexibleLimiters[type];
+}
 
 async function flexibleConsume(type: LimiterType, key: string): Promise<RateLimitResult> {
-  const limiter = flexibleLimiters[type];
+  const limiter = await getFlexibleLimiter(type);
   try {
     const res = await limiter.consume(key);
     return {
@@ -121,7 +157,8 @@ async function flexibleConsume(type: LimiterType, key: string): Promise<RateLimi
  * Main Check Function
  */
 async function checkRateLimit(type: LimiterType, key: string): Promise<RateLimitResult> {
-  if (upstashRedis) {
+  const upstash = await getUpstashRedis();
+  if (upstash) {
     return upstashConsume(type, key);
   }
   return flexibleConsume(type, key);
@@ -166,13 +203,19 @@ export async function checkLoginRateLimitWithIP(email: string, ip?: string): Pro
  */
 export async function resetRateLimit(key: string, type: LimiterType): Promise<void> {
   try {
+    const upstashRedis = await getUpstashRedis();
+    const ioRedisClient = await getIORedisClient();
+    
     if (upstashRedis) {
       const prefix = `@upstash/ratelimit/${type}`;
       await upstashRedis.del(`${prefix}:${key}`);
     } else if (ioRedisClient) {
       await ioRedisClient.del(`${type}:${key}`);
     } else {
-      await (flexibleLimiters[type] as RateLimiterMemory).delete(key);
+      const limiter = await getFlexibleLimiter(type);
+      if (limiter instanceof RateLimiterMemory) {
+        await limiter.delete(key);
+      }
     }
   } catch (error) {
     console.error(`Failed to reset ${type} rate limit:`, error);
