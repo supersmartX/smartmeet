@@ -36,12 +36,27 @@ interface CodeGenerationResponse {
   code: string;
   language: string;
   file_path: string;
+  test_output?: Record<string, unknown> | null;
 }
 
 interface TestResponse {
   success: boolean;
-  output: string;
-  error: string;
+  output: string | null;
+  error: string | null;
+}
+
+interface PlanGenerationResponse {
+  plan: string;
+  provider: string;
+  model: string;
+}
+
+interface PromptBuildingResponse {
+  prompt: string;
+  provider: string;
+  model: string;
+  task_type: string;
+  suggestions?: Record<string, unknown> | null;
 }
 
 interface CompletePipelineResponse {
@@ -52,7 +67,7 @@ interface CompletePipelineResponse {
   code: string;
   language: string;
   file_path: string;
-  test_output: TestResponse;
+  test_output: Record<string, unknown> | null;
 }
 
 /**
@@ -251,19 +266,21 @@ export async function transcribeAudio(
  * Build a prompt from text
  */
 export async function buildPrompt(
-  text: string,
+  discussion_summary: string,
   options: {
+    context?: string;
     api_key?: string;
     provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
     model?: string;
     language?: string;
   } = {}
-): Promise<ApiResponse<{ prompt: string }>> {
-  return makeApiRequest<{ prompt: string }>("/api/AI/prompt/build", "POST", {
-    text,
-    api_key: options.api_key || "",
+): Promise<ApiResponse<PromptBuildingResponse>> {
+  return makeApiRequest<PromptBuildingResponse>("/api/AI/prompt/build", "POST", {
+    discussion_summary,
+    context: options.context || null,
+    api_key: options.api_key || null,
     provider: options.provider || "openai",
-    model: options.model,
+    model: options.model || null,
     language: options.language
   });
 }
@@ -272,19 +289,19 @@ export async function buildPrompt(
  * Generate a plan from text
  */
 export async function generatePlan(
-  text: string,
+  description: string,
   options: {
     api_key?: string;
     provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
     model?: string;
     language?: string;
   } = {}
-): Promise<ApiResponse<{ plan: string }>> {
-  return makeApiRequest<{ plan: string }>("/api/AI/plan", "POST", {
-    text,
-    api_key: options.api_key || "",
+): Promise<ApiResponse<PlanGenerationResponse>> {
+  return makeApiRequest<PlanGenerationResponse>("/api/AI/plan", "POST", {
+    description,
+    api_key: options.api_key || null,
     provider: options.provider || "openai",
-    model: options.model,
+    model: options.model || null,
     language: options.language
   });
 }
@@ -304,11 +321,11 @@ export async function summarizeText(
 ): Promise<ApiResponse<SummaryResponse>> {
   return makeApiRequest<SummaryResponse>("/api/AI/audio/summarize", "POST", {
     transcript: text,
-    api_key: options.api_key || "",
+    api_key: options.api_key || null,
     provider: options.provider || "OPENAI",
-    model: options.model,
-    summary_length: options.summary_length,
-    language: options.language
+    model: options.model || null,
+    summary_length: options.summary_length || null,
+    language: options.language || null
   });
 }
 
@@ -326,8 +343,8 @@ export async function generateCode(
   return makeApiRequest<CodeGenerationResponse>("/api/AI/code/generate-code", "POST", {
     task,
     provider: options.provider || "openai",
-    api_key: options.api_key || "",
-    model: options.model
+    api_key: options.api_key || null,
+    model: options.model || null
   });
 }
 
@@ -339,12 +356,14 @@ export async function testCode(
   options: {
     api_key?: string;
     provider?: "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+    model?: string;
   } = {}
 ): Promise<ApiResponse<TestResponse>> {
   return makeApiRequest<TestResponse>("/api/AI/code/test-code", "POST", {
     code,
     provider: options.provider || "local",
-    api_key: options.api_key || ""
+    api_key: options.api_key || null,
+    model: options.model || null
   });
 }
 
