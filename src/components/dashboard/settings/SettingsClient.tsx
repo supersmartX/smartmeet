@@ -33,6 +33,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
   const [allowedIps, setAllowedIps] = useState(initialSettings.allowedIps || "")
   const [defaultLanguage, setDefaultLanguage] = useState(initialSettings.defaultLanguage || "en")
   const [summaryLength, setSummaryLength] = useState(initialSettings.summaryLength || "medium")
+  const [summaryPersona, setSummaryPersona] = useState(initialSettings.summaryPersona || "balanced")
   const [autoProcess, setAutoProcess] = useState(initialSettings.autoProcess ?? true)
   const [lastUsedAt] = useState<string | null>(
     initialSettings.lastUsedAt ? new Date(initialSettings.lastUsedAt).toLocaleString() : null
@@ -110,6 +111,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
         allowedIps,
         defaultLanguage,
         summaryLength,
+        summaryPersona,
         autoProcess
       })
       
@@ -214,11 +216,13 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
           providerModels={providerModels}
         />
 
-        <PreferenceSection
+        <PreferenceSection 
           defaultLanguage={defaultLanguage}
           setDefaultLanguage={setDefaultLanguage}
           summaryLength={summaryLength}
           setSummaryLength={setSummaryLength}
+          summaryPersona={summaryPersona}
+          setSummaryPersona={setSummaryPersona}
           autoProcess={autoProcess}
           setAutoProcess={setAutoProcess}
         />

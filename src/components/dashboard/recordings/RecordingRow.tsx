@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, AlertCircle, RefreshCw } from "lucide-react";
+import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, AlertCircle, RefreshCw, Pin, PinOff, Star } from "lucide-react";
 import { Meeting } from "@/types/meeting";
 import { enqueueMeetingAI } from "@/actions/meeting";
 import { useToast } from "@/hooks/useToast";
@@ -10,6 +10,8 @@ interface RecordingRowProps {
   searchQuery: string;
   onRename: (id: string, newTitle: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onTogglePinned: (id: string) => Promise<void>;
+  onToggleFavorite: (id: string) => Promise<void>;
   renderHighlightedText: (text: string, query: string) => React.ReactNode;
   fetchMeetings?: () => void;
 }
@@ -19,6 +21,8 @@ export function RecordingRow({
   searchQuery,
   onRename,
   onDelete,
+  onTogglePinned,
+  onToggleFavorite,
   renderHighlightedText,
   fetchMeetings,
 }: RecordingRowProps) {
@@ -27,6 +31,8 @@ export function RecordingRow({
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isTogglingPinned, setIsTogglingPinned] = useState(false);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [formattedDate, setFormattedDate] = useState<string>("");
   
@@ -92,6 +98,32 @@ export function RecordingRow({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isEditing, recording.title]);
 
+  const handleTogglePinned = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsTogglingPinned(true);
+    try {
+      await onTogglePinned(recording.id);
+    } catch (error) {
+      console.error("Failed to toggle pinned:", error);
+    } finally {
+      setIsTogglingPinned(false);
+    }
+  }, [recording.id, onTogglePinned]);
+
+  const handleToggleFavorite = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsTogglingFavorite(true);
+    try {
+      await onToggleFavorite(recording.id);
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+    } finally {
+      setIsTogglingFavorite(false);
+    }
+  }, [recording.id, onToggleFavorite]);
+
   const handleRenameSubmit = useCallback(async () => {
     if (!editTitle.trim() || editTitle === recording.title) {
       setIsEditing(false);
@@ -150,42 +182,82 @@ export function RecordingRow({
             <Video className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400 dark:text-zinc-500" />
           </div>
           <div className="flex flex-col gap-1 flex-1 min-w-0">
-            {isEditing ? (
-              <div className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleRenameSubmit();
-                    if (e.key === "Escape") {
-                      setIsEditing(false);
-                      setEditTitle(recording.title);
-                    }
-                  }}
-                  className="bg-transparent border-b-2 border-zinc-900 dark:border-white focus:outline-none text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 w-full"
-                />
-                <button
-                  disabled={isRenaming}
-                  onClick={handleRenameSubmit}
-                  className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
-                >
-                  {isRenaming ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Check className="w-4 h-4 text-green-600" />
-                  )}
-                </button>
-              </div>
-            ) : (
-              <Link
-                href={`/dashboard/recordings/${recording.id}`}
-                className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
-              >
-                {renderHighlightedText(recording.title, searchQuery)}
-              </Link>
-            )}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {isEditing ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRenameSubmit();
+                      if (e.key === "Escape") {
+                        setIsEditing(false);
+                        setEditTitle(recording.title);
+                      }
+                    }}
+                    className="bg-transparent border-b-2 border-zinc-900 dark:border-white focus:outline-none text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 w-full"
+                  />
+                  <button
+                    disabled={isRenaming}
+                    onClick={handleRenameSubmit}
+                    className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                  >
+                    {isRenaming ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4 text-green-600" />
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Link
+                    href={`/dashboard/recordings/${recording.id}`}
+                    className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                  >
+                    {renderHighlightedText(recording.title, searchQuery)}
+                  </Link>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={handleTogglePinned}
+                      disabled={isTogglingPinned}
+                      className={`p-1 rounded-md transition-colors ${
+                        recording.isPinned 
+                          ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" 
+                          : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      }`}
+                      title={recording.isPinned ? "Unpin recording" : "Pin recording"}
+                    >
+                      {isTogglingPinned ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : recording.isPinned ? (
+                        <PinOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Pin className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={handleToggleFavorite}
+                      disabled={isTogglingFavorite}
+                      className={`p-1 rounded-md transition-colors ${
+                        recording.isFavorite 
+                          ? "text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20" 
+                          : "text-zinc-400 hover:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      }`}
+                      title={recording.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      {isTogglingFavorite ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Star className={`w-3.5 h-3.5 ${recording.isFavorite ? "fill-current" : ""}`} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               <span className="text-[10px] sm:text-xs text-zinc-400 font-medium">
                 {formattedDate}

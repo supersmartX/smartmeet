@@ -12,6 +12,8 @@ interface RecordingTableProps {
   fetchMeetings: () => void;
   onRename: (id: string, newTitle: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onTogglePinned: (id: string) => Promise<void>;
+  onToggleFavorite: (id: string) => Promise<void>;
   renderHighlightedText: (text: string, query: string) => React.ReactNode;
 }
 
@@ -24,6 +26,8 @@ export function RecordingTable({
   fetchMeetings,
   onRename,
   onDelete,
+  onTogglePinned,
+  onToggleFavorite,
   renderHighlightedText,
 }: RecordingTableProps) {
   if (error) {
@@ -113,6 +117,8 @@ export function RecordingTable({
                 searchQuery={searchQuery}
                 onRename={onRename}
                 onDelete={onDelete}
+                onTogglePinned={onTogglePinned}
+                onToggleFavorite={onToggleFavorite}
                 renderHighlightedText={renderHighlightedText}
                 fetchMeetings={fetchMeetings}
               />

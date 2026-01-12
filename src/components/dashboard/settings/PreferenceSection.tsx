@@ -1,12 +1,14 @@
 "use client"
 
-import { Globe, FileText, Zap } from "lucide-react"
+import { Globe, FileText, Zap, UserCircle } from "lucide-react"
 
 interface PreferenceSectionProps {
   defaultLanguage: string
   setDefaultLanguage: (lang: string) => void
   summaryLength: string
   setSummaryLength: (length: string) => void
+  summaryPersona: string
+  setSummaryPersona: (persona: string) => void
   autoProcess: boolean
   setAutoProcess: (auto: boolean) => void
 }
@@ -16,6 +18,8 @@ export function PreferenceSection({
   setDefaultLanguage,
   summaryLength,
   setSummaryLength,
+  summaryPersona,
+  setSummaryPersona,
   autoProcess,
   setAutoProcess
 }: PreferenceSectionProps) {
@@ -33,6 +37,13 @@ export function PreferenceSection({
     { id: 'short', name: 'Short (Quick Bullets)' },
     { id: 'medium', name: 'Medium (Balanced)' },
     { id: 'long', name: 'Long (Comprehensive)' },
+  ]
+
+  const personas = [
+    { id: 'balanced', name: 'Balanced (Standard)', desc: 'Concise and informative' },
+    { id: 'technical', name: 'Technical Focus', desc: 'Detailed specs and logic' },
+    { id: 'executive', name: 'Executive Summary', desc: 'High-level business impact' },
+    { id: 'actionable', name: 'Action Oriented', desc: 'Focus on tasks and deadlines' },
   ]
 
   return (
@@ -89,6 +100,34 @@ export function PreferenceSection({
                   >
                     {len.name}
                     {summaryLength === len.id && <div className="w-1.5 h-1.5 rounded-full bg-brand-via shadow-[0_0_8px_rgba(34,197,94,0.5)]" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* AI Summary Persona */}
+            <div className="space-y-4">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block flex items-center gap-2">
+                <UserCircle className="w-3 h-3" /> AI Summary Persona
+              </label>
+              <div className="grid grid-cols-1 gap-2">
+                {personas.map((persona) => (
+                  <button
+                    key={persona.id}
+                    onClick={() => setSummaryPersona(persona.id)}
+                    className={`px-4 py-3 rounded-2xl transition-all text-left flex flex-col gap-1 ${
+                      summaryPersona === persona.id
+                        ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg"
+                        : "bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-[10px] font-black uppercase tracking-widest">{persona.name}</span>
+                      {summaryPersona === persona.id && <div className="w-1.5 h-1.5 rounded-full bg-brand-via shadow-[0_0_8px_rgba(34,197,94,0.5)]" />}
+                    </div>
+                    <span className={`text-[8px] font-bold uppercase tracking-wider ${summaryPersona === persona.id ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                      {persona.desc}
+                    </span>
                   </button>
                 ))}
               </div>

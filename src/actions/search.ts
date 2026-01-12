@@ -24,8 +24,12 @@ export async function globalSearch(query: string) {
       include: {
         summary: true
       },
-      take: 5,
-      orderBy: { createdAt: 'desc' }
+      take: 8,
+      orderBy: [
+        { isPinned: 'desc' },
+        { isFavorite: 'desc' },
+        { createdAt: 'desc' }
+      ]
     });
 
     return { 
@@ -35,7 +39,9 @@ export async function globalSearch(query: string) {
           id: m.id,
           title: m.title,
           type: 'recording',
-          createdAt: m.createdAt
+          createdAt: m.createdAt,
+          isPinned: m.isPinned,
+          isFavorite: m.isFavorite
         })),
         navigation: [
           { title: 'Dashboard', href: '/dashboard', type: 'nav' },

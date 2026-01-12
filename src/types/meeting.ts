@@ -18,6 +18,8 @@ export interface Meeting {
   projectDoc?: string;
   testResults?: string;
   audioUrl?: string;
+  isPinned: boolean;
+  isFavorite: boolean;
   image?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -126,6 +128,7 @@ export interface UserSettings {
   mfaEnabled: boolean;
   defaultLanguage?: string;
   summaryLength?: string;
+  summaryPersona?: string;
   autoProcess?: boolean;
   plan: "FREE" | "PRO" | "ENTERPRISE";
   meetingQuota: number;

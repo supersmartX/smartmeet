@@ -60,6 +60,7 @@ model User {
   preferredModel    String? @default("gpt-4o")
   defaultLanguage   String? @default("en")
   summaryLength     String? @default("medium") // short, medium, long
+  summaryPersona    String? @default("balanced") // balanced, technical, executive, actionable
   autoProcess       Boolean @default(true)
   failedLoginAttempts Int      @default(0)
   lockedUntil         DateTime?
@@ -138,6 +139,8 @@ model Meeting {
   projectDoc   String?
   testResults  String?
   audioUrl     String?
+  isPinned     Boolean        @default(false)
+  isFavorite   Boolean        @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

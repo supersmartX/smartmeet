@@ -29,6 +29,7 @@ export const apiKeyUpdateSchema = z.object({
   allowedIps: z.string().optional(),
   defaultLanguage: z.string().optional(),
   summaryLength: z.string().optional(),
+  summaryPersona: z.string().optional(),
   autoProcess: z.boolean().optional(),
 });
 

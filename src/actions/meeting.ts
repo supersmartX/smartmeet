@@ -213,9 +213,10 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
       where: {
         user: { email: session.user.email },
       },
-      orderBy: {
-        date: "desc",
-      },
+      orderBy: [
+        { isPinned: "desc" },
+        { date: "desc" },
+      ],
       include: {
         summary: true,
         transcripts: {
@@ -334,6 +335,70 @@ export async function getMeetingById(id: string): Promise<ActionResult<MeetingWi
   }
 }
 
+export async function togglePinned(id: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id, user: { email: session.user.email } },
+      select: { isPinned: true }
+    });
+
+    if (!meeting) return { success: false, error: "Meeting not found" };
+
+    await prisma.meeting.update({
+      where: { id },
+      data: { isPinned: !meeting.isPinned }
+    });
+
+    const cacheKey = `user:${session.user.id}:meetings`;
+    await cache.delete(cacheKey);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/recordings");
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Toggle pinned error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to toggle pinned status" 
+    };
+  }
+}
+
+export async function toggleFavorite(id: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id, user: { email: session.user.email } },
+      select: { isFavorite: true }
+    });
+
+    if (!meeting) return { success: false, error: "Meeting not found" };
+
+    await prisma.meeting.update({
+      where: { id },
+      data: { isFavorite: !meeting.isFavorite }
+    });
+
+    const cacheKey = `user:${session.user.id}:meetings`;
+    await cache.delete(cacheKey);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/recordings");
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Toggle favorite error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to toggle favorite status" 
+    };
+  }
+}
+
 /**
  * Update user API key and AI preferences
  */
@@ -358,6 +423,7 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
       allowedIps?: string;
       defaultLanguage?: string;
       summaryLength?: string;
+      summaryPersona?: string;
       autoProcess?: boolean;
       lastUsedAt: Date;
     } = {
@@ -380,6 +446,7 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
     if (validatedData.allowedIps !== undefined) updatePayload.allowedIps = validatedData.allowedIps;
     if (validatedData.defaultLanguage !== undefined) updatePayload.defaultLanguage = validatedData.defaultLanguage;
     if (validatedData.summaryLength !== undefined) updatePayload.summaryLength = validatedData.summaryLength;
+    if (validatedData.summaryPersona !== undefined) updatePayload.summaryPersona = validatedData.summaryPersona;
     if (validatedData.autoProcess !== undefined) updatePayload.autoProcess = validatedData.autoProcess;
 
     // Quota reset logic (optional but good for testing)
@@ -437,6 +504,7 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
         mfaEnabled: true,
         defaultLanguage: true,
         summaryLength: true,
+        summaryPersona: true,
         autoProcess: true,
         plan: true,
         meetingQuota: true,
@@ -890,6 +958,7 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
           api_key: effectiveApiKey, 
           provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
           summary_length: user.summaryLength || undefined,
+          summary_persona: user.summaryPersona || undefined,
           language: user.defaultLanguage || undefined
         });
         if (!res.success) throw new Error(res.error || "Summarization failed");
@@ -1340,7 +1409,13 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
     
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { apiKey: true, preferredProvider: true }
+      select: { 
+        apiKey: true, 
+        preferredProvider: true,
+        summaryPersona: true,
+        summaryLength: true,
+        defaultLanguage: true
+      }
     });
 
     if (!user?.apiKey) return { success: false, error: "API Key missing" };
@@ -1354,7 +1429,10 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
       api_key: apiKey,
       provider: (rawProvider.toUpperCase() === "ANTHROPIC" ? "CLAUDE" :
                  rawProvider.toUpperCase() === "GOOGLE" ? "GEMINI" :
-                 rawProvider.toUpperCase()) as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM"
+                 rawProvider.toUpperCase()) as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+      summary_length: user.summaryLength || undefined,
+      summary_persona: user.summaryPersona || undefined,
+      language: user.defaultLanguage || undefined
     });
 
     if (result.success && result.data) {

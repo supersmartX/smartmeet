@@ -316,6 +316,7 @@ export async function summarizeText(
     provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM";
     model?: string;
     summary_length?: string;
+    summary_persona?: string;
     language?: string;
   } = {}
 ): Promise<ApiResponse<SummaryResponse>> {
@@ -325,6 +326,7 @@ export async function summarizeText(
     provider: options.provider || "OPENAI",
     model: options.model || null,
     summary_length: options.summary_length || null,
+    summary_persona: options.summary_persona || null,
     language: options.language || null
   });
 }

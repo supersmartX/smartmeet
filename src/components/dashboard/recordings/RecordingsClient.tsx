@@ -4,7 +4,16 @@ import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { useState, useEffect, useCallback } from "react"
 import { highlightText } from "@/utils/text"
-import { getMeetings, createMeeting, deleteMeeting, updateMeetingTitle, createSignedUploadUrl, enqueueMeetingAI } from "@/actions/meeting"
+import { 
+  getMeetings, 
+  createMeeting, 
+  deleteMeeting, 
+  updateMeetingTitle, 
+  createSignedUploadUrl, 
+  enqueueMeetingAI,
+  togglePinned,
+  toggleFavorite
+} from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
@@ -74,6 +83,34 @@ export default function RecordingsClient() {
       }
     } catch (error) {
       console.error("Delete error:", error)
+      toastVisible("An unexpected error occurred.", "error")
+    }
+  }
+
+  const handleTogglePinned = async (id: string) => {
+    try {
+      const result = await togglePinned(id)
+      if (result.success) {
+        await fetchMeetings(true)
+      } else {
+        toastVisible(result.error || "Failed to pin recording.", "error")
+      }
+    } catch (error) {
+      console.error("Toggle pinned error:", error)
+      toastVisible("An unexpected error occurred.", "error")
+    }
+  }
+
+  const handleToggleFavorite = async (id: string) => {
+    try {
+      const result = await toggleFavorite(id)
+      if (result.success) {
+        await fetchMeetings(true)
+      } else {
+        toastVisible(result.error || "Failed to favorite recording.", "error")
+      }
+    } catch (error) {
+      console.error("Toggle favorite error:", error)
       toastVisible("An unexpected error occurred.", "error")
     }
   }
@@ -246,6 +283,8 @@ export default function RecordingsClient() {
         searchQuery={searchQuery}
         onRename={handleRename}
         onDelete={handleDelete}
+        onTogglePinned={handleTogglePinned}
+        onToggleFavorite={handleToggleFavorite}
         setFilter={setFilter}
         fetchMeetings={fetchMeetings}
         renderHighlightedText={renderHighlightedText}
