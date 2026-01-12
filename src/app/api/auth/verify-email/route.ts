@@ -34,5 +34,15 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  // Add notification for email verification
+  await prisma.notification.create({
+    data: {
+      userId: user.id,
+      title: "Email Verified! ✅",
+      message: "Your email has been successfully verified. You now have full access to all features.",
+      type: "SUCCESS",
+    }
+  });
+
   return NextResponse.redirect(new URL("/login?message=email_verified", req.url));
 }

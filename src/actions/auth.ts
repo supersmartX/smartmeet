@@ -39,6 +39,17 @@ export async function signUp(formData: SignUpInput) {
       },
     });
 
+    // Create welcome notification
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        title: "Welcome to SupersmartX! 🚀",
+        message: "We're excited to have you here. Start by uploading your first meeting recording to see the magic happen.",
+        type: "SUCCESS",
+        link: "/dashboard",
+      }
+    });
+
     if (user.email && user.verificationToken) {
       await sendVerificationEmail(user.email, user.verificationToken);
     }
