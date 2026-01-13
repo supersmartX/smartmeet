@@ -12,6 +12,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { headers } from "next/headers";
 import { cache } from "@/lib/cache";
+import { enqueueTask } from "@/lib/queue";
 import { checkApiRateLimit, checkGeneralRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 import { 
@@ -106,87 +107,87 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const cacheKey = `user:${session.user.id}:stats`;
-    const cachedStats = await cache.get<DashboardStat[]>(cacheKey);
-    if (cachedStats) {
-      return { success: true, data: cachedStats };
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-        email: true,
-        plan: true,
-        meetingQuota: true,
-        meetingsUsed: true,
-        meetings: {
-          include: {
-            _count: {
-              select: { actionItems: true }
+    
+    const stats = await cache.swr<DashboardStat[]>(
+      cacheKey,
+      async () => {
+        const user = await prisma.user.findUnique({
+          where: { email: session!.user!.email! },
+          select: {
+            id: true,
+            email: true,
+            plan: true,
+            meetingQuota: true,
+            meetingsUsed: true,
+            meetings: {
+              include: {
+                _count: {
+                  select: { actionItems: true }
+                },
+                summary: true
+              }
             },
-            summary: true
+            _count: {
+              select: { meetings: true },
+            },
+          },
+        }) as UserWithMeetings | null;
+
+        if (!user) throw new Error("User not found");
+
+        const totalMeetings = user._count.meetings;
+        const aiInsightsCount = user.meetings.reduce((acc: number, meeting) => {
+          return acc + (meeting._count?.actionItems ?? 0) + (meeting.summary ? 1 : 0);
+        }, 0);
+
+        const timeSavedHours = (totalMeetings * 0.5).toFixed(1);
+
+        const complianceScore = totalMeetings > 0
+          ? Math.round((user.meetings.filter((m) => m.summary || m._count.actionItems > 0).length / totalMeetings) * 100)
+          : 0;
+
+        return [
+          {
+            label: "Total Meetings",
+            value: totalMeetings.toString(),
+            icon: "Video",
+            color: "text-brand-via",
+            bg: "bg-brand-via/10",
+            trend: `${user.meetingsUsed}/${user.meetingQuota} used`,
+            href: "/dashboard/recordings"
+          },
+          {
+            label: "AI Insights",
+            value: aiInsightsCount.toString(),
+            icon: "Sparkles",
+            color: "text-amber-500",
+            bg: "bg-amber-500/10",
+            trend: aiInsightsCount > 0 ? "+5%" : "0%",
+            href: "/dashboard/recordings?filter=action+items"
+          },
+          {
+            label: "Time Saved",
+            value: `${timeSavedHours}h`,
+            icon: "Zap",
+            color: "text-emerald-500",
+            bg: "bg-emerald-500/10",
+            trend: "+18%",
+            href: "/dashboard/recordings"
+          },
+          {
+            label: "Compliance",
+            value: `${complianceScore}%`,
+            icon: "ShieldCheck",
+            color: "text-indigo-500",
+            bg: "bg-indigo-500/10",
+            trend: "+2%",
+            href: "/dashboard/security"
           }
-        },
-        _count: {
-          select: { meetings: true },
-        },
+        ];
       },
-    }) as UserWithMeetings | null;
-
-    if (!user) return { success: false, error: "User not found" };
-
-    const totalMeetings = user._count.meetings;
-    const aiInsightsCount = user.meetings.reduce((acc: number, meeting) => {
-      return acc + (meeting._count?.actionItems ?? 0) + (meeting.summary ? 1 : 0);
-    }, 0);
-
-    // Heuristic: Each meeting saves ~30 mins of manual note taking/reviewing
-    const timeSavedHours = (totalMeetings * 0.5).toFixed(1);
-
-    const complianceScore = totalMeetings > 0
-      ? Math.round((user.meetings.filter((m) => m.summary || m._count.actionItems > 0).length / totalMeetings) * 100)
-      : 0;
-
-    const stats: DashboardStat[] = [
-      {
-        label: "Total Meetings",
-        value: totalMeetings.toString(),
-        icon: "Video",
-        color: "text-brand-via",
-        bg: "bg-brand-via/10",
-        trend: `${user.meetingsUsed}/${user.meetingQuota} used`,
-        href: "/dashboard/recordings"
-      },
-      {
-        label: "AI Insights",
-        value: aiInsightsCount.toString(),
-        icon: "Sparkles",
-        color: "text-amber-500",
-        bg: "bg-amber-500/10",
-        trend: aiInsightsCount > 0 ? "+5%" : "0%",
-        href: "/dashboard/recordings?filter=action+items"
-      },
-      {
-        label: "Time Saved",
-        value: `${timeSavedHours}h`,
-        icon: "Zap",
-        color: "text-emerald-500",
-        bg: "bg-emerald-500/10",
-        trend: "+18%",
-        href: "/dashboard/recordings"
-      },
-      {
-        label: "Compliance",
-        value: `${complianceScore}%`,
-        icon: "ShieldCheck",
-        color: "text-indigo-500",
-        bg: "bg-indigo-500/10",
-        trend: "+2%",
-        href: "/dashboard/security"
-      }
-    ];
-
-    await cache.set(cacheKey, stats, 300); // Cache for 5 minutes
+      300, // 5 minutes TTL
+      86400 // 24 hours stale
+    );
 
     return { success: true, data: stats };
   } catch (error: unknown) {
@@ -205,34 +206,37 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const cacheKey = `user:${session.user.id}:meetings`;
-    const cachedMeetings = await cache.get<Meeting[]>(cacheKey);
-    if (cachedMeetings) {
-      return { success: true, data: cachedMeetings };
-    }
-
-    const meetings = await prisma.meeting.findMany({
-      where: {
-        user: { email: session.user.email },
-      },
-      orderBy: [
-        { isPinned: "desc" },
-        { date: "desc" },
-      ],
-      include: {
-        summary: true,
-        transcripts: {
-          select: {
-            text: true
+    
+    const meetings = await cache.swr<Meeting[]>(
+      cacheKey,
+      async () => {
+        const data = await prisma.meeting.findMany({
+          where: {
+            user: { email: session!.user!.email! },
+          },
+          orderBy: [
+            { isPinned: "desc" },
+            { date: "desc" },
+          ],
+          include: {
+            summary: true,
+            transcripts: {
+              select: {
+                text: true
+              }
+            },
+            _count: {
+              select: { actionItems: true }
+            }
           }
-        },
-        _count: {
-          select: { actionItems: true }
-        }
-      }
-    });
+        });
+        return data as unknown as Meeting[];
+      },
+      60, // 1 minute TTL
+      3600 // 1 hour stale
+    );
 
-    await cache.set(cacheKey, meetings, 60); // Cache for 1 minute (meetings change more frequently than stats)
-    return { success: true, data: meetings as unknown as Meeting[] };
+    return { success: true, data: meetings };
   } catch (error: unknown) {
     logger.error({ error, userId: session?.user?.id }, "Get meetings error");
     return { 
@@ -942,8 +946,10 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
     logger.info({ meetingId, provider }, "Starting AI pipeline");
 
     const { aiCircuitBreaker } = await import("@/lib/circuit-breaker");
+    const { aiConcurrencyLimiter } = await import("@/lib/concurrency");
 
-    try {
+    return await aiConcurrencyLimiter.run(meetingId, async () => {
+      try {
       // Step 1: TRANSCRIPTION
       await prisma.meeting.update({
         where: { id: meetingId },
@@ -1080,13 +1086,14 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
       });
       
       return { 
-        success: false, 
-        error: errorDetail,
-        message: isBreakerOpen 
-          ? "AI service is temporarily unavailable. Please try again shortly."
-          : "AI processing failed. Please check your settings."
-      };
-    }
+          success: false, 
+          error: errorDetail,
+          message: isBreakerOpen 
+            ? "AI service is temporarily unavailable. Please try again shortly."
+            : "AI processing failed. Please check your settings."
+        };
+      }
+    });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process meeting with AI";
     logger.error({ error, meetingId }, "Internal process meeting AI outer error");
@@ -1107,17 +1114,31 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
                     headerList.get("x-real-ip") || 
                     "unknown";
 
-    // Start background processing without blocking the request
-    (async () => {
-      try {
-        logger.info({ meetingId, userId: session?.user?.id }, "Starting background AI processing");
-        await internalProcessMeetingAI(meetingId, clientIp);
-      } catch (err) {
-        logger.error({ err, meetingId, userId: session?.user?.id }, "Background AI processing failed");
-      }
-    })();
+    // Enqueue for background processing
+    const enqueued = await enqueueTask({
+      id: uuidv4(),
+      type: "PROCESS_MEETING",
+      data: { meetingId }
+    });
 
-    return { success: true, message: "AI processing started in the background" };
+    if (!enqueued) {
+      // Fallback to background IIFE if queue fails
+      (async () => {
+        try {
+          logger.info({ meetingId, userId: session?.user?.id }, "Queue failed, starting fallback background AI processing");
+          await internalProcessMeetingAI(meetingId, clientIp);
+        } catch (err) {
+          logger.error({ err, meetingId, userId: session?.user?.id }, "Fallback background AI processing failed");
+        }
+      })();
+    }
+
+    return { 
+      success: true, 
+      message: enqueued 
+        ? "AI processing enqueued" 
+        : "AI processing started (fallback mode)" 
+    };
   } catch (error: unknown) {
     logger.error({ error, meetingId, userId: session?.user?.id }, "Process meeting AI error");
     return { 

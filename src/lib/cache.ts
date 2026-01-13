@@ -48,5 +48,51 @@ export const cache = {
     if (keys.length > 0) {
       await redis.del(...keys);
     }
+  },
+
+  /**
+   * Stale-While-Revalidate (SWR) pattern
+   * Returns cached data immediately, then refreshes it in the background if stale
+   */
+  async swr<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttlSeconds: number = 3600,
+    staleSeconds: number = 86400 // 24 hours
+  ): Promise<T> {
+    const redis = await getRedis();
+    if (!redis) return await fetcher();
+
+    // Try to get cached data
+    const cached = await redis.get<{ data: T; timestamp: number }>(key);
+    const now = Date.now();
+
+    if (cached) {
+      const isStale = now - cached.timestamp > ttlSeconds * 1000;
+      const isExpired = now - cached.timestamp > staleSeconds * 1000;
+
+      if (!isStale) {
+        return cached.data;
+      }
+
+      // If stale but not expired, return stale data and refresh in background
+      if (!isExpired) {
+        // Background refresh
+        (async () => {
+          try {
+            const freshData = await fetcher();
+            await this.set(key, { data: freshData, timestamp: Date.now() }, staleSeconds);
+          } catch (error) {
+            console.error(`SWR background refresh failed for key: ${key}`, error);
+          }
+        })();
+        return cached.data;
+      }
+    }
+
+    // If no cache or expired, fetch and set
+    const freshData = await fetcher();
+    await this.set(key, { data: freshData, timestamp: Date.now() }, staleSeconds);
+    return freshData;
   }
 };

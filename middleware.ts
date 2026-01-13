@@ -1,9 +1,56 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+// Rate limiting at the edge
+async function handleRateLimit(req: NextRequest) {
+  const url = req.nextUrl.pathname;
+  
+  // Only rate limit API routes and specific entry points
+  if (!url.startsWith("/api") && !url.startsWith("/login")) {
+    return null;
+  }
+
+  try {
+    const { checkApiRateLimit, checkGeneralRateLimit } = await import("@/lib/rate-limit");
+    
+    const ip = req.headers.get("x-forwarded-for")?.split(',')[0] || 
+               req.headers.get("x-real-ip") || 
+               "127.0.0.1";
+    
+    const type = url.startsWith("/api") ? "api" : "general";
+    const result = type === "api" ? await checkApiRateLimit(ip) : await checkGeneralRateLimit(ip);
+
+    if (!result.allowed) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: "Too many requests", 
+          retryAfter: result.retryAfter 
+        }),
+        { 
+          status: 429, 
+          headers: { 
+            "Content-Type": "application/json",
+            "Retry-After": result.retryAfter?.toString() || "60"
+          } 
+        }
+      );
+    }
+  } catch (error) {
+    // Fail open if rate limiter is down to ensure availability
+    console.error("Middleware rate limit error:", error);
+  }
+  
+  return null;
+}
 
 export default withAuth(
-  function middleware() {
-    // Generate a secure random nonce using Edge-compatible Web Crypto API
+  async function middleware(req: NextRequest) {
+    // 1. Check Rate Limit first (at the edge)
+    const rateLimitResponse = await handleRateLimit(req);
+    if (rateLimitResponse) return rateLimitResponse;
+
+    // 2. Security Headers (CSP)
     const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
 
     const csp = `
@@ -37,13 +84,11 @@ export default withAuth(
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
+     * Match all request paths except for:
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - logoX.png (logo file)
+     * - favicon.ico, logoX.png, etc.
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|logoX.png).*)",
+    "/((?!_next/static|_next/image|favicon.ico|logoX.png).*)",
   ],
 };
