@@ -7,8 +7,10 @@ import { sendVerificationEmail } from "@/lib/mail";
 import { signUpSchema, SignUpInput } from "@/lib/validations/auth";
 import { logSecurityEvent } from "@/lib/audit";
 import { sendPasswordResetEmail } from "@/lib/mail";
+import logger from "@/lib/logger";
+import { ActionResult } from "@/types/meeting";
 
-export async function signUp(formData: SignUpInput) {
+export async function signUp(formData: SignUpInput): Promise<ActionResult<{ id: string; name: string | null; email: string | null }>> {
   try {
     const result = signUpSchema.safeParse(formData);
 
@@ -63,10 +65,10 @@ export async function signUp(formData: SignUpInput) {
 
     return { 
       success: true, 
-      user: { id: user.id, name: user.name, email: user.email } 
+      data: { id: user.id, name: user.name, email: user.email } 
     };
   } catch (error) {
-    console.error("SignUp Error:", error);
+    logger.error({ error }, "SignUp Error");
     return { 
       success: false, 
       error: "An unexpected error occurred during signup." 
@@ -74,7 +76,7 @@ export async function signUp(formData: SignUpInput) {
   }
 }
 
-export async function requestPasswordReset(email: string) {
+export async function requestPasswordReset(email: string): Promise<ActionResult<{ message: string }>> {
   try {
     const user = await prisma.user.findUnique({
       where: { email },
@@ -82,7 +84,7 @@ export async function requestPasswordReset(email: string) {
 
     if (!user) {
       // Return success even if user doesn't exist to prevent email enumeration
-      return { success: true, message: "If an account exists, a reset link has been sent." };
+      return { success: true, data: { message: "If an account exists, a reset link has been sent." } };
     }
 
     const resetToken = uuidv4();
@@ -105,14 +107,14 @@ export async function requestPasswordReset(email: string) {
       "Authentication"
     );
 
-    return { success: true, message: "If an account exists, a reset link has been sent." };
+    return { success: true, data: { message: "If an account exists, a reset link has been sent." } };
   } catch (error) {
-    console.error("Password Reset Request Error:", error);
+    logger.error({ error, email }, "Password Reset Request Error");
     return { success: false, error: "Failed to process request." };
   }
 }
 
-export async function resetPassword(token: string, password: string) {
+export async function resetPassword(token: string, password: string): Promise<ActionResult<{ message: string }>> {
   try {
     const user = await prisma.user.findUnique({
       where: { resetToken: token },
@@ -140,9 +142,9 @@ export async function resetPassword(token: string, password: string) {
       "Authentication"
     );
 
-    return { success: true, message: "Password has been reset successfully." };
+    return { success: true, data: { message: "Password has been reset successfully." } };
   } catch (error) {
-    console.error("Password Reset Error:", error);
+    logger.error({ error }, "Password Reset Error");
     return { success: false, error: "Failed to reset password." };
   }
 }

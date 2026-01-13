@@ -21,7 +21,7 @@ export default function ForgotPasswordClient() {
     try {
       const result = await requestPasswordReset(email);
       if (result.success) {
-        setMessage(result.message || "Reset link sent to your email.");
+        setMessage(result.data?.message || "Reset link sent to your email.");
       } else {
         setError(result.error || "Failed to request password reset.");
       }

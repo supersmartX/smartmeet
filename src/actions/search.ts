@@ -3,11 +3,40 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
+import logger from "@/lib/logger";
+import { ActionResult } from "@/types/meeting";
+import { checkApiRateLimit } from "@/lib/rate-limit";
 
-export async function globalSearch(query: string) {
+export interface SearchResult {
+  meetings: Array<{
+    id: string;
+    title: string;
+    type: string;
+    createdAt: Date;
+    isPinned: boolean;
+    isFavorite: boolean;
+  }>;
+  navigation: Array<{
+    title: string;
+    href: string;
+    type: string;
+  }>;
+}
+
+export async function globalSearch(query: string): Promise<ActionResult<SearchResult>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(`search:${session.user.id}`);
+    if (!rateLimit.allowed) {
+      return { 
+        success: false, 
+        error: `Too many search requests. Please try again in ${rateLimit.retryAfter} seconds.` 
+      };
+    }
 
     const q = query.toLowerCase();
 
@@ -51,8 +80,11 @@ export async function globalSearch(query: string) {
         ].filter(n => n.title.toLowerCase().includes(q))
       }
     };
-  } catch (error) {
-    console.error("Global search error:", error);
-    return { success: false, error: "Failed to perform search" };
+  } catch (error: unknown) {
+    logger.error({ error, userId: session?.user?.id, query }, "Global search error");
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to perform search" 
+    };
   }
 }

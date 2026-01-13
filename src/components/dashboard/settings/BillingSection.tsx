@@ -23,8 +23,12 @@ export function BillingSection({
   const handleManageBilling = async () => {
     setIsPortalLoading(true)
     try {
-      const { url } = await createPortalSession()
-      window.location.href = url
+      const result = await createPortalSession()
+      if (result.success && result.url) {
+        window.location.href = result.url
+      } else {
+        alert(result.error || "Failed to open billing portal.")
+      }
     } catch (error) {
       console.error("Portal error:", error)
       alert("Failed to open billing portal.")

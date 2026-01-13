@@ -131,12 +131,16 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
   const handleSetupMFA = async () => {
     try {
       setIsSettingUpMFA(true)
-      const { secret, qrCodeUrl } = await generateMFASecret()
-      setMfaSecret(secret)
-      setQrCodeUrl(qrCodeUrl)
+      const result = await generateMFASecret()
+      if (result.success && result.data) {
+        setMfaSecret(result.data.secret)
+        setQrCodeUrl(result.data.qrCodeUrl)
+      } else {
+        showToast(result.error || "Failed to initialize MFA setup.", "error")
+      }
     } catch (error) {
       console.error("MFA Setup error:", error)
-      showToast("Failed to initialize MFA setup.", "error")
+      showToast("An unexpected error occurred during MFA setup.", "error")
     } finally {
       setIsSettingUpMFA(false)
     }
@@ -146,15 +150,19 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
     if (!mfaToken) return
     try {
       setIsVerifyingMFA(true)
-      await verifyAndEnableMFA(mfaToken, mfaSecret)
-      setMfaEnabled(true)
-      setQrCodeUrl("")
-      setMfaSecret("")
-      setMfaToken("")
-      showToast("MFA enabled successfully!")
+      const result = await verifyAndEnableMFA(mfaToken, mfaSecret)
+      if (result.success) {
+        setMfaEnabled(true)
+        setQrCodeUrl("")
+        setMfaSecret("")
+        setMfaToken("")
+        showToast("MFA enabled successfully!")
+      } else {
+        showToast(result.error || "Failed to verify MFA code.", "error")
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to verify MFA code."
-      showToast(message, "error")
+      console.error("MFA verification error:", error)
+      showToast("An unexpected error occurred during verification.", "error")
     } finally {
       setIsVerifyingMFA(false)
     }
@@ -164,20 +172,24 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
     if (!mfaToken) return
     try {
       setIsDisablingMFA(true)
-      await disableMFA(mfaToken, mfaPassword)
-      setMfaEnabled(false)
-      setShowDisableConfirm(false)
-      setMfaToken("")
-      setMfaPassword("")
-      showToast("MFA disabled.")
+      const result = await disableMFA(mfaToken, mfaPassword)
+      if (result.success) {
+        setMfaEnabled(false)
+        setShowDisableConfirm(false)
+        setMfaToken("")
+        setMfaPassword("")
+        showToast("MFA disabled.")
+      } else {
+        const message = result.error || "Failed to disable MFA."
+        if (message === "PASSWORD_REQUIRED") {
+          showToast("Password required to disable MFA.", "error")
+        } else {
+          showToast(message, "error")
+        }
+      }
     } catch (error) {
       console.error("Disable MFA error:", error)
-      const message = error instanceof Error ? error.message : "Failed to disable MFA."
-      if (message === "PASSWORD_REQUIRED") {
-        showToast("Password required to disable MFA.", "error")
-      } else {
-        showToast(message, "error")
-      }
+      showToast("An unexpected error occurred while disabling MFA.", "error")
     } finally {
       setIsDisablingMFA(false)
     }

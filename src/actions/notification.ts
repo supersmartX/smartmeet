@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
 import { Notification, NotificationType } from "@prisma/client";
+import logger from "@/lib/logger";
 
 export type ActionResult<T = unknown> = {
   success: boolean;
@@ -16,8 +17,9 @@ export type ActionResult<T = unknown> = {
  * Fetch all notifications for the current user
  */
 export async function getNotifications(): Promise<ActionResult<Notification[]>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const notifications = await prisma.notification.findMany({
@@ -32,7 +34,7 @@ export async function getNotifications(): Promise<ActionResult<Notification[]>> 
 
     return { success: true, data: notifications };
   } catch (error: unknown) {
-    console.error("Get notifications error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Get notifications error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to fetch notifications" 
@@ -44,8 +46,9 @@ export async function getNotifications(): Promise<ActionResult<Notification[]>> 
  * Mark a notification as read
  */
 export async function markNotificationAsRead(id: string): Promise<ActionResult> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     await prisma.notification.update({
@@ -61,7 +64,7 @@ export async function markNotificationAsRead(id: string): Promise<ActionResult> 
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error: unknown) {
-    console.error("Mark notification as read error:", error);
+    logger.error({ error, userId: session?.user?.id, notificationId: id }, "Mark notification as read error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to mark notification as read" 
@@ -73,8 +76,9 @@ export async function markNotificationAsRead(id: string): Promise<ActionResult> 
  * Mark all notifications as read
  */
 export async function markAllNotificationsAsRead(): Promise<ActionResult> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     await prisma.notification.updateMany({
@@ -90,7 +94,7 @@ export async function markAllNotificationsAsRead(): Promise<ActionResult> {
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error: unknown) {
-    console.error("Mark all notifications as read error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Mark all notifications as read error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to mark all notifications as read" 
@@ -123,7 +127,7 @@ export async function createNotification(
 
     return { success: true, data: notification };
   } catch (error: unknown) {
-    console.error("Create notification error:", error);
+    logger.error({ error, userId }, "Create notification error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to create notification" 
@@ -135,8 +139,9 @@ export async function createNotification(
  * Delete a notification
  */
 export async function deleteNotification(id: string): Promise<ActionResult> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     await prisma.notification.delete({
@@ -149,7 +154,7 @@ export async function deleteNotification(id: string): Promise<ActionResult> {
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error: unknown) {
-    console.error("Delete notification error:", error);
+    logger.error({ error, userId: session?.user?.id, notificationId: id }, "Delete notification error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to delete notification" 

@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import { headers } from "next/headers";
 import { cache } from "@/lib/cache";
 import { checkApiRateLimit, checkGeneralRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 import { 
   generateCode, 
   summarizeText, 
@@ -99,8 +100,9 @@ async function enforceRateLimit(type: "api" | "general" = "general") {
 }
 
 export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const cacheKey = `user:${session.user.id}:stats`;
@@ -109,8 +111,7 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
       return { success: true, data: cachedStats };
     }
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const user = await (prisma.user.findUnique as any)({
+    const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: {
         id: true,
@@ -131,7 +132,6 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
         },
       },
     }) as UserWithMeetings | null;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     if (!user) return { success: false, error: "User not found" };
 
@@ -190,7 +190,7 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
 
     return { success: true, data: stats };
   } catch (error: unknown) {
-    console.error("Get dashboard stats error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Get dashboard stats error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to fetch dashboard stats" 
@@ -199,8 +199,9 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
 }
 
 export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const cacheKey = `user:${session.user.id}:meetings`;
@@ -233,7 +234,7 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
     await cache.set(cacheKey, meetings, 60); // Cache for 1 minute (meetings change more frequently than stats)
     return { success: true, data: meetings as unknown as Meeting[] };
   } catch (error: unknown) {
-    console.error("Get meetings error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Get meetings error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to fetch meetings" 
@@ -242,8 +243,9 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
 }
 
 export async function getActionItems(): Promise<ActionResult<(ActionItem & { meetingTitle: string; meetingDate: Date })[]>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const actionItems = await prisma.actionItem.findMany({
@@ -275,7 +277,7 @@ export async function getActionItems(): Promise<ActionResult<(ActionItem & { mee
 
     return { success: true, data: formattedActionItems };
   } catch (error: unknown) {
-    console.error("Get action items error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Get action items error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to fetch action items" 
@@ -284,18 +286,24 @@ export async function getActionItems(): Promise<ActionResult<(ActionItem & { mee
 }
 
 export async function updateActionItemStatus(id: string, status: "PENDING" | "COMPLETED" | "IN_PROGRESS" | "CANCELLED"): Promise<ActionResult> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    await enforceRateLimit("general");
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-    await prisma.actionItem.update({
+    const actionItem = await prisma.actionItem.update({
       where: { id },
-      data: { status }
+      data: { status },
+      include: { meeting: { select: { userId: true } } }
     });
+
+    await cache.delete(`user:${actionItem.meeting.userId}:stats`);
+    revalidatePath("/dashboard");
 
     return { success: true };
   } catch (error: unknown) {
-    console.error("Update action item status error:", error);
+    logger.error({ error, userId: session?.user?.id, actionItemId: id }, "Update action item status error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to update action item status" 
@@ -304,9 +312,9 @@ export async function updateActionItemStatus(id: string, status: "PENDING" | "CO
 }
 
 export async function getMeetingById(id: string): Promise<ActionResult<MeetingWithRelations>> {
-  // noStore(); // Removed: not imported / not needed here
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const validatedId = meetingIdSchema.parse({ id });
@@ -327,7 +335,7 @@ export async function getMeetingById(id: string): Promise<ActionResult<MeetingWi
 
     return { success: true, data: meeting };
   } catch (error: unknown) {
-    console.error("Get meeting by ID error:", error);
+    logger.error({ error, userId: session?.user?.id, meetingId: id }, "Get meeting by ID error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to fetch meeting" 
@@ -336,8 +344,9 @@ export async function getMeetingById(id: string): Promise<ActionResult<MeetingWi
 }
 
 export async function togglePinned(id: string): Promise<ActionResult> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const meeting = await prisma.meeting.findUnique({
@@ -359,7 +368,7 @@ export async function togglePinned(id: string): Promise<ActionResult> {
 
     return { success: true };
   } catch (error: unknown) {
-    console.error("Toggle pinned error:", error);
+    logger.error({ error, userId: session?.user?.id, meetingId: id }, "Toggle pinned error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to toggle pinned status" 
@@ -368,8 +377,9 @@ export async function togglePinned(id: string): Promise<ActionResult> {
 }
 
 export async function toggleFavorite(id: string): Promise<ActionResult> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const meeting = await prisma.meeting.findUnique({
@@ -391,7 +401,7 @@ export async function toggleFavorite(id: string): Promise<ActionResult> {
 
     return { success: true };
   } catch (error: unknown) {
-    console.error("Toggle favorite error:", error);
+    logger.error({ error, userId: session?.user?.id, meetingId: id }, "Toggle favorite error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to toggle favorite status" 
@@ -403,8 +413,9 @@ export async function toggleFavorite(id: string): Promise<ActionResult> {
  * Update user API key and AI preferences
  */
 export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionResult> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const validatedData = apiKeyUpdateSchema.parse(data);
@@ -475,7 +486,7 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
 
     return { success: true, data: updatedUser };
   } catch (error: unknown) {
-    console.error("Update API key error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Update API key error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to update API key" 
@@ -484,12 +495,12 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
 }
 
 export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const user = await (prisma.user.findUnique as any)({
+    const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: {
         id: true,
@@ -509,17 +520,14 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
         plan: true,
         meetingQuota: true,
         meetingsUsed: true,
-        stripeSubscriptionId: true
+        stripeSubscriptionId: true,
       }
     });
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     if (!user) return { success: false, error: "User not found" };
 
     let apiKeys: Record<string, string> = {};
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userTyped = user as any;
-    const userApiKey = userTyped.apiKey as string | null;
+    const userApiKey = user.apiKey as string | null;
     
     if (userApiKey) {
       const decrypted = decrypt(userApiKey);
@@ -527,31 +535,31 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
         apiKeys = JSON.parse(decrypted);
       } catch {
         // Fallback for legacy single-string API keys
-        const provider = userTyped.preferredProvider || "openai";
+        const provider = user.preferredProvider || "openai";
         apiKeys = { [provider]: decrypted };
       }
     }
 
     const settings: UserSettings = {
-      apiKey: userApiKey ? (apiKeys[userTyped.preferredProvider || "openai"] || "") : null,
+      apiKey: userApiKey ? (apiKeys[user.preferredProvider || "openai"] || "") : null,
       apiKeys,
-      preferredProvider: userTyped.preferredProvider,
-      preferredModel: userTyped.preferredModel,
-      allowedIps: userTyped.allowedIps || "",
-      lastUsedAt: userTyped.lastUsedAt,
-      name: userTyped.name,
-      email: userTyped.email,
-      image: userTyped.image,
-      mfaEnabled: userTyped.mfaEnabled,
-      plan: userTyped.plan as "FREE" | "PRO" | "ENTERPRISE",
-      meetingQuota: userTyped.meetingQuota,
-      meetingsUsed: userTyped.meetingsUsed,
-      stripeSubscriptionId: userTyped.stripeSubscriptionId
+      preferredProvider: user.preferredProvider || "openai",
+      preferredModel: user.preferredModel || "gpt-4o",
+      allowedIps: user.allowedIps || "",
+      lastUsedAt: user.lastUsedAt,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      mfaEnabled: user.mfaEnabled,
+      plan: user.plan as "FREE" | "PRO" | "ENTERPRISE",
+      meetingQuota: user.meetingQuota,
+      meetingsUsed: user.meetingsUsed,
+      stripeSubscriptionId: user.stripeSubscriptionId
     };
 
     return { success: true, data: settings };
   } catch (error: unknown) {
-    console.error("Get user settings error:", error);
+    logger.error({ error }, "Get user settings error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to fetch user settings" 
@@ -560,24 +568,24 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
 }
 
 export async function createMeeting(data: MeetingInput): Promise<ActionResult<Meeting>> {
+  let session;
   try {
     await enforceRateLimit("api");
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const user = await (prisma.user.findUnique as any)({
+    const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { 
         id: true, 
         meetingsUsed: true, 
         meetingQuota: true, 
         plan: true,
+        autoProcess: true,
         stripeSubscriptionId: true,
         stripeCurrentPeriodEnd: true
       }
     });
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     if (!user) return { success: false, error: "User not found" };
 
@@ -633,7 +641,7 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
     
     return { success: true, data: meetingWithPrefs as unknown as Meeting & { autoProcess: boolean } };
   } catch (error: unknown) {
-    console.error("Create meeting error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Create meeting error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to create meeting" 
@@ -642,9 +650,10 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
 }
 
 export async function deleteMeeting(id: string): Promise<ActionResult> {
+  let session;
   try {
     await enforceRateLimit("api");
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const { id: validatedId } = meetingIdSchema.parse({ id });
@@ -669,11 +678,11 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
           .remove([meeting.audioUrl]);
         
         if (storageError) {
-          console.error("Storage deletion error:", storageError);
+          logger.error({ storageError, meetingId: id }, "Storage deletion error");
           // We continue anyway to delete the DB record, but log it
         }
       } catch (err) {
-        console.error("Storage service error:", err);
+        logger.error({ err, meetingId: id }, "Storage service error");
       }
     }
 
@@ -694,7 +703,7 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
     ]);
     return { success: true };
   } catch (error: unknown) {
-    console.error("Delete meeting error:", error);
+    logger.error({ error, userId: session?.user?.id, meetingId: id }, "Delete meeting error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to delete meeting" 
@@ -703,9 +712,10 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
 }
 
 export async function updateMeetingTitle(id: string, title: string): Promise<ActionResult<Meeting>> {
+  let session;
   try {
     await enforceRateLimit("general");
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const validatedData = updateMeetingTitleSchema.parse({ id, title });
@@ -725,7 +735,7 @@ export async function updateMeetingTitle(id: string, title: string): Promise<Act
     ]);
     return { success: true, data: meeting as unknown as Meeting };
   } catch (error: unknown) {
-    console.error("Update meeting title error:", error);
+    logger.error({ error, userId: session?.user?.id, meetingId: id }, "Update meeting title error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to update meeting title" 
@@ -734,9 +744,10 @@ export async function updateMeetingTitle(id: string, title: string): Promise<Act
 }
 
 export async function updateMeetingCode(id: string, code: string): Promise<ActionResult<Meeting>> {
+  let session;
   try {
     await enforceRateLimit("general");
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const validatedData = updateMeetingCodeSchema.parse({ id, code });
@@ -753,7 +764,7 @@ export async function updateMeetingCode(id: string, code: string): Promise<Actio
     await cache.delete(`user:${meeting.userId}:meetings`);
     return { success: true, data: meeting as unknown as Meeting };
   } catch (error: unknown) {
-    console.error("Update meeting code error:", error);
+    logger.error({ error, userId: session?.user?.id, meetingId: id }, "Update meeting code error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to update meeting code" 
@@ -762,9 +773,10 @@ export async function updateMeetingCode(id: string, code: string): Promise<Actio
 }
 
 export async function createSignedUploadUrl(fileName: string): Promise<ActionResult<{ signedUrl: string; path: string; token: string }>> {
+  let session;
   try {
     await enforceRateLimit("api");
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const user = await prisma.user.findUnique({
@@ -794,7 +806,7 @@ export async function createSignedUploadUrl(fileName: string): Promise<ActionRes
       }
     };
   } catch (error: unknown) {
-    console.error("Create signed upload URL error:", error);
+    logger.error({ error, userId: session?.user?.id, fileName }, "Create signed upload URL error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to create upload URL" 
@@ -927,7 +939,7 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
       return { success: false, error: "API Key missing for the selected provider." };
     }
 
-    console.log(`Starting AI pipeline for meeting ${meetingId} using provider: ${provider}`);
+    logger.info({ meetingId, provider }, "Starting AI pipeline");
 
     const { aiCircuitBreaker } = await import("@/lib/circuit-breaker");
 
@@ -1042,16 +1054,18 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
 
     } catch (error: unknown) {
       const errorDetail = error instanceof Error ? error.message : "AI Pipeline failed";
-      const isCircuitOpen = errorDetail.toLowerCase().includes("circuit breaker is open");
       
-      console.error("Pipeline failure details:", errorDetail);
+      logger.error({ error, meetingId, userId: user.id }, "Pipeline failure details");
       
+      const breakerState = await aiCircuitBreaker.getState();
+      const isBreakerOpen = breakerState === "OPEN";
+
       await prisma.meeting.update({
         where: { id: meetingId },
         data: { 
           status: "FAILED",
           processingStep: "FAILED",
-          testResults: isCircuitOpen 
+          testResults: isBreakerOpen 
             ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
             : `System Error: ${errorDetail}`
         }
@@ -1068,22 +1082,23 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
       return { 
         success: false, 
         error: errorDetail,
-        message: isCircuitOpen 
+        message: isBreakerOpen 
           ? "AI service is temporarily unavailable. Please try again shortly."
           : "AI processing failed. Please check your settings."
       };
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process meeting with AI";
-    console.error("Internal process meeting AI outer error:", errorMessage);
+    logger.error({ error, meetingId }, "Internal process meeting AI outer error");
     return { success: false, error: errorMessage };
   }
 }
 
 export async function processMeetingAI(meetingId: string): Promise<ActionResult> {
+  let session;
   try {
     await enforceRateLimit("api");
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     // Get client IP for restrictions
@@ -1093,20 +1108,18 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
                     "unknown";
 
     // Start background processing without blocking the request
-    // Note: Since we're in a Server Action, this will continue in the background
-    // even after the response is sent in most serverless environments.
     (async () => {
       try {
-        console.log(`[Background] Starting AI processing for meeting ${meetingId}`);
+        logger.info({ meetingId, userId: session?.user?.id }, "Starting background AI processing");
         await internalProcessMeetingAI(meetingId, clientIp);
       } catch (err) {
-        console.error(`[Background] Failed to process meeting ${meetingId}:`, err);
+        logger.error({ err, meetingId, userId: session?.user?.id }, "Background AI processing failed");
       }
     })();
 
     return { success: true, message: "AI processing started in the background" };
   } catch (error: unknown) {
-    console.error("Process meeting AI error:", error);
+    logger.error({ error, meetingId, userId: session?.user?.id }, "Process meeting AI error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to process meeting" 
@@ -1118,14 +1131,15 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
  * Enqueue AI processing to be handled by a background worker
  */
 export async function enqueueMeetingAI(meetingId: string): Promise<ActionResult> {
-  // Simply delegate to processMeetingAI which now uses after() for background processing
+  // Simply delegate to processMeetingAI which now uses background processing
   return processMeetingAI(meetingId);
 }
 
 
 export async function updateMeetingStatus(id: string, status: MeetingStatus, data?: MeetingUpdateData): Promise<ActionResult<Meeting>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const updateData: {
@@ -1183,7 +1197,7 @@ export async function updateMeetingStatus(id: string, status: MeetingStatus, dat
 
     return { success: true, data: meeting as unknown as Meeting };
   } catch (error: unknown) {
-    console.error("Update meeting status error:", error);
+    logger.error({ error, meetingId: id, userId: session?.user?.id }, "Update meeting status error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to update meeting status" 
@@ -1192,8 +1206,9 @@ export async function updateMeetingStatus(id: string, status: MeetingStatus, dat
 }
 
 export async function getAuditLogs(): Promise<ActionResult<AuditLog[]>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const user = await prisma.user.findUnique({
@@ -1211,7 +1226,7 @@ export async function getAuditLogs(): Promise<ActionResult<AuditLog[]>> {
 
     return { success: true, data: logs };
   } catch (error: unknown) {
-    console.error("Get audit logs error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Get audit logs error");
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to fetch audit logs"
@@ -1220,8 +1235,9 @@ export async function getAuditLogs(): Promise<ActionResult<AuditLog[]>> {
 }
 
 export async function getActiveSessions(): Promise<ActionResult<Session[]>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const user = await prisma.user.findUnique({
@@ -1246,7 +1262,7 @@ export async function getActiveSessions(): Promise<ActionResult<Session[]>> {
 
     return { success: true, data: sessions };
   } catch (error: unknown) {
-    console.error("Get active sessions error:", error);
+    logger.error({ error, userId: session?.user?.id }, "Get active sessions error");
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to fetch active sessions"
@@ -1255,8 +1271,10 @@ export async function getActiveSessions(): Promise<ActionResult<Session[]>> {
 }
 
 export async function generateMeetingLogic(meetingId: string): Promise<ActionResult<string>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    await enforceRateLimit("api");
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const meeting = await prisma.meeting.findUnique({
@@ -1298,14 +1316,16 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
 
     return { success: false, error: result.error || "Failed to generate logic" };
   } catch (error: unknown) {
-    console.error("Generate meeting logic error:", error);
+    logger.error({ error, meetingId, userId: session?.user?.id }, "Generate meeting logic error");
     return { success: false, error: error instanceof Error ? error.message : "Failed to generate logic" };
   }
 }
 
 export async function askAIAboutMeeting(meetingId: string, question: string): Promise<ActionResult<string>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    await enforceRateLimit("api");
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const meeting = await prisma.meeting.findUnique({
@@ -1347,14 +1367,15 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
 
     return { success: false, error: result.error || "AI failed to answer" };
   } catch (error: unknown) {
-    console.error("Ask AI error:", error);
+    logger.error({ error, meetingId, userId: session?.user?.id }, "Ask AI error");
     return { success: false, error: error instanceof Error ? error.message : "Failed to get AI answer" };
   }
 }
 
 export async function revokeSession(sessionId: string): Promise<ActionResult> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const user = await prisma.user.findUnique({
@@ -1387,7 +1408,7 @@ export async function revokeSession(sessionId: string): Promise<ActionResult> {
 
     return { success: true };
   } catch (error: unknown) {
-    console.error("Revoke session error:", error);
+    logger.error({ error, sessionId, userId: session?.user?.id }, "Revoke session error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to revoke session" 
@@ -1396,8 +1417,10 @@ export async function revokeSession(sessionId: string): Promise<ActionResult> {
 }
 
 export async function generateMeetingSummary(meetingId: string): Promise<ActionResult<Summary>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    await enforceRateLimit("api");
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const meeting = await prisma.meeting.findUnique({
@@ -1447,14 +1470,16 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
 
     return { success: false, error: result.error || "Failed to generate summary" };
   } catch (error: unknown) {
-    console.error("Generate meeting summary error:", error);
+    logger.error({ error, meetingId, userId: session?.user?.id }, "Generate meeting summary error");
     return { success: false, error: error instanceof Error ? error.message : "Failed to generate summary" };
   }
 }
 
 export async function testMeetingCompliance(meetingId: string): Promise<ActionResult<string>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    await enforceRateLimit("api");
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const meeting = await prisma.meeting.findUnique({
@@ -1491,14 +1516,16 @@ export async function testMeetingCompliance(meetingId: string): Promise<ActionRe
 
     return { success: false, error: result.error || "Failed to run compliance tests" };
   } catch (error: unknown) {
-    console.error("Test meeting compliance error:", error);
+    logger.error({ error, meetingId, userId: session?.user?.id }, "Test meeting compliance error");
     return { success: false, error: error instanceof Error ? error.message : "Failed to run compliance tests" };
   }
 }
 
 export async function generateMeetingPlan(meetingId: string): Promise<ActionResult<string>> {
+  let session;
   try {
-    const session = await getServerSession(enhancedAuthOptions);
+    await enforceRateLimit("api");
+    session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
     const meeting = await prisma.meeting.findUnique({
@@ -1539,7 +1566,7 @@ export async function generateMeetingPlan(meetingId: string): Promise<ActionResu
 
     return { success: false, error: result.error || "Failed to generate plan" };
   } catch (error: unknown) {
-    console.error("Generate meeting plan error:", error);
+    logger.error({ error, meetingId, userId: session?.user?.id }, "Generate meeting plan error");
     return { success: false, error: error instanceof Error ? error.message : "Failed to generate plan" };
   }
 }

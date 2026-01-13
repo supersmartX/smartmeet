@@ -6,83 +6,89 @@ import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { prisma } from "@/lib/prisma";
 
 export async function createCheckoutSession(priceId: string) {
-  const session = await getServerSession(enhancedAuthOptions);
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
 
-  if (!session?.user?.email) {
-    throw new Error("Unauthorized");
-  }
+    if (!session?.user?.email) {
+      return { success: false, error: "Unauthorized" };
+    }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
 
-  if (!user) {
-    throw new Error("User not found");
-  }
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
 
-  // Create or retrieve Stripe customer
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  let stripeCustomerId = (user as any).stripeCustomerId;
+    // Create or retrieve Stripe customer
+    let stripeCustomerId = user.stripeCustomerId;
 
-  if (!stripeCustomerId) {
-    const customer = await stripe.customers.create({
-      email: user.email!,
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email!,
+        metadata: {
+          userId: user.id,
+        },
+      });
+      stripeCustomerId = customer.id;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { stripeCustomerId },
+      });
+    }
+
+    const checkoutSession = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: "subscription",
+      success_url: `${process.env.NEXTAUTH_URL}/dashboard?success=true`,
+      cancel_url: `${process.env.NEXTAUTH_URL}/dashboard?canceled=true`,
       metadata: {
         userId: user.id,
       },
     });
-    stripeCustomerId = customer.id;
-    await (prisma.user.update as any)({
-      where: { id: user.id },
-      data: { stripeCustomerId },
-    });
+
+    if (!checkoutSession.url) {
+      return { success: false, error: "Could not create checkout session" };
+    }
+
+    return { success: true, url: checkoutSession.url };
+  } catch (error) {
+    console.error("Stripe Checkout Error:", error);
+    return { success: false, error: "An error occurred while creating checkout session" };
   }
-  /* eslint-enable @typescript-eslint/no-explicit-any */
-
-  const checkoutSession = await stripe.checkout.sessions.create({
-    customer: stripeCustomerId,
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
-      },
-    ],
-    mode: "subscription",
-    success_url: `${process.env.NEXTAUTH_URL}/dashboard?success=true`,
-    cancel_url: `${process.env.NEXTAUTH_URL}/dashboard?canceled=true`,
-    metadata: {
-      userId: user.id,
-    },
-  });
-
-  if (!checkoutSession.url) {
-    throw new Error("Could not create checkout session");
-  }
-
-  return { url: checkoutSession.url };
 }
 
 export async function createPortalSession() {
-  const session = await getServerSession(enhancedAuthOptions);
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
 
-  if (!session?.user?.email) {
-    throw new Error("Unauthorized");
+    if (!session?.user?.email) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user || !user.stripeCustomerId) {
+      return { success: false, error: "Subscription not found" };
+    }
+
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: `${process.env.NEXTAUTH_URL}/dashboard/settings`,
+    });
+
+    return { success: true, url: portalSession.url };
+  } catch (error) {
+    console.error("Stripe Portal Error:", error);
+    return { success: false, error: "An error occurred while opening billing portal" };
   }
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
-
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  if (!user || !(user as any).stripeCustomerId) {
-    throw new Error("User or customer not found");
-  }
-
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: (user as any).stripeCustomerId,
-    return_url: `${process.env.NEXTAUTH_URL}/dashboard/settings`,
-  });
-  /* eslint-enable @typescript-eslint/no-explicit-any */
-
-  return { url: portalSession.url };
 }

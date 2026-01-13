@@ -9,125 +9,149 @@ import { logSecurityEvent } from "@/lib/audit";
 import { createNotification } from "./notification";
 import crypto from "crypto";
 
-export async function generateMFASecret() {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
+export type ActionResult<T = unknown> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
 
-  const secret = speakeasy.generateSecret({
-    name: `Supersmart (${session.user.email})`,
-  });
+export async function generateMFASecret(): Promise<ActionResult<{ secret: string; qrCodeUrl: string }>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-  const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || "");
+    const secret = speakeasy.generateSecret({
+      name: `Supersmart (${session.user.email})`,
+    });
 
-  return {
-    secret: secret.base32,
-    qrCodeUrl,
-  };
+    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || "");
+
+    return {
+      success: true,
+      data: {
+        secret: secret.base32,
+        qrCodeUrl,
+      }
+    };
+  } catch (error: unknown) {
+    console.error("Generate MFA Secret Error:", error);
+    return { success: false, error: "Failed to generate MFA secret" };
+  }
 }
 
-export async function verifyAndEnableMFA(token: string, secret: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
+export async function verifyAndEnableMFA(token: string, secret: string): Promise<ActionResult<{ recoveryCodes: string[] }>> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-  const verified = speakeasy.totp.verify({
-    secret,
-    encoding: "base32",
-    token,
-  });
+    const verified = speakeasy.totp.verify({
+      secret,
+      encoding: "base32",
+      token,
+    });
 
-  if (!verified) {
-    throw new Error("Invalid verification code. Please try again.");
+    if (!verified) {
+      return { success: false, error: "Invalid verification code. Please try again." };
+    }
+
+    // Generate 10 recovery codes
+    const recoveryCodes = Array.from({ length: 10 }).map(() => 
+      crypto.randomBytes(4).toString("hex").toUpperCase()
+    );
+
+    const user = await prisma.user.update({
+      where: { email: session.user.email },
+      data: {
+        mfaEnabled: true,
+        mfaSecret: secret,
+        mfaRecoveryCodes: recoveryCodes as string[],
+      },
+    });
+
+    await logSecurityEvent(
+      "MFA_ENABLED",
+      user.id,
+      "Multi-factor authentication enabled",
+      "Security"
+    );
+
+    await createNotification(user.id, {
+      title: "MFA Enabled",
+      message: "Multi-factor authentication has been successfully enabled on your account.",
+      type: "SUCCESS",
+      link: "/dashboard/security"
+    });
+
+    return { success: true, data: { recoveryCodes } };
+  } catch (error: unknown) {
+    console.error("Verify and Enable MFA Error:", error);
+    return { success: false, error: "Failed to enable MFA" };
   }
-
-  // Generate 10 recovery codes
-  const recoveryCodes = Array.from({ length: 10 }).map(() => 
-    crypto.randomBytes(4).toString("hex").toUpperCase()
-  );
-
-  const user = await prisma.user.update({
-    where: { email: session.user.email },
-    data: {
-      mfaEnabled: true,
-      mfaSecret: secret,
-      mfaRecoveryCodes: recoveryCodes as string[],
-    },
-  });
-
-  await logSecurityEvent(
-    "MFA_ENABLED",
-    user.id,
-    "Multi-factor authentication enabled",
-    "Security"
-  );
-
-  await createNotification(user.id, {
-    title: "MFA Enabled",
-    message: "Multi-factor authentication has been successfully enabled on your account.",
-    type: "SUCCESS",
-    link: "/dashboard/security"
-  });
-
-  return { success: true, recoveryCodes };
 }
 
 import bcrypt from "bcryptjs";
 
-export async function disableMFA(token: string, password?: string) {
-  const session = await getServerSession(enhancedAuthOptions);
-  if (!session?.user?.email) throw new Error("Unauthorized");
+export async function disableMFA(token: string, password?: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
 
-  if (!user || !user.mfaEnabled) throw new Error("MFA not enabled");
+    if (!user || !user.mfaEnabled) return { success: false, error: "MFA not enabled" };
 
-  // If user has a password, we should require it for deactivation (security best practice)
-  if (user.password) {
-    if (!password) {
-      throw new Error("PASSWORD_REQUIRED");
+    // If user has a password, we should require it for deactivation (security best practice)
+    if (user.password) {
+      if (!password) {
+        return { success: false, error: "PASSWORD_REQUIRED" };
+      }
+      const isPasswordCorrect = await bcrypt.compare(password, user.password);
+      if (!isPasswordCorrect) {
+        return { success: false, error: "Invalid password" };
+      }
     }
-    const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    if (!isPasswordCorrect) {
-      throw new Error("Invalid password");
+
+    // Verify TOTP token or recovery code
+    const isTotpValid = speakeasy.totp.verify({
+      secret: user.mfaSecret || "",
+      encoding: "base32",
+      token,
+    });
+
+    const isRecoveryCodeValid = user.mfaRecoveryCodes.includes(token);
+
+    if (!isTotpValid && !isRecoveryCodeValid) {
+      return { success: false, error: "Invalid verification code or recovery code" };
     }
+
+    await prisma.user.update({
+      where: { email: session.user.email },
+      data: {
+        mfaEnabled: false,
+        mfaSecret: null,
+        mfaRecoveryCodes: [], // Always clear recovery codes when MFA is disabled
+      },
+    });
+
+    await logSecurityEvent(
+      "MFA_DISABLED",
+      user.id,
+      isRecoveryCodeValid ? "MFA disabled using recovery code" : "MFA disabled using TOTP",
+      "Security"
+    );
+
+    await createNotification(user.id, {
+      title: "MFA Disabled",
+      message: "Multi-factor authentication has been disabled on your account. We recommend keeping it enabled for better security.",
+      type: "WARNING",
+      link: "/dashboard/security"
+    });
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Disable MFA Error:", error);
+    return { success: false, error: "Failed to disable MFA" };
   }
-
-  // Verify TOTP token or recovery code
-  const isTotpValid = speakeasy.totp.verify({
-    secret: user.mfaSecret || "",
-    encoding: "base32",
-    token,
-  });
-
-  const isRecoveryCodeValid = user.mfaRecoveryCodes.includes(token);
-
-  if (!isTotpValid && !isRecoveryCodeValid) {
-    throw new Error("Invalid verification code or recovery code");
-  }
-
-  await prisma.user.update({
-    where: { email: session.user.email },
-    data: {
-      mfaEnabled: false,
-      mfaSecret: null,
-      mfaRecoveryCodes: [], // Always clear recovery codes when MFA is disabled
-    },
-  });
-
-  await logSecurityEvent(
-    "MFA_DISABLED",
-    user.id,
-    isRecoveryCodeValid ? "MFA disabled using recovery code" : "MFA disabled using TOTP",
-    "Security"
-  );
-
-  await createNotification(user.id, {
-    title: "MFA Disabled",
-    message: "Multi-factor authentication has been disabled on your account. We recommend keeping it enabled for better security.",
-    type: "WARNING",
-    link: "/dashboard/security"
-  });
-
-  return { success: true };
 }

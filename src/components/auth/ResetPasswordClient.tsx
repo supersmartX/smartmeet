@@ -51,7 +51,7 @@ function ResetPasswordContent() {
     try {
       const result = await resetPassword(token, password);
       if (result.success) {
-        setMessage(result.message || "Password reset successfully!");
+        setMessage(result.data?.message || "Password reset successfully!");
         setTimeout(() => router.push("/login"), 3000);
       } else {
         setError(result.error || "Failed to reset password.");

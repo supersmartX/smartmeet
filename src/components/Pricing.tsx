@@ -62,8 +62,12 @@ export default function Pricing() {
     if (!priceId) return;
     setLoading(priceId);
     try {
-      const { url } = await createCheckoutSession(priceId);
-      window.location.href = url;
+      const result = await createCheckoutSession(priceId);
+      if (result.success && result.url) {
+        window.location.href = result.url;
+      } else {
+        alert(result.error || "Failed to initiate checkout. Please try again.");
+      }
     } catch (error) {
       console.error("Upgrade error:", error);
       alert("Failed to initiate checkout. Please try again.");
