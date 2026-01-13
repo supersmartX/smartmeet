@@ -1,3 +1,5 @@
+import logger from "./logger";
+
 // Auth Diagnostic Tool
 // Run this to check your auth configuration
 
@@ -53,23 +55,23 @@ export function checkAuthConfig() {
 export function getAuthDebugInfo() {
   const diagnostic = checkAuthConfig();
   
-  console.log("=== Auth Configuration Diagnostic ===");
-  console.log("Environment:", diagnostic.config.nodeEnv);
-  console.log("NextAuth Secret:", diagnostic.config.hasNextAuthSecret ? "✅ Present" : "❌ Missing");
-  console.log("NextAuth URL:", diagnostic.config.hasNextAuthUrl ? "✅ Present" : "❌ Missing");
-  console.log("Database URL:", diagnostic.config.hasDatabaseUrl ? "✅ Present" : "❌ Missing");
+  logger.info({ 
+    env: diagnostic.config.nodeEnv,
+    hasNextAuthSecret: diagnostic.config.hasNextAuthSecret,
+    hasNextAuthUrl: diagnostic.config.hasNextAuthUrl,
+    hasDatabaseUrl: diagnostic.config.hasDatabaseUrl
+  }, "Auth Configuration Diagnostic");
   
-  console.log("\n=== OAuth Providers ===");
-  console.log("Google:", diagnostic.config.google.hasClientId ? "✅ Configured" : "❌ Not configured");
-  console.log("GitHub:", diagnostic.config.github.hasClientId ? "✅ Configured" : "❌ Not configured");
+  logger.info({
+    google: diagnostic.config.google.hasClientId,
+    github: diagnostic.config.github.hasClientId
+  }, "OAuth Providers Configuration");
   
   if (diagnostic.issues.length > 0) {
-    console.log("\n=== Issues Found ===");
-    diagnostic.issues.forEach(issue => console.log(issue));
+    logger.warn({ issues: diagnostic.issues }, "Auth Configuration Issues Found");
   }
   
-  console.log("\n=== Health Status ===");
-  console.log(diagnostic.isHealthy ? "✅ Configuration appears healthy" : "❌ Configuration has issues");
+  logger.info({ isHealthy: diagnostic.isHealthy }, "Auth Health Status");
   
   return diagnostic;
 }

@@ -1,24 +1,25 @@
 import { prisma } from "@/lib/prisma";
+import logger from "./logger";
 
 export async function testDatabaseConnection() {
   try {
-    console.log('🔍 Testing database connection...');
+    logger.info('Testing database connection...');
     
     // Test basic connection
     await prisma.$connect();
-    console.log('✅ Database connection successful');
+    logger.info('Database connection successful');
     
     // Test user table
     const userCount = await prisma.user.count();
-    console.log(`✅ User table accessible - ${userCount} users found`);
+    logger.info({ userCount }, 'User table accessible');
     
     // Test account table (for OAuth)
     const accountCount = await prisma.account.count();
-    console.log(`✅ Account table accessible - ${accountCount} accounts found`);
+    logger.info({ accountCount }, 'Account table accessible');
     
     // Test session table
     const sessionCount = await prisma.session.count();
-    console.log(`✅ Session table accessible - ${sessionCount} sessions found`);
+    logger.info({ sessionCount }, 'Session table accessible');
     
     return {
       success: true,
@@ -27,7 +28,7 @@ export async function testDatabaseConnection() {
       sessionCount
     };
   } catch (error) {
-    console.error('🚨 Database connection failed:', error);
+    logger.error({ error }, 'Database connection failed');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown database error'
@@ -40,7 +41,7 @@ export async function testDatabaseConnection() {
 // Test OAuth-specific database operations
 export async function testOAuthDatabaseOperations() {
   try {
-    console.log('🔍 Testing OAuth database operations...');
+    logger.info('Testing OAuth database operations...');
     
     // Test finding user by email (common OAuth operation)
     const testEmail = 'test@example.com';
@@ -49,9 +50,9 @@ export async function testOAuthDatabaseOperations() {
     });
     
     if (user) {
-      console.log('✅ Found existing user:', user.id);
+      logger.info({ userId: user.id }, 'Found existing user');
     } else {
-      console.log('ℹ️ Test user not found (this is normal)');
+      logger.info('Test user not found (this is normal)');
     }
     
     // Test account linking operations
@@ -60,7 +61,7 @@ export async function testOAuthDatabaseOperations() {
       include: { user: true }
     });
     
-    console.log(`✅ Found ${accounts.length} OAuth accounts`);
+    logger.info({ accountCount: accounts.length }, 'Found OAuth accounts');
     
     return {
       success: true,
@@ -68,7 +69,7 @@ export async function testOAuthDatabaseOperations() {
       accountCount: accounts.length
     };
   } catch (error) {
-    console.error('🚨 OAuth database operations failed:', error);
+    logger.error({ error }, 'OAuth database operations failed');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown OAuth database error'

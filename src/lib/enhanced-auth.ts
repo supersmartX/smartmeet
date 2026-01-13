@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import { authOptions } from "./auth";
 import { prisma } from "@/lib/prisma";
+import logger from "./logger";
 
 // Extended JWT token type for OAuth
 interface ExtendedJWT {
@@ -36,11 +37,11 @@ export const enhancedAuthOptions: NextAuthOptions = {
     ...authOptions.callbacks,
     async signIn({ user, account }) {
       try {
-        console.log('🔍 [SignIn Callback] Started:', { 
+        logger.info({ 
           provider: account?.provider,
           email: user?.email,
           type: account?.type
-        });
+        }, "SignIn Callback Started");
 
         // Handle OAuth account linking with enhanced security
         if (account?.provider && account.type === 'oauth') {
@@ -52,21 +53,21 @@ export const enhancedAuthOptions: NextAuthOptions = {
               const expectedOrigin = new URL(expectedUrl).origin;
               
               if (receivedOrigin !== expectedOrigin) {
-                console.warn('⚠️ OAuth callback URL origin mismatch:', {
+                logger.warn({
                   received: receivedOrigin,
                   expected: expectedOrigin
-                });
+                }, "OAuth callback URL origin mismatch");
                 // In some environments (like preview deploys), this might be expected.
                 // We'll log it but not necessarily block it unless it's a completely different domain.
               }
             } catch (e) {
-              console.error('❌ Failed to parse callback URLs:', e);
+              logger.error({ error: e }, "Failed to parse callback URLs");
             }
           }
 
           // Check if user exists with this email using Prisma directly
           if (!user.email) {
-            console.error('❌ OAuth provider did not return an email');
+            logger.error("OAuth provider did not return an email");
             return false;
           }
 
@@ -82,7 +83,7 @@ export const enhancedAuthOptions: NextAuthOptions = {
             );
 
             if (!isLinked) {
-              console.log('ℹ️ Existing user found with same email but different provider. Redirecting to link required.');
+              logger.info({ email: user.email }, "Existing user found with same email but different provider. Redirecting to link required.");
               // Instead of throwing, we return a redirect URL
               return `/login?error=OAuthAccountNotLinked&email=${encodeURIComponent(user.email)}`;
             }
@@ -91,7 +92,7 @@ export const enhancedAuthOptions: NextAuthOptions = {
         
         return true;
       } catch (error: unknown) {
-        console.error('❌ [SignIn Callback] Exception:', error);
+        logger.error({ error }, "SignIn Callback Exception");
         return false;
       }
     },

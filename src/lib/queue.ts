@@ -1,4 +1,5 @@
 import type { Redis as UpstashRedis } from "@upstash/redis";
+import logger from "@/lib/logger";
 
 let upstashRedisInstance: UpstashRedis | null = null;
 
@@ -36,7 +37,7 @@ export interface Task {
 export async function enqueueTask(task: Omit<Task, "createdAt">): Promise<boolean> {
   const upstashRedis = await getUpstashRedis();
   if (!upstashRedis) {
-    console.warn("Upstash Redis not configured. Task not enqueued.");
+    logger.warn("Upstash Redis not configured. Task not enqueued.");
     return false;
   }
 
@@ -49,7 +50,7 @@ export async function enqueueTask(task: Omit<Task, "createdAt">): Promise<boolea
     await upstashRedis.rpush(QUEUE_NAME, JSON.stringify(fullTask));
     return true;
   } catch (error) {
-    console.error("Failed to enqueue task:", error);
+    logger.error({ error, taskId: task.id }, "Failed to enqueue task");
     return false;
   }
 }
@@ -64,7 +65,7 @@ export async function dequeueTask(): Promise<Task | null> {
 
     return JSON.parse(taskData) as Task;
   } catch (error) {
-    console.error("Failed to dequeue task:", error);
+    logger.error({ error }, "Failed to dequeue task");
     return null;
   }
 }
@@ -79,7 +80,7 @@ export async function getQueueLength(): Promise<number> {
   try {
     return await upstashRedis.llen(QUEUE_NAME);
   } catch (error) {
-    console.error("Failed to get queue length:", error);
+    logger.error({ error }, "Failed to get queue length");
     return 0;
   }
 }

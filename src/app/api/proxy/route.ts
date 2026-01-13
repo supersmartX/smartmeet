@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkApiRateLimit, type RateLimitResult } from "@/lib/rate-limit";
 import { headers } from "next/headers";
+import logger from "@/lib/logger";
 
 /**
  * Get client IP address from request headers
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
     );
     
   } catch (error) {
-    console.error("API proxy error:", error);
+    logger.error({ error }, "API proxy error");
     
     return NextResponse.json(
       { 

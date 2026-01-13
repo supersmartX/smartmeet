@@ -1,4 +1,5 @@
 import { Redis as UpstashRedis } from "@upstash/redis";
+import logger from "@/lib/logger";
 
 let redisInstance: UpstashRedis | null = null;
 
@@ -83,7 +84,7 @@ export const cache = {
             const freshData = await fetcher();
             await this.set(key, { data: freshData, timestamp: Date.now() }, staleSeconds);
           } catch (error) {
-            console.error(`SWR background refresh failed for key: ${key}`, error);
+            logger.error({ error, key }, "SWR background refresh failed");
           }
         })();
         return cached.data;

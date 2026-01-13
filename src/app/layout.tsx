@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { headers } from "next/headers";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -111,9 +112,11 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <ToastProvider>
-              <main id="main-content">
-                {children}
-              </main>
+              <ErrorBoundary>
+                <main id="main-content">
+                  {children}
+                </main>
+              </ErrorBoundary>
             </ToastProvider>
           </ThemeProvider>
         </AuthProvider>

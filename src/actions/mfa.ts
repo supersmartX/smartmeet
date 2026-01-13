@@ -8,12 +8,8 @@ import QRCode from "qrcode";
 import { logSecurityEvent } from "@/lib/audit";
 import { createNotification } from "./notification";
 import crypto from "crypto";
-
-export type ActionResult<T = unknown> = {
-  success: boolean;
-  data?: T;
-  error?: string;
-};
+import logger from "@/lib/logger";
+import { ActionResult } from "@/types/meeting";
 
 export async function generateMFASecret(): Promise<ActionResult<{ secret: string; qrCodeUrl: string }>> {
   try {
@@ -34,7 +30,7 @@ export async function generateMFASecret(): Promise<ActionResult<{ secret: string
       }
     };
   } catch (error: unknown) {
-    console.error("Generate MFA Secret Error:", error);
+    logger.error({ error }, "Generate MFA Secret Error");
     return { success: false, error: "Failed to generate MFA secret" };
   }
 }
@@ -84,7 +80,7 @@ export async function verifyAndEnableMFA(token: string, secret: string): Promise
 
     return { success: true, data: { recoveryCodes } };
   } catch (error: unknown) {
-    console.error("Verify and Enable MFA Error:", error);
+    logger.error({ error }, "Verify and Enable MFA Error");
     return { success: false, error: "Failed to enable MFA" };
   }
 }
@@ -151,7 +147,7 @@ export async function disableMFA(token: string, password?: string): Promise<Acti
 
     return { success: true };
   } catch (error: unknown) {
-    console.error("Disable MFA Error:", error);
+    logger.error({ error }, "Disable MFA Error");
     return { success: false, error: "Failed to disable MFA" };
   }
 }

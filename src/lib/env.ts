@@ -1,4 +1,5 @@
 import { z } from "zod";
+import logger from "./logger";
 
 const isServer = typeof window === 'undefined';
 
@@ -53,7 +54,7 @@ const _env = envSchema.safeParse({
 });
 
 if (!_env.success) {
-  console.error("❌ Invalid environment variables:", _env.error.format());
+  logger.error({ errors: _env.error.format() }, "Invalid environment variables");
   throw new Error("Invalid environment variables");
 }
 

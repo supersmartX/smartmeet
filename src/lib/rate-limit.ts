@@ -2,6 +2,8 @@ import { RateLimiterMemory, RateLimiterRedis, RateLimiterAbstract } from "rate-l
 import type { Redis as UpstashRedis } from "@upstash/redis";
 import type IORedis from "ioredis";
 
+import logger from "./logger";
+
 // Configuration for rate limiters
 type LimiterType = "api" | "login" | "general";
 
@@ -218,6 +220,6 @@ export async function resetRateLimit(key: string, type: LimiterType): Promise<vo
       }
     }
   } catch (error) {
-    console.error(`Failed to reset ${type} rate limit:`, error);
+    logger.error({ error, type, key }, "Failed to reset rate limit");
   }
 }

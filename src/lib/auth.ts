@@ -12,6 +12,7 @@ import { Adapter } from "next-auth/adapters";
 import { headers } from "next/headers";
 import { checkLoginRateLimitWithIP, resetRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
+import logger from "@/lib/logger";
 
 const googleId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -59,13 +60,13 @@ export const authOptions: NextAuthOptions = {
               `
             });
           } catch (error) {
-            console.error("Error sending magic link email:", error);
+            logger.error({ error, email }, "Error sending magic link email");
             throw new Error("SEND_VERIFICATION_EMAIL_ERROR");
           }
         } else {
           // Fallback to default SMTP if Resend is not configured
           // but we still need some config for the default provider
-          console.log(`[DEV MODE] Magic link for ${email}: ${url}`);
+          logger.info({ email, url }, "[DEV MODE] Magic link generated");
         }
       },
     }),
@@ -173,7 +174,7 @@ export const authOptions: NextAuthOptions = {
         } catch (error) {
           // Log errors only in development
           if (process.env.NODE_ENV === 'development') {
-            console.error("Auth authorize error:", error);
+            logger.error({ error }, "Auth authorize error");
           }
           throw error;
         }
@@ -184,7 +185,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
-  debug: process.env.NODE_ENV === "development" || process.env.NEXTAUTH_DEBUG === "true",
+  debug: false,
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -229,14 +230,14 @@ export const authOptions: NextAuthOptions = {
                 (token as { lastRefreshed?: number }).lastRefreshed = now;
               }
             } catch (error) {
-              console.error("❌ [JWT Callback] Failed to refresh user role:", error);
+              logger.error({ error, tokenId: token.id }, "[JWT Callback] Failed to refresh user role");
             }
           }
         }
 
         return token;
       } catch (error) {
-        console.error("❌ [JWT Callback] Critical failure:", error);
+        logger.error({ error }, "[JWT Callback] Critical failure");
         return token; // Return whatever we have rather than failing completely
       }
     },
@@ -252,7 +253,7 @@ export const authOptions: NextAuthOptions = {
         }
         return session;
       } catch (error) {
-        console.error("❌ [Session Callback] failure:", error);
+        logger.error({ error }, "[Session Callback] failure");
         return session;
       }
     },
@@ -264,7 +265,7 @@ export const authOptions: NextAuthOptions = {
         else if (new URL(url).origin === baseUrl) return url;
         return `${baseUrl}/dashboard`;
       } catch (error) {
-        console.warn("⚠️ [Redirect Callback] fallback used:", error);
+        logger.warn({ error, url }, "[Redirect Callback] fallback used");
         return `${baseUrl}/dashboard`;
       }
     },

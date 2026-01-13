@@ -1,4 +1,5 @@
 import type { Redis as UpstashRedis } from "@upstash/redis";
+import logger from "@/lib/logger";
 
 let redisInstance: UpstashRedis | null = null;
 
@@ -78,7 +79,7 @@ export class RedisCircuitBreaker {
     if (failures >= this.config.failureThreshold) {
       await redis.set(`${this.prefix}:status`, "OPEN");
       await redis.set(`${this.prefix}:open_time`, Date.now());
-      console.warn(`[CircuitBreaker] Service ${this.config.serviceName} is now OPEN`);
+      logger.warn({ service: this.config.serviceName, failures }, "Circuit breaker tripped OPEN");
     }
   }
 

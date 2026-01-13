@@ -1,3 +1,5 @@
+import logger from "@/lib/logger";
+
 /**
  * SupersmartX API Service
  * Handles all communication with the backend API
@@ -374,7 +376,7 @@ export async function testCode(
  */
 export async function downloadFile(url: string, filename: string): Promise<void> {
   if (typeof window === 'undefined') {
-    console.error("downloadFile is only available in the browser");
+    logger.error("downloadFile is only available in the browser");
     return;
   }
   try {
@@ -391,7 +393,7 @@ export async function downloadFile(url: string, filename: string): Promise<void>
     document.body.removeChild(a);
     window.URL.revokeObjectURL(downloadUrl);
   } catch (error) {
-    console.error("Download failed:", error);
+    logger.error({ error }, "Download failed");
     throw error;
   }
 }

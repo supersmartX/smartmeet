@@ -4,6 +4,8 @@ import { stripe } from "@/lib/stripe";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { prisma } from "@/lib/prisma";
+import logger from "@/lib/logger";
+import { logSecurityEvent } from "@/lib/audit";
 
 export async function createCheckoutSession(priceId: string) {
   try {
@@ -58,9 +60,16 @@ export async function createCheckoutSession(priceId: string) {
       return { success: false, error: "Could not create checkout session" };
     }
 
+    await logSecurityEvent(
+      "STRIPE_CHECKOUT_CREATED",
+      user.id,
+      `Checkout session created for price ${priceId}`,
+      "Billing"
+    );
+
     return { success: true, url: checkoutSession.url };
   } catch (error) {
-    console.error("Stripe Checkout Error:", error);
+    logger.error({ error, priceId }, "Stripe Checkout Error");
     return { success: false, error: "An error occurred while creating checkout session" };
   }
 }
@@ -86,9 +95,16 @@ export async function createPortalSession() {
       return_url: `${process.env.NEXTAUTH_URL}/dashboard/settings`,
     });
 
+    await logSecurityEvent(
+      "STRIPE_PORTAL_CREATED",
+      user.id,
+      "Billing portal session created",
+      "Billing"
+    );
+
     return { success: true, url: portalSession.url };
   } catch (error) {
-    console.error("Stripe Portal Error:", error);
+    logger.error({ error }, "Stripe Portal Error");
     return { success: false, error: "An error occurred while opening billing portal" };
   }
 }

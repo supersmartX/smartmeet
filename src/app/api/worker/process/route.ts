@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dequeueTask } from "@/lib/queue";
+import logger from "@/lib/logger";
 
 // This would ideally be a dedicated worker, but for Next.js/Vercel, 
 // we can use an API route triggered by a Cron job or a long-running process.
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     if (!task) break;
 
     try {
-      console.log(`Worker processing task: ${task.id} (${task.type})`);
+      logger.info({ taskId: task.id, type: task.type }, "Worker processing task");
       
       if (task.type === "PROCESS_MEETING") {
         const { meetingId } = task.data;
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
         results.push({ taskId: task.id, success: false, error: "Unknown task type" });
       }
     } catch (error) {
-      console.error(`Worker error processing task ${task.id}:`, error);
+      logger.error({ error, taskId: task.id }, "Worker error processing task");
       results.push({ 
         taskId: task.id, 
         success: false, 

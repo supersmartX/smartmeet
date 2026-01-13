@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import logger from './logger';
 
 let resendInstance: Resend | null = null;
 
@@ -20,7 +21,7 @@ export async function sendVerificationEmail(email: string, token: string) {
   const resend = getResend();
 
   if (!resend) {
-    console.log(`[DEV MODE] Verification link for ${email}: ${verifyLink}`);
+    logger.info({ email, verifyLink }, "[DEV MODE] Verification link generated");
     return;
   }
 
@@ -40,7 +41,7 @@ export async function sendVerificationEmail(email: string, token: string) {
       `
     });
   } catch (error) {
-    console.error("Error sending verification email:", error);
+    logger.error({ error, email }, "Error sending verification email");
     throw new Error("Failed to send verification email");
   }
 }
@@ -50,7 +51,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   const resend = getResend();
 
   if (!resend) {
-    console.log(`[DEV MODE] Password reset link for ${email}: ${resetLink}`);
+    logger.info({ email, resetLink }, "[DEV MODE] Password reset link generated");
     return;
   }
 
@@ -71,7 +72,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
       `
     });
   } catch (error) {
-    console.error("Error sending password reset email:", error);
+    logger.error({ error, email }, "Error sending password reset email");
     throw new Error("Failed to send password reset email");
   }
 }

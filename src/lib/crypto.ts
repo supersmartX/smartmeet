@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import logger from './logger';
 
 const ALGORITHM = 'aes-256-cbc';
 const ENCRYPTION_KEY = (() => {
@@ -29,7 +30,7 @@ export function decrypt(text: string): string {
   } catch (error) {
     // Log decryption errors in development
     if (process.env.NODE_ENV === 'development') {
-      console.error('Decryption error:', error);
+      logger.error({ error }, "Decryption error");
     }
     throw new Error('Failed to decrypt data');
   }

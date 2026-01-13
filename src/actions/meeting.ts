@@ -15,6 +15,7 @@ import { cache } from "@/lib/cache";
 import { enqueueTask } from "@/lib/queue";
 import { checkApiRateLimit, checkGeneralRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
+import { Performance } from "@/lib/performance";
 import { 
   generateCode, 
   summarizeText, 
@@ -637,6 +638,13 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
       cache.delete(`user:${user.id}:meetings`)
     ]);
     
+    await logSecurityEvent(
+      "MEETING_CREATED",
+      user.id,
+      `Meeting "${validatedData.title}" created`,
+      "Meeting"
+    );
+
     // Include autoProcess in the response data so the client knows whether to enqueue
     const meetingWithPrefs = {
       ...meeting,
@@ -705,6 +713,14 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
       cache.delete(`user:${deletedMeeting.userId}:stats`),
       cache.delete(`user:${deletedMeeting.userId}:meetings`)
     ]);
+
+    await logSecurityEvent(
+      "MEETING_DELETED",
+      deletedMeeting.userId,
+      `Meeting (ID: ${id}) deleted`,
+      "Meeting"
+    );
+
     return { success: true };
   } catch (error: unknown) {
     logger.error({ error, userId: session?.user?.id, meetingId: id }, "Delete meeting error");
@@ -737,6 +753,14 @@ export async function updateMeetingTitle(id: string, title: string): Promise<Act
       cache.delete(`user:${meeting.userId}:stats`),
       cache.delete(`user:${meeting.userId}:meetings`)
     ]);
+
+    await logSecurityEvent(
+      "MEETING_TITLE_UPDATED",
+      meeting.userId,
+      `Meeting title updated to "${meeting.title}" (ID: ${id})`,
+      "Meeting"
+    );
+
     return { success: true, data: meeting as unknown as Meeting };
   } catch (error: unknown) {
     logger.error({ error, userId: session?.user?.id, meetingId: id }, "Update meeting title error");
@@ -956,11 +980,17 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
         data: { processingStep: "TRANSCRIPTION" }
       });
 
-      const transcriptionResult = await aiCircuitBreaker.execute(async () => {
-        const res = await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
-        if (!res.success) throw new Error(res.error || "Transcription failed");
-        return res.data;
-      });
+      const transcriptionResult = await Performance.measure(
+        "AI_TRANSCRIPTION",
+        async () => {
+          return await aiCircuitBreaker.execute(async () => {
+            const res = await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
+            if (!res.success) throw new Error(res.error || "Transcription failed");
+            return res.data;
+          });
+        },
+        { meetingId, userId: user.id }
+      );
 
       if (!transcriptionResult) throw new Error("Transcription failed");
       const transcription = transcriptionResult.transcription;
@@ -971,17 +1001,23 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
         data: { processingStep: "SUMMARIZATION" }
       });
 
-      const summaryResult = await aiCircuitBreaker.execute(async () => {
-        const res = await summarizeText(transcription, { 
-          api_key: effectiveApiKey, 
-          provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
-          summary_length: user.summaryLength || undefined,
-          summary_persona: user.summaryPersona || undefined,
-          language: user.defaultLanguage || undefined
-        });
-        if (!res.success) throw new Error(res.error || "Summarization failed");
-        return res.data;
-      });
+      const summaryResult = await Performance.measure(
+        "AI_SUMMARIZATION",
+        async () => {
+          return await aiCircuitBreaker.execute(async () => {
+            const res = await summarizeText(transcription, { 
+              api_key: effectiveApiKey, 
+              provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+              summary_length: user.summaryLength || undefined,
+              summary_persona: user.summaryPersona || undefined,
+              language: user.defaultLanguage || undefined
+            });
+            if (!res.success) throw new Error(res.error || "Summarization failed");
+            return res.data;
+          });
+        },
+        { meetingId, userId: user.id }
+      );
 
       if (!summaryResult) throw new Error("Summarization failed");
       const { summary, project_doc } = summaryResult;
@@ -992,15 +1028,21 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
         data: { processingStep: "CODE_GENERATION" }
       });
 
-      const codeResult = await aiCircuitBreaker.execute(async () => {
-        const res = await generateCode(transcription, { 
-          api_key: effectiveApiKey, 
-          provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
-          model: finalModel || undefined
-        });
-        if (!res.success) throw new Error(res.error || "Code generation failed");
-        return res.data;
-      });
+      const codeResult = await Performance.measure(
+        "AI_CODE_GEN",
+        async () => {
+          return await aiCircuitBreaker.execute(async () => {
+            const res = await generateCode(transcription, { 
+              api_key: effectiveApiKey, 
+              provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+              model: finalModel || undefined
+            });
+            if (!res.success) throw new Error(res.error || "Code generation failed");
+            return res.data;
+          });
+        },
+        { meetingId, userId: user.id }
+      );
 
       if (!codeResult) throw new Error("Code generation failed");
       const { code } = codeResult;
@@ -1011,36 +1053,55 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
         data: { processingStep: "TESTING" }
       });
 
-      const testResult = await aiCircuitBreaker.execute(async () => {
-        const res = await testCode(code, { 
-          api_key: effectiveApiKey, 
-          provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
-        });
-        // We don't throw error if test fails, just record it
-        return res.data;
-      });
+      const testResult = await Performance.measure(
+        "AI_TESTING",
+        async () => {
+          return await aiCircuitBreaker.execute(async () => {
+            const res = await testCode(code, { 
+              api_key: effectiveApiKey, 
+              provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
+            });
+            // We don't throw error if test fails, just record it
+            return res.data;
+          });
+        },
+        { meetingId, userId: user.id }
+      );
 
       // Final Save
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: {
-          status: "COMPLETED",
-          processingStep: "COMPLETED",
-          transcripts: {
-            create: [{
-              speaker: "AI Assistant",
-              time: "0:00",
-              text: transcription
-            }]
-          },
-          summary: {
-            create: { content: summary }
-          },
-          code: code,
-          projectDoc: project_doc,
-          testResults: testResult?.output || testResult?.error || "No test results"
-        }
-      });
+      await Performance.measure(
+        "DB_FINAL_SAVE",
+        async () => {
+          await prisma.meeting.update({
+            where: { id: meetingId },
+            data: {
+              status: "COMPLETED",
+              processingStep: "COMPLETED",
+              transcripts: {
+                create: [{
+                  speaker: "AI Assistant",
+                  time: "0:00",
+                  text: transcription
+                }]
+              },
+              summary: {
+                create: { content: summary }
+              },
+              code: code,
+              projectDoc: project_doc,
+              testResults: testResult?.output || testResult?.error || "No test results"
+            }
+          });
+        },
+        { meetingId, userId: user.id }
+      );
+
+      await logSecurityEvent(
+        "MEETING_PROCESSING_SUCCESS",
+        user.id,
+        `Meeting "${meeting.title}" processed successfully`,
+        "Meeting"
+      );
 
       // Send success notification
       await createNotification(user.id, {

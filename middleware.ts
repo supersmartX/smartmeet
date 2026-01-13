@@ -1,6 +1,7 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import logger from "@/lib/logger";
 
 // Rate limiting at the edge
 async function handleRateLimit(req: NextRequest) {
@@ -38,7 +39,7 @@ async function handleRateLimit(req: NextRequest) {
     }
   } catch (error) {
     // Fail open if rate limiter is down to ensure availability
-    console.error("Middleware rate limit error:", error);
+    logger.error({ error }, "Middleware rate limit error");
   }
   
   return null;
