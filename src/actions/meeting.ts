@@ -650,6 +650,33 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
       ...meeting,
       autoProcess: user.autoProcess
     };
+
+    // If autoProcess is enabled, trigger AI processing immediately on the server
+    if (user.autoProcess !== false) {
+      // We use the same background process logic as processMeetingAI
+      // We don't await this as we want to return the meeting object to the client quickly
+      const headerList = await headers();
+      const clientIp = headerList.get("x-forwarded-for")?.split(',')[0] || 
+                      headerList.get("x-real-ip") || 
+                      "unknown";
+
+      (async () => {
+        try {
+          const enqueued = await enqueueTask({
+            id: uuidv4(),
+            type: "PROCESS_MEETING",
+            data: { meetingId: meeting.id }
+          });
+
+          if (!enqueued) {
+            logger.info({ meetingId: meeting.id, userId: user.id }, "Queue failed during auto-process, starting fallback background AI processing");
+            await internalProcessMeetingAI(meeting.id, clientIp);
+          }
+        } catch (err) {
+          logger.error({ err, meetingId: meeting.id, userId: user.id }, "Auto-process background trigger failed");
+        }
+      })();
+    }
     
     return { success: true, data: meetingWithPrefs as unknown as Meeting & { autoProcess: boolean } };
   } catch (error: unknown) {
@@ -853,6 +880,7 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
       where: { id: meetingId },
       select: {
         id: true,
+        title: true,
         audioUrl: true,
         user: {
           select: { 
@@ -863,6 +891,7 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
             preferredModel: true,
             defaultLanguage: true,
             summaryLength: true,
+            summaryPersona: true,
             plan: true
           }
         }
@@ -872,6 +901,16 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
 
     if (!meeting || !meeting.user) return { success: false, error: "Meeting or user not found" };
     const user = meeting.user;
+
+    // Helper to fail the meeting in DB and return error
+    const failMeeting = async (error: string) => {
+      logger.error({ meetingId, error }, "Failing meeting processing");
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { status: "FAILED" }
+      });
+      return { success: false, error };
+    };
 
     // 2. Check IP Restriction if enabled (only if clientIp is provided)
     if (user.allowedIps && clientIp) {
@@ -885,11 +924,6 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
           "Security"
         );
 
-        await prisma.meeting.update({
-          where: { id: meetingId },
-          data: { status: "FAILED" }
-        });
-
         await createNotification(user.id, {
           title: "Processing Failed",
           message: `Blocked request from unauthorized IP: ${clientIp}`,
@@ -897,16 +931,11 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
           link: `/dashboard/recordings/${meetingId}`
         });
 
-        return { success: false, error: `Unauthorized IP: ${clientIp}. Please update your settings if this is you.` };
+        return await failMeeting(`Unauthorized IP: ${clientIp}. Please update your settings if this is you.`);
       }
     }
 
     if (!user.apiKey) {
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { status: "FAILED" }
-      });
-
       await createNotification(user.id, {
         title: "Processing Failed",
         message: "API Key missing. Please add it in Settings.",
@@ -914,7 +943,7 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
         link: "/dashboard/settings"
       });
 
-      return { success: false, error: "API Key missing. Please add it in Settings." };
+      return await failMeeting("API Key missing. Please add it in Settings.");
     }
 
     // Update lastUsedAt
@@ -924,24 +953,24 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
     });
 
     if (!meeting.audioUrl) {
-      return { success: false, error: "Audio URL missing for this meeting" };
+      return await failMeeting("Audio URL missing for this meeting");
     }
 
     // 2. Get a signed URL for downloading the file from Supabase
-    if (!supabaseAdmin) return { success: false, error: "Supabase Admin not configured" };
+    if (!supabaseAdmin) return await failMeeting("Supabase Admin not configured");
     
     const { data: signedData, error: signedError } = await supabaseAdmin.storage
       .from('recordings')
       .createSignedUrl(meeting.audioUrl, 3600); // 1 hour
 
     if (signedError || !signedData) {
-      return { success: false, error: `Failed to generate download URL: ${signedError?.message}` };
+      return await failMeeting(`Failed to generate download URL: ${signedError?.message}`);
     }
 
     // 3. Download the file using the signed URL
     const audioResponse = await fetch(signedData.signedUrl);
     if (!audioResponse.ok) {
-      return { success: false, error: `Failed to download audio from storage: ${audioResponse.statusText}` };
+      return await failMeeting(`Failed to download audio from storage: ${audioResponse.statusText}`);
     }
     
     const audioBuffer = await audioResponse.arrayBuffer();
@@ -964,7 +993,7 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
     }
 
     if (!effectiveApiKey) {
-      return { success: false, error: "API Key missing for the selected provider." };
+      return await failMeeting("API Key missing for the selected provider.");
     }
 
     logger.info({ meetingId, provider }, "Starting AI pipeline");
@@ -1152,6 +1181,17 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process meeting with AI";
     logger.error({ error, meetingId }, "Internal process meeting AI outer error");
+    
+    // Ensure the meeting is marked as failed even on outer errors
+    try {
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { status: "FAILED", processingStep: "FAILED" }
+      });
+    } catch (dbError) {
+      logger.error({ dbError, meetingId }, "Failed to update meeting status to FAILED in outer catch");
+    }
+
     return { success: false, error: errorMessage };
   }
 }

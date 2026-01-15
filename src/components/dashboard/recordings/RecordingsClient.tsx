@@ -10,7 +10,6 @@ import {
   deleteMeeting, 
   updateMeetingTitle, 
   createSignedUploadUrl, 
-  enqueueMeetingAI,
   togglePinned,
   toggleFavorite
 } from "@/actions/meeting"
@@ -203,19 +202,8 @@ export default function RecordingsClient() {
       // Re-fetch immediately to show the new "PROCESSING" row
       await fetchMeetings(true)
 
-      const meetingId = createResult.data.id
-      const autoProcess = (createResult.data as unknown as { autoProcess: boolean }).autoProcess !== false;
-      
-      // 4. Trigger AI processing (enqueued for background worker) if autoProcess is enabled
-      if (autoProcess) {
-        setTimeout(() => {
-          enqueueMeetingAI(meetingId).catch(err => {
-            console.error("Background AI processing error:", err)
-          })
-        }, 500)
-      } else {
-        toastVisible("Recording uploaded! You can start processing manually from the list.", "success")
-      }
+      // The AI processing is now triggered on the server inside createMeeting
+      // No need to call enqueueMeetingAI from the client anymore.
 
     } catch (err) {
       console.error("Upload error:", err)

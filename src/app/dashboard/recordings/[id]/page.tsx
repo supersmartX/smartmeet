@@ -12,7 +12,8 @@ import {
   askAIAboutMeeting,
   generateMeetingSummary,
   testMeetingCompliance,
-  generateMeetingPlan
+  generateMeetingPlan,
+  processMeetingAI
 } from "@/actions/meeting"
 import { MeetingWithRelations, Transcript, ActionItem } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
@@ -35,7 +36,8 @@ import {
   Copy,
   Loader2,
   ShieldCheck,
-  Download
+  Download,
+  AlertCircle
 } from "lucide-react"
 
 /* --------------------------- COMPONENT ---------------------------- */
@@ -359,10 +361,10 @@ export default function RecordingDetailPage() {
 
   const journeySteps = [
     { label: "Captured", status: meeting ? "completed" as const : "pending" as const },
-    { label: "Transcribed", status: (meeting?.transcripts?.length || 0) > 0 ? "completed" as const : "pending" as const },
-    { label: "AI Summary", status: meeting?.summary ? "completed" as const : "pending" as const },
-    { label: "Logic", status: (isLogicGenerated || meeting?.code) ? "completed" as const : "pending" as const },
-    { label: "Documentation", status: (planResult || meeting?.projectDoc) ? "completed" as const : "pending" as const },
+    { label: "Transcribed", status: (meeting?.transcripts?.length || 0) > 0 ? "completed" as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const },
+    { label: "AI Summary", status: meeting?.summary ? "completed" as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const },
+    { label: "Logic", status: (isLogicGenerated || meeting?.code) ? "completed" as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const },
+    { label: "Documentation", status: (planResult || meeting?.projectDoc) ? "completed" as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const },
   ]
 
   const [copyStatus, setCopyStatus] = useState("Copy Code")
@@ -530,23 +532,25 @@ export default function RecordingDetailPage() {
                 <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
                   step.status === 'completed' 
                     ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' 
-                    : 'bg-zinc-300 dark:bg-zinc-700'
+                    : step.status === 'failed'
+                      ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                      : 'bg-zinc-300 dark:bg-zinc-700'
                 }`} />
                 <div className="flex flex-col">
                   <span className={`text-[8px] font-black uppercase tracking-tighter leading-none ${
-                    step.status === 'completed' ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'
+                    step.status === 'completed' ? 'text-zinc-900 dark:text-zinc-100' : step.status === 'failed' ? 'text-red-500' : 'text-zinc-400'
                   }`}>
                     {step.label}
                   </span>
                   <span className="text-[7px] font-bold text-zinc-400 uppercase tracking-tighter">
-                    {step.status === 'completed' ? 'Verified' : 'Pending'}
+                    {step.status === 'completed' ? 'Verified' : step.status === 'failed' ? 'Failed' : 'Pending'}
                   </span>
                 </div>
                 {i < journeySteps.length - 1 && <div className="w-6 h-[1px] bg-zinc-200 dark:bg-zinc-800 ml-2" />}
                 
                 {/* Hover Tooltip */}
                 <div className="absolute top-full left-0 mt-2 py-1 px-2 bg-zinc-900 text-white text-[7px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                  Step {i + 1}: {step.label} {step.status === 'completed' ? 'Successful' : 'In Progress'}
+                  Step {i + 1}: {step.label} {step.status === 'completed' ? 'Successful' : step.status === 'failed' ? 'Failed' : 'In Progress'}
                 </div>
               </div>
             ))}
@@ -621,6 +625,28 @@ export default function RecordingDetailPage() {
           )}
 
           <div className="p-4 sm:p-8">
+            {meeting?.status === 'FAILED' && (
+              <div className="mb-8 p-6 bg-red-500/5 border border-red-500/20 rounded-3xl flex flex-col items-center text-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-1">Processing Failed</h3>
+                  <p className="text-[10px] text-zinc-500 font-medium max-w-xs mx-auto">
+                    {meeting.testResults?.includes("System Error") 
+                      ? meeting.testResults 
+                      : "Something went wrong during the AI analysis. This could be due to a temporary service interruption or an issue with the audio file."}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => processMeetingAI(meeting.id)}
+                  className="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
+                >
+                  Retry Analysis
+                </button>
+              </div>
+            )}
+
             {activeTab === "transcript" && (
               <div className="space-y-8 max-w-3xl">
                 {meeting?.transcripts?.length > 0 ? (
