@@ -1,6 +1,4 @@
 import { RateLimiterMemory, RateLimiterRedis, RateLimiterAbstract } from "rate-limiter-flexible";
-import type { Redis as UpstashRedis } from "@upstash/redis";
-import type IORedis from "ioredis";
 
 import logger from "./logger";
 
@@ -33,36 +31,64 @@ const LIMITER_CONFIGS: Record<LimiterType, Config> = {
   },
 };
 
-// 1. Try Upstash REST (Best for Serverless/Edge)
-let upstashRedisInstance: UpstashRedis | null = null;
+interface RedisInstance {
+  del(key: string): Promise<number>;
+}
 
-async function getUpstashRedis() {
+// 1. Try Upstash REST (Best for Serverless/Edge)
+let upstashRedisInstance: RedisInstance | null = null;
+
+async function getUpstashRedis(): Promise<RedisInstance | null> {
   if (upstashRedisInstance) return upstashRedisInstance;
   
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   
   if (url && token) {
-    const { Redis } = await import("@upstash/redis");
-    upstashRedisInstance = new Redis({
-      url,
-      token,
-    });
+    try {
+      const upstashModule = await import("@upstash/redis").catch(() => {
+        logger.warn("@upstash/redis module not available");
+        return null;
+      });
+      if (upstashModule && upstashModule.Redis) {
+        upstashRedisInstance = new upstashModule.Redis({
+          url,
+          token,
+        }) as unknown as RedisInstance;
+        logger.info("Upstash Redis initialized successfully");
+      }
+    } catch (error) {
+      logger.error({ error }, "Failed to initialize Upstash Redis");
+      upstashRedisInstance = null;
+    }
   }
   
   return upstashRedisInstance;
 }
 
 // 2. Try Standard Redis (ioredis)
-let ioRedisClientInstance: IORedis | null = null;
+let ioRedisClientInstance: RedisInstance | null = null;
 
-async function getIORedisClient() {
+async function getIORedisClient(): Promise<RedisInstance | null> {
   if (ioRedisClientInstance) return ioRedisClientInstance;
   
   const upstash = await getUpstashRedis();
   if (!upstash && process.env.REDIS_URL) {
-    const { default: IORedisClient } = await import("ioredis");
-    ioRedisClientInstance = new IORedisClient(process.env.REDIS_URL, { maxRetriesPerRequest: 3 });
+    try {
+      // Use dynamic import with type assertion to avoid TypeScript errors
+      const ioredisModule = await (import("ioredis") as Promise<unknown>).catch(() => {
+        logger.warn("ioredis module not available");
+        return null;
+      });
+      if (ioredisModule && (ioredisModule as Record<string, unknown>).default) {
+        const IORedisClient = (ioredisModule as Record<string, unknown>).default as new (url: string, options?: unknown) => RedisInstance;
+        ioRedisClientInstance = new IORedisClient(process.env.REDIS_URL as string, { maxRetriesPerRequest: 3 });
+        logger.info("IORedis client initialized successfully");
+      }
+    } catch (error) {
+      logger.error({ error }, "Failed to initialize IORedis client");
+      ioRedisClientInstance = null;
+    }
   }
   
   return ioRedisClientInstance;
@@ -84,29 +110,47 @@ export interface RateLimitResult {
  */
 async function upstashConsume(type: LimiterType, key: string): Promise<RateLimitResult> {
   const config = LIMITER_CONFIGS[type];
-  const redis = await getUpstashRedis();
   
-  if (!redis) {
-    throw new Error("Upstash Redis not initialized");
+  try {
+    const redis = await getUpstashRedis();
+    
+    if (!redis) {
+      // Fallback to flexible rate limiting if Upstash Redis is not available
+      logger.warn("Upstash Redis not available, falling back to flexible rate limiting");
+      return flexibleConsume(type, key);
+    }
+
+    const ratelimitModule = await import("@upstash/ratelimit").catch(() => {
+      logger.warn("@upstash/ratelimit module not available");
+      return null;
+    });
+    
+    if (!ratelimitModule || !ratelimitModule.Ratelimit) {
+      logger.warn("@upstash/ratelimit not available, falling back to flexible rate limiting");
+      return flexibleConsume(type, key);
+    }
+    
+    const ratelimit = new ratelimitModule.Ratelimit({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      redis: redis as any,
+      limiter: ratelimitModule.Ratelimit.slidingWindow(config.points, config.duration as `${number}s` | `${number}m` | `${number}h` | `${number}d`),
+      prefix: `@upstash/ratelimit/${type}`,
+    });
+
+    const { success, limit, remaining, reset } = await ratelimit.limit(key);
+    const now = Date.now();
+    
+    return {
+      allowed: success,
+      limit,
+      remaining,
+      reset: reset - now,
+      retryAfter: !success ? Math.ceil((reset - now) / 1000) : 0,
+    };
+  } catch (error) {
+    logger.error({ error }, "Upstash rate limiting failed, falling back to flexible rate limiting");
+    return flexibleConsume(type, key);
   }
-
-  const { Ratelimit } = await import("@upstash/ratelimit");
-  const ratelimit = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(config.points, config.duration as `${number}s` | `${number}m` | `${number}h` | `${number}d`),
-    prefix: `@upstash/ratelimit/${type}`,
-  });
-
-  const { success, limit, remaining, reset } = await ratelimit.limit(key);
-  const now = Date.now();
-  
-  return {
-    allowed: success,
-    limit,
-    remaining,
-    reset: reset - now,
-    retryAfter: !success ? Math.ceil((reset - now) / 1000) : 0,
-  };
 }
 
 /**
