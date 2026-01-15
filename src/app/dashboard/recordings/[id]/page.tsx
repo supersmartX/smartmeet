@@ -284,7 +284,7 @@ export default function RecordingDetailPage() {
     
     try {
       const path = docData.split(": ")[1].trim();
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://smartmeet-ai-x6qq.onrender.com";
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://api.supersmartx.com:8000";
       const downloadUrl = `${baseUrl}/${path}`;
       const filename = path.split('/').pop() || "project_doc.docx";
       

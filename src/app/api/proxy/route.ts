@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Forward request to actual API
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "https://smartmeet-ai-x6qq.onrender.com";
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://api.supersmartx.com:8000";
     const apiUrl = `${baseUrl}${sanitizedEndpoint}`;
     
     const requestHeaders: Record<string, string> = {

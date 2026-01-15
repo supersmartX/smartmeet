@@ -8,7 +8,7 @@ const envSchema = z.object({
   DIRECT_URL: isServer ? z.string().optional() : z.string().optional(),
   NEXTAUTH_SECRET: isServer ? z.string().min(1, "NEXTAUTH_SECRET is required") : z.string().optional(),
   NEXTAUTH_URL: z.string().url().default("http://localhost:3000"),
-  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("https://smartmeet-ai-x6qq.onrender.com"),
+  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://api.supersmartx.com:8000"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   
   // OAuth Providers

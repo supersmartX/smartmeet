@@ -1111,12 +1111,6 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
         link: `/dashboard/recordings/${meetingId}`
       });
 
-      // Increment meetings used count
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { meetingsUsed: { increment: 1 } }
-      });
-
       return { success: true };
 
     } catch (error: unknown) {
