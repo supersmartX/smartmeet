@@ -63,8 +63,8 @@ export default function Pricing() {
     setLoading(priceId);
     try {
       const result = await createCheckoutSession(priceId);
-      if (result.success && result.url) {
-        window.location.href = result.url;
+      if (result.success && result.data?.url) {
+        window.location.href = result.data.url;
       } else {
         alert(result.error || "Failed to initiate checkout. Please try again.");
       }

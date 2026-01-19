@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Mail, Lock, User, Key, ArrowRight, Loader2, Github, Eye, EyeOff } from "lucide-react";
 import { signUp } from "@/actions/auth";
+import logger from "@/lib/logger";
 
 export default function LoginClient() {
   const [mode, setMode] = useState<"signin" | "signup">("signup");
@@ -38,8 +39,6 @@ export default function LoginClient() {
     const errorParam = searchParams.get("error");
     const errorDescription = searchParams.get("error_description");
     
-    console.log('🔍 Login error params:', { errorParam, errorDescription });
-    
     if (errorParam === "OAuthAccountNotLinked") {
       setError("This email is already associated with another login method. Please sign in using your original method.");
     } else if (errorParam === "OAuthSigninFailed") {
@@ -57,19 +56,17 @@ export default function LoginClient() {
         ? `Authentication error: ${errorParam} - ${errorDescription}`
         : `Authentication error: ${errorParam}`;
       setError(detailedError);
-      console.error('🔍 Detailed OAuth error:', { errorParam, errorDescription });
+      logger.error({ errorParam, errorDescription }, "Detailed OAuth error");
     }
   }, [searchParams]);
 
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        console.log('🔍 Fetching auth providers...');
         const res = await getProviders();
-        console.log('✅ Providers fetched:', res);
         setProviders(res);
       } catch (error) {
-        console.error('❌ Failed to fetch providers:', error);
+        logger.error({ error }, "Failed to fetch providers");
         setError('Failed to load authentication providers');
       }
     };

@@ -6,7 +6,7 @@ import { ReactNode } from "react";
 export function AuthProvider({ 
   children,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  nonce 
+  nonce,
 }: { 
   children: ReactNode;
   nonce?: string;

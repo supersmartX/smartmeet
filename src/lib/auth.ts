@@ -14,10 +14,18 @@ import { checkLoginRateLimitWithIP, resetRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 import logger from "@/lib/logger";
 
-const googleId = process.env.GOOGLE_CLIENT_ID?.trim();
-const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
-const githubId = process.env.GITHUB_ID?.trim();
-const githubSecret = process.env.GITHUB_SECRET?.trim();
+const getEnv = (key: string, required = false) => {
+  const value = process.env[key]?.trim();
+  if (required && !value && process.env.NODE_ENV === 'production') {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+};
+
+const googleId = getEnv("GOOGLE_CLIENT_ID");
+const googleSecret = getEnv("GOOGLE_CLIENT_SECRET");
+const githubId = getEnv("GITHUB_ID");
+const githubSecret = getEnv("GITHUB_SECRET");
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
@@ -217,8 +225,8 @@ export const authOptions: NextAuthOptions = {
           const now = Math.floor(Date.now() / 1000);
           const lastRefreshed = (token as { lastRefreshed?: number }).lastRefreshed || 0;
           
-          // Refresh every 1 hour (3600 seconds)
-          if (now - lastRefreshed > 3600) {
+          // Refresh every 4 hours (14400 seconds) to balance data freshness and performance
+          if (now - lastRefreshed > 14400) {
             try {
               const dbUser = await prisma.user.findUnique({
                 where: { id: token.id as string },

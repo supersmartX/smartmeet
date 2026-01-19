@@ -6,12 +6,7 @@ import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
 import { Notification, NotificationType } from "@prisma/client";
 import logger from "@/lib/logger";
-
-export type ActionResult<T = unknown> = {
-  success: boolean;
-  data?: T;
-  error?: string;
-};
+import { ActionResult } from "@/types/meeting";
 
 /**
  * Fetch all notifications for the current user

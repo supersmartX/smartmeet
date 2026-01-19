@@ -21,6 +21,7 @@ import {
 import { useState, useEffect } from "react"
 import { getMeetings } from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
+import logger from "@/lib/logger"
 
 interface WorkspaceItem {
   name: string;
@@ -46,7 +47,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           setRecentMeetings(result.data.slice(0, 5))
         }
       } catch (error) {
-        console.error("Failed to fetch sidebar meetings:", error)
+        logger.error({ error }, "Failed to fetch sidebar meetings")
       } finally {
         setIsLoading(false)
       }

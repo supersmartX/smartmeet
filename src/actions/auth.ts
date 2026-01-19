@@ -10,9 +10,20 @@ import { sendPasswordResetEmail } from "@/lib/mail";
 import { maskEmail } from "@/lib/utils";
 import logger from "@/lib/logger";
 import { ActionResult } from "@/types/meeting";
+import { checkLoginRateLimitWithIP } from "@/lib/rate-limit";
+import { headers } from "next/headers";
 
 export async function signUp(formData: SignUpInput): Promise<ActionResult<{ id: string; name: string | null; email: string | null }>> {
   try {
+    const headerList = await headers();
+    const ipAddress = headerList.get("x-forwarded-for")?.split(',')[0] ||
+                     headerList.get("x-real-ip") || undefined;
+
+    const rateLimitResult = await checkLoginRateLimitWithIP(formData.email || "signup", ipAddress);
+    if (!rateLimitResult.allowed) {
+      return { success: false, error: "Too many attempts. Please try again later." };
+    }
+
     const result = signUpSchema.safeParse(formData);
 
     if (!result.success) {
@@ -79,6 +90,15 @@ export async function signUp(formData: SignUpInput): Promise<ActionResult<{ id: 
 
 export async function requestPasswordReset(email: string): Promise<ActionResult<{ message: string }>> {
   try {
+    const headerList = await headers();
+    const ipAddress = headerList.get("x-forwarded-for")?.split(',')[0] ||
+                     headerList.get("x-real-ip") || undefined;
+
+    const rateLimitResult = await checkLoginRateLimitWithIP(email, ipAddress);
+    if (!rateLimitResult.allowed) {
+      return { success: false, error: "Too many attempts. Please try again later." };
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
     });
@@ -117,6 +137,16 @@ export async function requestPasswordReset(email: string): Promise<ActionResult<
 
 export async function resetPassword(token: string, password: string): Promise<ActionResult<{ message: string }>> {
   try {
+    const headerList = await headers();
+    const ipAddress = headerList.get("x-forwarded-for")?.split(',')[0] ||
+                     headerList.get("x-real-ip") || undefined;
+
+    // Use token as key for rate limiting reset password
+    const rateLimitResult = await checkLoginRateLimitWithIP(token, ipAddress);
+    if (!rateLimitResult.allowed) {
+      return { success: false, error: "Too many attempts. Please try again later." };
+    }
+
     const user = await prisma.user.findUnique({
       where: { resetToken: token },
     });

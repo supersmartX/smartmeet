@@ -24,8 +24,8 @@ export function BillingSection({
     setIsPortalLoading(true)
     try {
       const result = await createPortalSession()
-      if (result.success && result.url) {
-        window.location.href = result.url
+      if (result.success && result.data?.url) {
+        window.location.href = result.data.url
       } else {
         alert(result.error || "Failed to open billing portal.")
       }

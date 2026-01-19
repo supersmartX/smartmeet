@@ -1,5 +1,20 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { parentPort } = require('worker_threads');
+import { parentPort } from 'worker_threads';
+
+// Fallback functions for non-worker context
+export const postMessage = (message) => {
+  if (parentPort) {
+    parentPort.postMessage(message);
+  } else {
+    console.log('Worker message:', message);
+  }
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const onMessage = (callback) => {
+  if (parentPort) {
+    parentPort.on('message', callback);
+  }
+};
 
 // Basic worker thread implementation for Next.js
 if (parentPort) {
@@ -30,15 +45,4 @@ if (parentPort) {
 
   // Send ready message
   parentPort.postMessage({ type: 'ready' });
-} else {
-  // If not running as a worker, provide basic functionality
-  module.exports = {
-    postMessage: (message) => {
-      console.log('Worker message:', message);
-    },
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    onMessage: () => {
-      // No-op for non-worker context
-    }
-  };
 }

@@ -6,8 +6,9 @@ import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
 import { logSecurityEvent } from "@/lib/audit";
+import { ActionResult } from "@/types/meeting";
 
-export async function createCheckoutSession(priceId: string) {
+export async function createCheckoutSession(priceId: string): Promise<ActionResult<{ url: string }>> {
   try {
     const session = await getServerSession(enhancedAuthOptions);
 
@@ -67,14 +68,14 @@ export async function createCheckoutSession(priceId: string) {
       "Billing"
     );
 
-    return { success: true, url: checkoutSession.url };
+    return { success: true, data: { url: checkoutSession.url } };
   } catch (error) {
     logger.error({ error, priceId }, "Stripe Checkout Error");
     return { success: false, error: "An error occurred while creating checkout session" };
   }
 }
 
-export async function createPortalSession() {
+export async function createPortalSession(): Promise<ActionResult<{ url: string }>> {
   try {
     const session = await getServerSession(enhancedAuthOptions);
 
@@ -102,9 +103,9 @@ export async function createPortalSession() {
       "Billing"
     );
 
-    return { success: true, url: portalSession.url };
+    return { success: true, data: { url: portalSession.url } };
   } catch (error) {
     logger.error({ error }, "Stripe Portal Error");
-    return { success: false, error: "An error occurred while opening billing portal" };
+    return { success: false, error: "An error occurred while creating portal session" };
   }
 }

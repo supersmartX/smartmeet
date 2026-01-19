@@ -14,6 +14,7 @@ import {
   toggleFavorite
 } from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
+import logger from "@/lib/logger"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
 import { RecordingHeader } from "@/components/dashboard/recordings/RecordingHeader"
@@ -46,7 +47,7 @@ export default function RecordingsClient() {
         toastVisible(result.error || "Failed to load recordings", "error")
       }
     } catch (err) {
-      console.error("Fetch meetings error:", err)
+      logger.error({ err }, "Fetch meetings error")
       if (!silent) {
         setError("Failed to load recordings. Please try again.")
         toastVisible("Failed to load recordings. Please try again.", "error")
@@ -66,7 +67,7 @@ export default function RecordingsClient() {
         toastVisible(result.error || "Failed to rename recording.", "error")
       }
     } catch (error) {
-      console.error("Rename error:", error)
+      logger.error({ error }, "Rename error")
       toastVisible("An unexpected error occurred.", "error")
     }
   }
@@ -89,7 +90,7 @@ export default function RecordingsClient() {
         toastVisible(result.error || "Failed to delete recording.", "error")
       }
     } catch (error) {
-      console.error("Delete error:", error)
+      logger.error({ error }, "Delete error")
       // Rollback on error
       setRecordings(previousRecordings);
       toastVisible("An unexpected error occurred.", "error")
@@ -105,7 +106,7 @@ export default function RecordingsClient() {
         toastVisible(result.error || "Failed to pin recording.", "error")
       }
     } catch (error) {
-      console.error("Toggle pinned error:", error)
+      logger.error({ error }, "Toggle pinned error")
       toastVisible("An unexpected error occurred.", "error")
     }
   }
@@ -119,7 +120,7 @@ export default function RecordingsClient() {
         toastVisible(result.error || "Failed to favorite recording.", "error")
       }
     } catch (error) {
-      console.error("Toggle favorite error:", error)
+      logger.error({ error }, "Toggle favorite error")
       toastVisible("An unexpected error occurred.", "error")
     }
   }
