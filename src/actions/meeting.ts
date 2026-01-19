@@ -668,7 +668,11 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
             data: { meetingId: meeting.id }
           });
 
-          if (!enqueued) {
+          if (enqueued) {
+            logger.info({ meetingId: meeting.id, userId: user.id }, "Meeting enqueued for auto-processing");
+            // Trigger the worker to start processing the queue immediately
+            triggerWorker();
+          } else {
             logger.info({ meetingId: meeting.id, userId: user.id }, "Queue failed during auto-process, starting fallback background AI processing");
             await internalProcessMeetingAI(meeting.id, clientIp);
           }
@@ -708,31 +712,27 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
 
     if (!meeting) return { success: false, error: "Meeting not found" };
 
-    // 2. Delete from storage if audioUrl exists
-    if (meeting.audioUrl && supabaseAdmin) {
-      try {
-        const { error: storageError } = await supabaseAdmin
-          .storage
+    // 2. & 3. Delete from storage and database in parallel for speed
+    // We don't await storage deletion strictly if it fails, we prioritize DB consistency
+    const storagePromise = (meeting.audioUrl && supabaseAdmin)
+      ? supabaseAdmin.storage
           .from("recordings")
-          .remove([meeting.audioUrl]);
-        
-        if (storageError) {
-          logger.error({ storageError, meetingId: id }, "Storage deletion error");
-          // We continue anyway to delete the DB record, but log it
-        }
-      } catch (err) {
-        logger.error({ err, meetingId: id }, "Storage service error");
-      }
-    }
+          .remove([meeting.audioUrl])
+          .then(({ error }) => {
+            if (error) logger.error({ error, meetingId: id }, "Storage deletion error");
+          })
+          .catch(err => logger.error({ err, meetingId: id }, "Storage service error"))
+      : Promise.resolve();
 
-    // 3. Delete from database
-    const deletedMeeting = await prisma.meeting.delete({
+    const dbPromise = prisma.meeting.delete({
       where: {
         id: validatedId,
         user: { email: session.user.email },
       },
       select: { userId: true }
     });
+
+    const [_, deletedMeeting] = await Promise.all([storagePromise, dbPromise]);
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/recordings");
@@ -1001,183 +1001,192 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
     const { aiCircuitBreaker } = await import("@/lib/circuit-breaker");
     const { aiConcurrencyLimiter } = await import("@/lib/concurrency");
 
-    return await aiConcurrencyLimiter.run(meetingId, async () => {
+    // Set a global timeout for the entire AI pipeline (e.g., 15 minutes)
+    const PIPELINE_TIMEOUT_MS = 15 * 60 * 1000;
+    
+    const pipelinePromise = aiConcurrencyLimiter.run(meetingId, async () => {
       try {
-      // Step 1: TRANSCRIPTION
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { processingStep: "TRANSCRIPTION" }
-      });
+        // Step 1: TRANSCRIPTION
+        await prisma.meeting.update({
+          where: { id: meetingId },
+          data: { processingStep: "TRANSCRIPTION" }
+        });
 
-      const transcriptionResult = await Performance.measure(
-        "AI_TRANSCRIPTION",
-        async () => {
-          return await aiCircuitBreaker.execute(async () => {
-            const res = await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
-            if (!res.success) throw new Error(res.error || "Transcription failed");
-            return res.data;
-          });
-        },
-        { meetingId, userId: user.id }
-      );
-
-      if (!transcriptionResult) throw new Error("Transcription failed");
-      const transcription = transcriptionResult.transcription;
-
-      // Step 2: SUMMARIZATION
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { processingStep: "SUMMARIZATION" }
-      });
-
-      const summaryResult = await Performance.measure(
-        "AI_SUMMARIZATION",
-        async () => {
-          return await aiCircuitBreaker.execute(async () => {
-            const res = await summarizeText(transcription, { 
-              api_key: effectiveApiKey, 
-              provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
-              summary_length: user.summaryLength || undefined,
-              summary_persona: user.summaryPersona || undefined,
-              language: user.defaultLanguage || undefined
+        const transcriptionResult = await Performance.measure(
+          "AI_TRANSCRIPTION",
+          async () => {
+            return await aiCircuitBreaker.execute(async () => {
+              const res = await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
+              if (!res.success) throw new Error(res.error || "Transcription failed");
+              return res.data;
             });
-            if (!res.success) throw new Error(res.error || "Summarization failed");
-            return res.data;
-          });
-        },
-        { meetingId, userId: user.id }
-      );
+          },
+          { meetingId, userId: user.id }
+        );
 
-      if (!summaryResult) throw new Error("Summarization failed");
-      const { summary, project_doc } = summaryResult;
+        if (!transcriptionResult) throw new Error("Transcription failed");
+        const transcription = transcriptionResult.transcription;
 
-      // Step 3: CODE_GENERATION
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { processingStep: "CODE_GENERATION" }
-      });
+        // Step 2: SUMMARIZATION
+        await prisma.meeting.update({
+          where: { id: meetingId },
+          data: { processingStep: "SUMMARIZATION" }
+        });
 
-      const codeResult = await Performance.measure(
-        "AI_CODE_GEN",
-        async () => {
-          return await aiCircuitBreaker.execute(async () => {
-            const res = await generateCode(transcription, { 
-              api_key: effectiveApiKey, 
-              provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
-              model: finalModel || undefined
+        const summaryResult = await Performance.measure(
+          "AI_SUMMARIZATION",
+          async () => {
+            return await aiCircuitBreaker.execute(async () => {
+              const res = await summarizeText(transcription, { 
+                api_key: effectiveApiKey, 
+                provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+                summary_length: user.summaryLength || undefined,
+                summary_persona: user.summaryPersona || undefined,
+                language: user.defaultLanguage || undefined
+              });
+              if (!res.success) throw new Error(res.error || "Summarization failed");
+              return res.data;
             });
-            if (!res.success) throw new Error(res.error || "Code generation failed");
-            return res.data;
-          });
-        },
-        { meetingId, userId: user.id }
-      );
+          },
+          { meetingId, userId: user.id }
+        );
 
-      if (!codeResult) throw new Error("Code generation failed");
-      const { code } = codeResult;
+        if (!summaryResult) throw new Error("Summarization failed");
+        const { summary, project_doc } = summaryResult;
 
-      // Step 4: TESTING
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { processingStep: "TESTING" }
-      });
+        // Step 3: CODE_GENERATION
+        await prisma.meeting.update({
+          where: { id: meetingId },
+          data: { processingStep: "CODE_GENERATION" }
+        });
 
-      const testResult = await Performance.measure(
-        "AI_TESTING",
-        async () => {
-          return await aiCircuitBreaker.execute(async () => {
-            const res = await testCode(code, { 
-              api_key: effectiveApiKey, 
-              provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
+        const codeResult = await Performance.measure(
+          "AI_CODE_GEN",
+          async () => {
+            return await aiCircuitBreaker.execute(async () => {
+              const res = await generateCode(transcription, { 
+                api_key: effectiveApiKey, 
+                provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+                model: finalModel || undefined
+              });
+              if (!res.success) throw new Error(res.error || "Code generation failed");
+              return res.data;
             });
-            // We don't throw error if test fails, just record it
-            return res.data;
-          });
-        },
-        { meetingId, userId: user.id }
-      );
+          },
+          { meetingId, userId: user.id }
+        );
 
-      // Final Save
-      await Performance.measure(
-        "DB_FINAL_SAVE",
-        async () => {
-          await prisma.meeting.update({
-            where: { id: meetingId },
-            data: {
-              status: "COMPLETED",
-              processingStep: "COMPLETED",
-              transcripts: {
-                create: [{
-                  speaker: "AI Assistant",
-                  time: "0:00",
-                  text: transcription
-                }]
-              },
-              summary: {
-                create: { content: summary }
-              },
-              code: code,
-              projectDoc: project_doc,
-              testResults: testResult?.output || testResult?.error || "No test results"
-            }
-          });
-        },
-        { meetingId, userId: user.id }
-      );
+        if (!codeResult) throw new Error("Code generation failed");
+        const { code } = codeResult;
 
-      await logSecurityEvent(
-        "MEETING_PROCESSING_SUCCESS",
-        user.id,
-        `Meeting "${meeting.title}" processed successfully`,
-        "Meeting"
-      );
+        // Step 4: TESTING
+        await prisma.meeting.update({
+          where: { id: meetingId },
+          data: { processingStep: "TESTING" }
+        });
 
-      // Send success notification
-      await createNotification(user.id, {
-        title: "Processing Complete",
-        message: `Your meeting "${meeting.title}" has been successfully processed.`,
-        type: "SUCCESS",
-        link: `/dashboard/recordings/${meetingId}`
-      });
+        const testResult = await Performance.measure(
+          "AI_TESTING",
+          async () => {
+            return await aiCircuitBreaker.execute(async () => {
+              const res = await testCode(code, { 
+                api_key: effectiveApiKey, 
+                provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
+              });
+              // We don't throw error if test fails, just record it
+              return res.data;
+            });
+          },
+          { meetingId, userId: user.id }
+        );
 
-      return { success: true };
+        // Final Save
+        await Performance.measure(
+          "DB_FINAL_SAVE",
+          async () => {
+            await prisma.meeting.update({
+              where: { id: meetingId },
+              data: {
+                status: "COMPLETED",
+                processingStep: "COMPLETED",
+                transcripts: {
+                  create: [{
+                    speaker: "AI Assistant",
+                    time: "0:00",
+                    text: transcription
+                  }]
+                },
+                summary: {
+                  create: { content: summary }
+                },
+                code: code,
+                projectDoc: project_doc,
+                testResults: testResult?.output || testResult?.error || "No test results"
+              }
+            });
+          },
+          { meetingId, userId: user.id }
+        );
 
-    } catch (error: unknown) {
-      const errorDetail = error instanceof Error ? error.message : "AI Pipeline failed";
-      
-      logger.error({ error, meetingId, userId: user.id }, "Pipeline failure details");
-      
-      const breakerState = await aiCircuitBreaker.getState();
-      const isBreakerOpen = breakerState === "OPEN";
+        await logSecurityEvent(
+          "MEETING_PROCESSING_SUCCESS",
+          user.id,
+          `Meeting "${meeting.title}" processed successfully`,
+          "Meeting"
+        );
 
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { 
-          status: "FAILED",
-          processingStep: "FAILED",
-          testResults: isBreakerOpen 
-            ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
-            : `System Error: ${errorDetail}`
-        }
-      });
-      
-      // Send failure notification
-      await createNotification(user.id, {
-        title: "Processing Failed",
-        message: `Failed to process meeting "${meeting.title}": ${errorDetail}`,
-        type: "ERROR",
-        link: `/dashboard/recordings/${meetingId}`
-      });
-      
-      return { 
-          success: false, 
-          error: errorDetail,
-          message: isBreakerOpen 
-            ? "AI service is temporarily unavailable. Please try again shortly."
-            : "AI processing failed. Please check your settings."
-        };
+        // Send success notification
+        await createNotification(user.id, {
+          title: "Processing Complete",
+          message: `Your meeting "${meeting.title}" has been successfully processed.`,
+          type: "SUCCESS",
+          link: `/dashboard/recordings/${meetingId}`
+        });
+
+        return { success: true };
+
+      } catch (error: unknown) {
+        const errorDetail = error instanceof Error ? error.message : "AI Pipeline failed";
+        
+        logger.error({ error, meetingId, userId: user.id }, "Pipeline failure details");
+        
+        const breakerState = await aiCircuitBreaker.getState();
+        const isBreakerOpen = breakerState === "OPEN";
+
+        await prisma.meeting.update({
+          where: { id: meetingId },
+          data: { 
+            status: "FAILED",
+            processingStep: "FAILED",
+            testResults: isBreakerOpen 
+              ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
+              : `System Error: ${errorDetail}`
+          }
+        });
+        
+        // Send failure notification
+        await createNotification(user.id, {
+          title: "Processing Failed",
+          message: `Failed to process meeting "${meeting.title}": ${errorDetail}`,
+          type: "ERROR",
+          link: `/dashboard/recordings/${meetingId}`
+        });
+        
+        return { 
+            success: false, 
+            error: errorDetail,
+            message: isBreakerOpen 
+              ? "AI service is temporarily unavailable. Please try again shortly."
+              : "AI processing failed. Please check your settings."
+          };
       }
     });
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("AI Pipeline timed out")), PIPELINE_TIMEOUT_MS);
+    });
+
+    return await Promise.race([pipelinePromise, timeoutPromise]) as ActionResult;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process meeting with AI";
     logger.error({ error, meetingId }, "Internal process meeting AI outer error");
@@ -1194,6 +1203,26 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
 
     return { success: false, error: errorMessage };
   }
+}
+
+/**
+ * Helper to trigger the background worker asynchronously
+ */
+async function triggerWorker() {
+  const workerSecret = process.env.WORKER_SECRET;
+  if (!workerSecret) return;
+
+  // Use the internal URL if possible, otherwise use the public one
+  // In Next.js, we can often hit our own API route
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000";
+  
+  // Fire and forget the worker trigger
+  fetch(`${baseUrl}/api/worker/process`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${workerSecret}`
+    }
+  }).catch(err => logger.error({ err }, "Failed to trigger worker"));
 }
 
 export async function processMeetingAI(meetingId: string): Promise<ActionResult> {
@@ -1216,7 +1245,10 @@ export async function processMeetingAI(meetingId: string): Promise<ActionResult>
       data: { meetingId }
     });
 
-    if (!enqueued) {
+    if (enqueued) {
+      // Trigger the worker to start processing the queue immediately
+      triggerWorker();
+    } else {
       // Fallback to background IIFE if queue fails
       (async () => {
         try {

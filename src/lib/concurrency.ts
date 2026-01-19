@@ -43,14 +43,12 @@ export class ConcurrencyLimiter {
     const requestKey = `${this.prefix}:request:${requestId}`;
 
     try {
-      // Use Redis INCR to check if we're under the limit
-      // Note: This is a simplified semaphore. For absolute precision, 
-      // a Lua script or Redlock would be better, but INCR is sufficient for our traffic.
-      const current = await redis.get<number>(key) || 0;
+      // Use the number of active request keys as the source of truth for concurrency
+      // This is much more resilient to crashes than a separate counter
+      const keys = await redis.keys(`${this.prefix}:request:*`);
+      const current = keys.length;
       
       if (current >= this.maxConcurrency) {
-        // Double check for stale slots by looking at individual request keys if needed
-        // but for now, we'll stick to the count and use a TTL on the count as a fallback
         logger.warn({ 
           serviceName: this.serviceName, 
           current, 
@@ -59,18 +57,13 @@ export class ConcurrencyLimiter {
         return null;
       }
 
-      // Increment count and set a request-specific key with TTL to handle crashes
-      await redis.incr(key);
+      // Set a request-specific key with TTL to handle crashes
       await redis.set(requestKey, "active", { px: this.timeoutMs });
 
       // Return release function
       return async () => {
         try {
-          const exists = await redis.get(requestKey);
-          if (exists) {
-            await redis.decr(key);
-            await redis.del(requestKey);
-          }
+          await redis.del(requestKey);
         } catch (err) {
           logger.error({ err, requestId }, "Error releasing concurrency slot");
         }

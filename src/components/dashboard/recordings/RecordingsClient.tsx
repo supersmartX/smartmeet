@@ -72,16 +72,26 @@ export default function RecordingsClient() {
   }
 
   const handleDelete = async (id: string) => {
+    // Optimistic update
+    const previousRecordings = [...recordings];
+    setRecordings(prev => prev.filter(rec => rec.id !== id));
+
     try {
       const result = await deleteMeeting(id)
       if (result.success) {
-        await fetchMeetings()
         toastVisible("Recording deleted successfully", "success")
+        // No need to fetchMeetings() here as we already updated the state
+        // But we can do it silently to sync with server
+        await fetchMeetings(true)
       } else {
+        // Rollback on failure
+        setRecordings(previousRecordings);
         toastVisible(result.error || "Failed to delete recording.", "error")
       }
     } catch (error) {
       console.error("Delete error:", error)
+      // Rollback on error
+      setRecordings(previousRecordings);
       toastVisible("An unexpected error occurred.", "error")
     }
   }
