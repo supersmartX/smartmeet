@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import { authOptions } from "./auth";
 import { prisma } from "@/lib/prisma";
+import { maskEmail } from "@/lib/utils";
 import logger from "./logger";
 
 // Extended JWT token type for OAuth
@@ -39,7 +40,7 @@ export const enhancedAuthOptions: NextAuthOptions = {
       try {
         logger.info({ 
           provider: account?.provider,
-          email: user?.email,
+          email: maskEmail(user?.email),
           type: account?.type
         }, "SignIn Callback Started");
 
@@ -83,7 +84,7 @@ export const enhancedAuthOptions: NextAuthOptions = {
             );
 
             if (!isLinked) {
-              logger.info({ email: user.email }, "Existing user found with same email but different provider. Redirecting to link required.");
+              logger.info({ email: maskEmail(user.email) }, "Existing user found with same email but different provider. Redirecting to link required.");
               // Instead of throwing, we return a redirect URL
               return `/login?error=OAuthAccountNotLinked&email=${encodeURIComponent(user.email)}`;
             }
@@ -117,13 +118,14 @@ export const enhancedAuthOptions: NextAuthOptions = {
                 image: profile.image,
               };
             }
-          } catch {
-            // Silently handle token errors
+          } catch (e) {
+            logger.error({ error: e }, "Error setting OAuth token profile");
           }
         }
         
         return token;
-      } catch {
+      } catch (e) {
+        logger.error({ error: e }, "JWT callback exception");
         return token;
       }
     },
@@ -151,7 +153,8 @@ export const enhancedAuthOptions: NextAuthOptions = {
         }
         
         return session;
-      } catch {
+      } catch (e) {
+        logger.error({ error: e }, "Session callback exception");
         return session;
       }
     },

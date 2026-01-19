@@ -7,6 +7,7 @@ import { sendVerificationEmail } from "@/lib/mail";
 import { signUpSchema, SignUpInput } from "@/lib/validations/auth";
 import { logSecurityEvent } from "@/lib/audit";
 import { sendPasswordResetEmail } from "@/lib/mail";
+import { maskEmail } from "@/lib/utils";
 import logger from "@/lib/logger";
 import { ActionResult } from "@/types/meeting";
 
@@ -59,7 +60,7 @@ export async function signUp(formData: SignUpInput): Promise<ActionResult<{ id: 
     await logSecurityEvent(
       "SIGNUP_SUCCESS",
       user.id,
-      `Account created for ${user.email}`,
+      `Account created for ${maskEmail(user.email)}`,
       "Authentication"
     );
 
@@ -103,7 +104,7 @@ export async function requestPasswordReset(email: string): Promise<ActionResult<
     await logSecurityEvent(
       "PASSWORD_RESET_REQUESTED",
       user.id,
-      `Password reset requested for ${email}`,
+      `Password reset requested for ${maskEmail(email)}`,
       "Authentication"
     );
 
@@ -138,7 +139,7 @@ export async function resetPassword(token: string, password: string): Promise<Ac
     await logSecurityEvent(
       "PASSWORD_RESET_SUCCESS",
       user.id,
-      `Password successfully reset for ${user.email}`,
+      `Password successfully reset for ${maskEmail(user.email)}`,
       "Authentication"
     );
 

@@ -504,10 +504,10 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
   let session;
   try {
     session = await getServerSession(enhancedAuthOptions);
-    if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { id: session.user.id },
       select: {
         id: true,
         apiKey: true,

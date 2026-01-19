@@ -1,24 +1,5 @@
-import type { Redis as UpstashRedis } from "@upstash/redis";
+import { getRedisClient } from "@/lib/redis";
 import logger from "@/lib/logger";
-
-let redisInstance: UpstashRedis | null = null;
-
-async function getRedis() {
-  if (redisInstance) return redisInstance;
-  
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  
-  if (url && token) {
-    const { Redis } = await import("@upstash/redis");
-    redisInstance = new Redis({
-      url,
-      token,
-    });
-  }
-  
-  return redisInstance;
-}
 
 interface CircuitBreakerConfig {
   failureThreshold: number; // Number of failures before tripping the circuit
@@ -45,7 +26,7 @@ export class RedisCircuitBreaker {
   }
 
   async getState(): Promise<CircuitState> {
-    const redis = await getRedis();
+    const redis = await getRedisClient();
     if (!redis) return "CLOSED";
 
     const isOpen = await redis.get<string>(`${this.prefix}:status`);
@@ -62,7 +43,7 @@ export class RedisCircuitBreaker {
   }
 
   async recordSuccess(): Promise<void> {
-    const redis = await getRedis();
+    const redis = await getRedisClient();
     if (!redis) return;
     // Reset failures on success
     await redis.del(`${this.prefix}:failures`);
@@ -71,7 +52,7 @@ export class RedisCircuitBreaker {
   }
 
   async recordFailure(): Promise<void> {
-    const redis = await getRedis();
+    const redis = await getRedisClient();
     if (!redis) return;
 
     const failures = await redis.incr(`${this.prefix}:failures`);

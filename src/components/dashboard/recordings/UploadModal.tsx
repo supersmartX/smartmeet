@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react"
 import { X, Upload, FileAudio, AlertCircle, FileText } from "lucide-react"
+import { useToast } from "@/hooks/useToast"
 
 interface UploadModalProps {
   isOpen: boolean
@@ -21,6 +22,7 @@ export function UploadModal({
   const [dragActive, setDragActive] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showToast } = useToast()
 
   if (!isOpen) return null
 
@@ -43,7 +45,7 @@ export function UploadModal({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
       if (file.size > MAX_FILE_SIZE) {
-        alert("File size exceeds 500MB limit.")
+        showToast("File size exceeds 500MB limit.", "error")
         return
       }
       if (file.type.startsWith('audio/') || file.type.startsWith('video/') || 
@@ -60,7 +62,7 @@ export function UploadModal({
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       if (file.size > MAX_FILE_SIZE) {
-        alert("File size exceeds 500MB limit.")
+        showToast("File size exceeds 500MB limit.", "error")
         return
       }
       setSelectedFile(file)

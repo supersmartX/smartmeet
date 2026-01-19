@@ -4,6 +4,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { UploadModal } from '../../components/dashboard/recordings/UploadModal';
 
+// Mock useToast hook
+const mockShowToast = jest.fn();
+jest.mock('@/hooks/useToast', () => ({
+  useToast: () => ({
+    showToast: mockShowToast,
+    hideToast: jest.fn(),
+    toast: { show: false, message: "", type: "success" }
+  })
+}));
+
 // Mock lucide-react icons
 jest.mock('lucide-react', () => ({
   X: () => <div data-testid="icon-x" />,
@@ -26,7 +36,6 @@ describe('UploadModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    window.alert = jest.fn();
   });
 
   it('renders correctly when open', () => {
@@ -53,7 +62,7 @@ describe('UploadModal', () => {
       },
     });
 
-    expect(window.alert).toHaveBeenCalledWith('File size exceeds 500MB limit.');
+    expect(mockShowToast).toHaveBeenCalledWith('File size exceeds 500MB limit.', 'error');
     expect(screen.queryByText('large.mp3')).not.toBeInTheDocument();
   });
 
@@ -97,7 +106,7 @@ describe('UploadModal', () => {
 
     fireEvent.change(input, { target: { files: [largeFile] } });
 
-    expect(window.alert).toHaveBeenCalledWith('File size exceeds 500MB limit.');
+    expect(mockShowToast).toHaveBeenCalledWith('File size exceeds 500MB limit.', 'error');
   });
 
   it('triggers onUpload when "Start Upload" is clicked', async () => {

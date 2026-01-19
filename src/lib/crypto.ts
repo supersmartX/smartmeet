@@ -3,10 +3,14 @@ import logger from './logger';
 
 const ALGORITHM = 'aes-256-cbc';
 const ENCRYPTION_KEY = (() => {
-  if (!process.env.NEXTAUTH_SECRET) {
-    throw new Error('NEXTAUTH_SECRET is required for encryption operations');
+  const secret = process.env.ENCRYPTION_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('ENCRYPTION_SECRET or NEXTAUTH_SECRET is required for encryption operations');
   }
-  return crypto.createHash('sha256').update(process.env.NEXTAUTH_SECRET).digest();
+  if (!process.env.ENCRYPTION_SECRET && process.env.NODE_ENV === 'production') {
+    logger.warn('ENCRYPTION_SECRET is not set. Falling back to NEXTAUTH_SECRET. It is recommended to use a dedicated ENCRYPTION_SECRET.');
+  }
+  return crypto.createHash('sha256').update(secret).digest();
 })();
 const IV_LENGTH = 16;
 

@@ -16,7 +16,7 @@ const prismaClientSingleton = () => {
   });
 
   client.$on('query' as never, (e: Prisma.QueryEvent) => {
-    if (e.duration >= 1000) {
+    if (e.duration >= 300) {
       logger.warn({
         query: e.query,
         params: e.params,

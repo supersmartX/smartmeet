@@ -1,5 +1,5 @@
 import { RateLimiterMemory, RateLimiterRedis, RateLimiterAbstract } from "rate-limiter-flexible";
-
+import { getUpstashRedis, getIORedisClient } from "@/lib/redis";
 import logger from "./logger";
 
 // Configuration for rate limiters
@@ -30,69 +30,6 @@ const LIMITER_CONFIGS: Record<LimiterType, Config> = {
     durationSec: 60 * 60,
   },
 };
-
-interface RedisInstance {
-  del(key: string): Promise<number>;
-}
-
-// 1. Try Upstash REST (Best for Serverless/Edge)
-let upstashRedisInstance: RedisInstance | null = null;
-
-async function getUpstashRedis(): Promise<RedisInstance | null> {
-  if (upstashRedisInstance) return upstashRedisInstance;
-  
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  
-  if (url && token) {
-    try {
-      const upstashModule = await import("@upstash/redis").catch(() => {
-        logger.warn("@upstash/redis module not available");
-        return null;
-      });
-      if (upstashModule && upstashModule.Redis) {
-        upstashRedisInstance = new upstashModule.Redis({
-          url,
-          token,
-        }) as unknown as RedisInstance;
-        logger.info("Upstash Redis initialized successfully");
-      }
-    } catch (error) {
-      logger.error({ error }, "Failed to initialize Upstash Redis");
-      upstashRedisInstance = null;
-    }
-  }
-  
-  return upstashRedisInstance;
-}
-
-// 2. Try Standard Redis (ioredis)
-let ioRedisClientInstance: RedisInstance | null = null;
-
-async function getIORedisClient(): Promise<RedisInstance | null> {
-  if (ioRedisClientInstance) return ioRedisClientInstance;
-  
-  const upstash = await getUpstashRedis();
-  if (!upstash && process.env.REDIS_URL) {
-    try {
-      // Use dynamic import with type assertion to avoid TypeScript errors
-      const ioredisModule = await (import("ioredis") as Promise<unknown>).catch(() => {
-        logger.warn("ioredis module not available");
-        return null;
-      });
-      if (ioredisModule && (ioredisModule as Record<string, unknown>).default) {
-        const IORedisClient = (ioredisModule as Record<string, unknown>).default as new (url: string, options?: unknown) => RedisInstance;
-        ioRedisClientInstance = new IORedisClient(process.env.REDIS_URL as string, { maxRetriesPerRequest: 3 });
-        logger.info("IORedis client initialized successfully");
-      }
-    } catch (error) {
-      logger.error({ error }, "Failed to initialize IORedis client");
-      ioRedisClientInstance = null;
-    }
-  }
-  
-  return ioRedisClientInstance;
-}
 
 /**
  * Interface for rate limit results

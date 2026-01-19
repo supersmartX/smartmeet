@@ -9,7 +9,7 @@ import logger from "@/lib/logger";
 // easily import it from server actions file if it's not exported.
 // I'll export it from meeting.ts first.
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const workerSecret = process.env.WORKER_SECRET;
 
@@ -19,9 +19,17 @@ export async function GET(request: NextRequest) {
 
   const results = [];
   let tasksProcessed = 0;
-  const MAX_TASKS = 5; // Process up to 5 tasks per invocation to avoid timeouts
+  const MAX_TASKS = 5; 
+  const START_TIME = Date.now();
+  const MAX_DURATION = 50000; // 50 seconds (standard Vercel timeout is 60s)
 
   while (tasksProcessed < MAX_TASKS) {
+    // Check if we're approaching the timeout
+    if (Date.now() - START_TIME > MAX_DURATION) {
+      logger.info("Worker approaching timeout, stopping task processing");
+      break;
+    }
+
     const task = await dequeueTask();
     if (!task) break;
 

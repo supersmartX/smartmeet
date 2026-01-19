@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
+import logger from "./logger";
 
 export async function logSecurityEvent(
   action: string,
@@ -22,7 +23,7 @@ export async function logSecurityEvent(
         userAgent,
       },
     });
-  } catch {
-    // Silently handle audit log errors to prevent blocking main flow
+  } catch (error) {
+    logger.error({ error, action, userId }, "Failed to log security event");
   }
 }
