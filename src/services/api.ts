@@ -112,7 +112,7 @@ async function makeApiRequest<T>(
 
     if (isServer) {
       // Direct call to API if on server
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://api.supersmartx.com:8000";
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://13.234.223.108:8000";
       url = `${baseUrl}${endpoint}`;
       
       const headers: Record<string, string> = {
