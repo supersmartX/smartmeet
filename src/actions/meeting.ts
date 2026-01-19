@@ -732,7 +732,7 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
       select: { userId: true }
     });
 
-    const [_, deletedMeeting] = await Promise.all([storagePromise, dbPromise]);
+    const [, deletedMeeting] = await Promise.all([storagePromise, dbPromise]);
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/recordings");

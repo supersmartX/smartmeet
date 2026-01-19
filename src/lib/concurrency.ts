@@ -39,7 +39,6 @@ export class ConcurrencyLimiter {
       return async () => {}; // No-op release
     }
 
-    const key = `${this.prefix}:slots`;
     const requestKey = `${this.prefix}:request:${requestId}`;
 
     try {
