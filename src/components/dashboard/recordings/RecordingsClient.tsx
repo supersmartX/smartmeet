@@ -148,6 +148,15 @@ export default function RecordingsClient() {
 
   const getFileDuration = (file: File): Promise<string> => {
     return new Promise((resolve) => {
+      // Skip duration for document files
+      if (file.type.includes('pdf') || 
+          file.type.includes('word') || 
+          file.type.includes('officedocument') ||
+          file.type.includes('text/plain')) {
+        resolve("0:00");
+        return;
+      }
+
       const element = document.createElement(file.type.startsWith('video/') ? 'video' : 'audio');
       element.src = URL.createObjectURL(file);
       element.onloadedmetadata = () => {

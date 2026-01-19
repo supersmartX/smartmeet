@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
     const ALLOWED_ENDPOINTS = [
       '/api/AI/audio/process',
       '/api/AI/audio/transcribe',
+      '/api/AI/document/transcribe',
       '/api/AI/audio/summarize',
       '/api/AI/code/generate-code',
       '/api/AI/code/test-code',

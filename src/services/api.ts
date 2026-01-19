@@ -265,6 +265,29 @@ export async function transcribeAudio(
 }
 
 /**
+ * Transcribe document file (PDF, DOC, DOCX)
+ */
+export async function transcribeDocument(
+  file: File | Blob,
+  apiKey: string = "",
+  language?: string
+): Promise<ApiResponse<TranscriptionResponse>> {
+  const formData = new FormData();
+  
+  if (file instanceof File) {
+    formData.append("file", file);
+  } else {
+    formData.append("file", file, "transcript.pdf");
+  }
+
+  if (language) formData.append("language", language);
+
+  // We use the document-specific transcription endpoint if available, 
+  // or fallback to the general one which might handle multiple formats.
+  return makeApiRequest<TranscriptionResponse>("/api/AI/document/transcribe", "POST", formData, apiKey);
+}
+
+/**
  * Build a prompt from text
  */
 export async function buildPrompt(

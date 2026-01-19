@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from "react"
-import { X, Upload, FileAudio, AlertCircle } from "lucide-react"
+import { X, Upload, FileAudio, AlertCircle, FileText } from "lucide-react"
 
 interface UploadModalProps {
   isOpen: boolean
@@ -34,13 +34,23 @@ export function UploadModal({
     }
   }
 
+  const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
-      if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert("File size exceeds 500MB limit.")
+        return
+      }
+      if (file.type.startsWith('audio/') || file.type.startsWith('video/') || 
+          file.type === 'application/pdf' || 
+          file.type === 'application/msword' || 
+          file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+          file.type === 'text/plain') {
         setSelectedFile(file)
       }
     }
@@ -48,7 +58,12 @@ export function UploadModal({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0])
+      const file = e.target.files[0]
+      if (file.size > MAX_FILE_SIZE) {
+        alert("File size exceeds 500MB limit.")
+        return
+      }
+      setSelectedFile(file)
     }
   }
 
@@ -69,10 +84,10 @@ export function UploadModal({
         <div className="px-8 py-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-              Upload Recording
+              Upload Recording or Transcript
             </h2>
             <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Audio or Video files supported
+              Audio, Video, PDF, DOC, or Text files supported
             </p>
           </div>
           <button 
@@ -105,7 +120,7 @@ export function UploadModal({
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
-                    accept="audio/*,video/*"
+                    accept="audio/*,video/*,.pdf,.doc,.docx,.txt"
                     onChange={handleFileChange}
                   />
                   <div className="w-16 h-16 rounded-3xl bg-white dark:bg-zinc-800 shadow-xl shadow-black/5 flex items-center justify-center text-zinc-400 group-hover:text-brand-via transition-colors">
@@ -116,14 +131,21 @@ export function UploadModal({
                       Click to upload or drag and drop
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                      MP3, WAV, MP4, M4A (Max 100MB)
+                      MP3, WAV, MP4, PDF, DOC, TXT (Max 500MB)
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-[24px] p-6 border border-zinc-100 dark:border-zinc-800 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center text-brand-via">
-                    <FileAudio className="w-6 h-6" />
+                    {selectedFile.type.includes('pdf') || 
+                     selectedFile.type.includes('word') || 
+                     selectedFile.type.includes('officedocument') ||
+                     selectedFile.type.includes('text/plain') ? (
+                      <FileText className="w-6 h-6" />
+                    ) : (
+                      <FileAudio className="w-6 h-6" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">

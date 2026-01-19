@@ -22,7 +22,8 @@ import {
   buildPrompt, 
   generatePlan,
   testCode,
-  transcribeAudio
+  transcribeAudio,
+  transcribeDocument
 } from "@/services/api";
 import { 
   meetingSchema, 
@@ -1012,11 +1013,18 @@ export async function internalProcessMeetingAI(meetingId: string, clientIp?: str
           data: { processingStep: "TRANSCRIPTION" }
         });
 
+        const isDocument = meeting.audioUrl?.toLowerCase().endsWith('.pdf') || 
+                          meeting.audioUrl?.toLowerCase().endsWith('.doc') || 
+                          meeting.audioUrl?.toLowerCase().endsWith('.docx') ||
+                          meeting.audioUrl?.toLowerCase().endsWith('.txt');
+
         const transcriptionResult = await Performance.measure(
           "AI_TRANSCRIPTION",
           async () => {
             return await aiCircuitBreaker.execute(async () => {
-              const res = await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
+              const res = isDocument 
+                ? await transcribeDocument(audioBlob, effectiveApiKey, user.defaultLanguage || undefined)
+                : await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
               if (!res.success) throw new Error(res.error || "Transcription failed");
               return res.data;
             });
