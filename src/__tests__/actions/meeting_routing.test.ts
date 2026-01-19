@@ -1,6 +1,3 @@
-import { transcribeAudio, transcribeDocument, summarizeText, generateCode, testCode } from "@/services/api";
-import { prisma } from "@/lib/prisma";
-
 // Mock the entire services/api module
 jest.mock("@/services/api", () => ({
   transcribeAudio: jest.fn(),
