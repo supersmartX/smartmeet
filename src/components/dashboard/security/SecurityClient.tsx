@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useSearchParams } from "next/navigation"
 import { 
   Shield,
   Clock, 
@@ -24,6 +25,8 @@ import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
 
 export default function SecurityClient() {
+  const searchParams = useSearchParams()
+  const logsRef = useRef<HTMLDivElement>(null)
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -60,6 +63,12 @@ export default function SecurityClient() {
     }
     loadData()
   }, [])
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'logs' && !isLoading && logsRef.current) {
+      logsRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [searchParams, isLoading])
 
   const handleRevokeSession = async (sessionId: string) => {
     try {
@@ -204,7 +213,7 @@ export default function SecurityClient() {
         </section>
 
         {/* Activity Timeline */}
-        <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <section ref={logsRef} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-950/30">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-white flex items-center justify-center">

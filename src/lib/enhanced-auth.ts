@@ -15,20 +15,7 @@ interface ExtendedJWT {
     email?: string | null;
     image?: string | null;
   };
-}
-
-// Extended session type for OAuth
-interface ExtendedSession {
-  user: {
-    id?: string;
-    role?: UserRole;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    oauthProvider?: string;
-    oauthAccountId?: string;
-  };
-  expires: string;
+  lastRefreshed?: number;
 }
 
 // Enhanced auth options with better OAuth error handling
@@ -104,12 +91,12 @@ export const enhancedAuthOptions: NextAuthOptions = {
         // 1. Handle base auth logic (id and role)
         if (user) {
           token.id = user.id;
-          token.role = (user as any).role || "MEMBER";
+          token.role = (user as { role?: UserRole }).role || "MEMBER";
         }
 
         // Handle explicit session updates
         if (trigger === "update" && session?.role) {
-          token.role = session.role;
+          token.role = session.role as UserRole;
         }
 
         // 2. Enhanced JWT handling for OAuth
@@ -133,7 +120,7 @@ export const enhancedAuthOptions: NextAuthOptions = {
         // 3. Periodically refresh user data (logic from auth.ts)
         if (token.id) {
           const now = Math.floor(Date.now() / 1000);
-          const lastRefreshed = (token as any).lastRefreshed || 0;
+          const lastRefreshed = (token as ExtendedJWT).lastRefreshed || 0;
           
           if (now - lastRefreshed > 14400) {
             try {
@@ -143,8 +130,8 @@ export const enhancedAuthOptions: NextAuthOptions = {
               });
               
               if (dbUser) {
-                token.role = dbUser.role;
-                (token as any).lastRefreshed = now;
+                token.role = dbUser.role as UserRole;
+                (token as ExtendedJWT).lastRefreshed = now;
               }
             } catch (error) {
               logger.error({ error, tokenId: token.id }, "[JWT Callback] Failed to refresh user role");
@@ -173,14 +160,22 @@ export const enhancedAuthOptions: NextAuthOptions = {
           const extendedToken = token as ExtendedJWT;
           
           if (extendedToken?.oauthProvider) {
-            const extendedSession = session as any;
-            extendedSession.user.oauthProvider = extendedToken.oauthProvider;
-            extendedSession.user.oauthAccountId = extendedToken.oauthAccountId;
+            const userWithOAuth = session.user as {
+              id?: string;
+              role?: UserRole;
+              name?: string | null;
+              email?: string | null;
+              image?: string | null;
+              oauthProvider?: string;
+              oauthAccountId?: string;
+            };
+            userWithOAuth.oauthProvider = extendedToken.oauthProvider;
+            userWithOAuth.oauthAccountId = extendedToken.oauthAccountId;
             
             if (extendedToken.oauthProfile) {
-              extendedSession.user.name = extendedToken.oauthProfile.name;
-              extendedSession.user.email = extendedToken.oauthProfile.email;
-              extendedSession.user.image = extendedToken.oauthProfile.image;
+              userWithOAuth.name = extendedToken.oauthProfile.name;
+              userWithOAuth.email = extendedToken.oauthProfile.email;
+              userWithOAuth.image = extendedToken.oauthProfile.image;
             }
           }
         }

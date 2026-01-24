@@ -13,7 +13,7 @@ import logger from "@/lib/logger";
 /**
  * Helper to get decrypted API key and mapped provider for a user
  */
-export async function getAIConfiguration(user: { apiKey: string | null; preferredProvider: string | null; preferredModel?: string | null }) {
+export async function getAIConfiguration(user: { id?: string; apiKey: string | null; preferredProvider: string | null; preferredModel?: string | null }) {
   if (!user.apiKey) return { apiKey: null, provider: "openai", rawProvider: "openai", model: "gpt-4o" };
 
   const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
@@ -22,7 +22,7 @@ export async function getAIConfiguration(user: { apiKey: string | null; preferre
   try {
     decrypted = decrypt(user.apiKey);
   } catch (error) {
-    logger.error({ error, userId: (user as any).id }, "Failed to decrypt API key in getAIConfiguration");
+    logger.error({ error, userId: user.id }, "Failed to decrypt API key in getAIConfiguration");
     return { apiKey: null, provider: "openai", rawProvider: "openai", model: "gpt-4o" };
   }
 

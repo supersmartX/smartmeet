@@ -8,7 +8,6 @@ import {
   ChevronDown,
   Folder,
   Video,
-  Settings,
   Layout,
   HelpCircle,
   Shield,
@@ -17,7 +16,10 @@ import {
   Plus,
   Loader2,
   LucideIcon,
-  BarChart3
+  BarChart3,
+  Key,
+  User,
+  Activity
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getMeetings } from "@/actions/meeting"
@@ -35,7 +37,7 @@ interface WorkspaceItem {
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
-  const [openFolders, setOpenFolders] = useState<string[]>(["SUPERSMART", "ACTIVE SESSIONS", "My Projects"])
+  const [openFolders, setOpenFolders] = useState<string[]>(["SUPERSMART", "ACTIVE SESSIONS", "My Projects", "Settings"])
   const [recentMeetings, setRecentMeetings] = useState<Meeting[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -76,10 +78,18 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 }))
               : [{ name: "Start New Project", icon: Plus, href: "/dashboard/recordings?action=upload" } as WorkspaceItem]
         },
-        { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
         { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
-        { name: "Team Management", href: "/dashboard/team", icon: Users },
-        { name: "API Settings", href: "/dashboard/settings/api", icon: Settings },
+        { 
+          name: "Settings", 
+          type: "folder",
+          children: [
+            { name: "Account", href: "/dashboard/settings", icon: User },
+            { name: "API Settings", href: "/dashboard/settings/api", icon: Key },
+            { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
+            { name: "Team Management", href: "/dashboard/team", icon: Users },
+            { name: "Activity Logs", href: "/dashboard/security?tab=logs", icon: Activity },
+          ]
+        },
         { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
       ]
     }
