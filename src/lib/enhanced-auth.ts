@@ -7,7 +7,7 @@ import logger from "./logger";
 // Extended JWT token type for OAuth
 interface ExtendedJWT {
   id?: string;
-  role?: string;
+  role?: UserRole;
   oauthProvider?: string;
   oauthAccountId?: string;
   oauthProfile?: {
@@ -21,7 +21,7 @@ interface ExtendedJWT {
 interface ExtendedSession {
   user: {
     id?: string;
-    role?: string;
+    role?: UserRole;
     name?: string | null;
     email?: string | null;
     image?: string | null;
@@ -98,15 +98,22 @@ export const enhancedAuthOptions: NextAuthOptions = {
       }
     },
     
-    async jwt({ token, account, profile }) {
+    async jwt(params) {
+      const { token, user, account, profile, trigger, session } = params;
       try {
-        // Enhanced JWT handling for OAuth
-        if (!token) {
-          return token;
+        // 1. Handle base auth logic (id and role)
+        if (user) {
+          token.id = user.id;
+          token.role = (user as any).role || "MEMBER";
         }
-        
+
+        // Handle explicit session updates
+        if (trigger === "update" && session?.role) {
+          token.role = session.role;
+        }
+
+        // 2. Enhanced JWT handling for OAuth
         if (account?.provider && account.type === 'oauth') {
-          // Safely add OAuth provider info to token
           try {
             (token as ExtendedJWT).oauthProvider = account.provider;
             (token as ExtendedJWT).oauthAccountId = account.providerAccountId;
@@ -122,6 +129,28 @@ export const enhancedAuthOptions: NextAuthOptions = {
             logger.error({ error: e }, "Error setting OAuth token profile");
           }
         }
+
+        // 3. Periodically refresh user data (logic from auth.ts)
+        if (token.id) {
+          const now = Math.floor(Date.now() / 1000);
+          const lastRefreshed = (token as any).lastRefreshed || 0;
+          
+          if (now - lastRefreshed > 14400) {
+            try {
+              const dbUser = await prisma.user.findUnique({
+                where: { id: token.id as string },
+                select: { role: true }
+              });
+              
+              if (dbUser) {
+                token.role = dbUser.role;
+                (token as any).lastRefreshed = now;
+              }
+            } catch (error) {
+              logger.error({ error, tokenId: token.id }, "[JWT Callback] Failed to refresh user role");
+            }
+          }
+        }
         
         return token;
       } catch (e) {
@@ -130,25 +159,29 @@ export const enhancedAuthOptions: NextAuthOptions = {
       }
     },
     
-    async session({ session, token }) {
+    async session(params) {
+      const { session, token } = params;
       try {
-        // Enhanced session handling for OAuth
-        if (!session || !token) {
-          return session;
+        // 1. Handle base session logic (id and role)
+        if (token?.id && session.user) {
+          session.user.id = token.id as string;
+          session.user.role = token.role as UserRole;
         }
-        
-        const extendedToken = token as ExtendedJWT;
-        
-        // Safely check for OAuth properties
-        if (extendedToken?.oauthProvider) {
-          const extendedSession = session as ExtendedSession;
-          extendedSession.user.oauthProvider = extendedToken.oauthProvider;
-          extendedSession.user.oauthAccountId = extendedToken.oauthAccountId;
+
+        // 2. Enhanced session handling for OAuth
+        if (session && token) {
+          const extendedToken = token as ExtendedJWT;
           
-          if (extendedToken.oauthProfile) {
-            extendedSession.user.name = extendedToken.oauthProfile.name;
-            extendedSession.user.email = extendedToken.oauthProfile.email;
-            extendedSession.user.image = extendedToken.oauthProfile.image;
+          if (extendedToken?.oauthProvider) {
+            const extendedSession = session as any;
+            extendedSession.user.oauthProvider = extendedToken.oauthProvider;
+            extendedSession.user.oauthAccountId = extendedToken.oauthAccountId;
+            
+            if (extendedToken.oauthProfile) {
+              extendedSession.user.name = extendedToken.oauthProfile.name;
+              extendedSession.user.email = extendedToken.oauthProfile.email;
+              extendedSession.user.image = extendedToken.oauthProfile.image;
+            }
           }
         }
         

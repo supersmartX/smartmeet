@@ -18,7 +18,14 @@ export async function getAIConfiguration(user: { apiKey: string | null; preferre
 
   const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
   const model = user.preferredModel || (rawProvider === "openai" ? "gpt-4o" : undefined);
-  const decrypted = decrypt(user.apiKey);
+  let decrypted: string;
+  try {
+    decrypted = decrypt(user.apiKey);
+  } catch (error) {
+    logger.error({ error, userId: (user as any).id }, "Failed to decrypt API key in getAIConfiguration");
+    return { apiKey: null, provider: "openai", rawProvider: "openai", model: "gpt-4o" };
+  }
+
   let apiKey = decrypted;
 
   try {
