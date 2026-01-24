@@ -79,7 +79,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
         { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
         { name: "Team Management", href: "/dashboard/team", icon: Users },
-        { name: "API Settings", href: "/dashboard/settings", icon: Settings },
+        { name: "API Settings", href: "/dashboard/settings/api", icon: Settings },
         { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
       ]
     }
