@@ -12,8 +12,13 @@ const ENCRYPTION_KEY = (() => {
 
   if (!secret) {
     if (isProd && !isBuildTime) {
-      throw new Error('ENCRYPTION_SECRET is required for production runtime');
+      // Fallback to NEXTAUTH_SECRET if ENCRYPTION_SECRET is missing in production
+      if (process.env.NEXTAUTH_SECRET) {
+        return crypto.scryptSync(process.env.NEXTAUTH_SECRET, 'salt', 32);
+      }
+      throw new Error('Neither ENCRYPTION_SECRET nor NEXTAUTH_SECRET found. Encryption is unavailable.');
     }
+    
     if (!process.env.NEXTAUTH_SECRET && !isBuildTime) {
       throw new Error('Neither ENCRYPTION_SECRET nor NEXTAUTH_SECRET found. Encryption is unavailable.');
     }

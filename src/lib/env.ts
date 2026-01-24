@@ -32,7 +32,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   
   // Security
-  ENCRYPTION_SECRET: isServer ? z.string().min(1, "ENCRYPTION_SECRET is required").optional() : z.string().optional(),
+  ENCRYPTION_SECRET: z.string().optional(),
 });
 
 const _env = envSchema.safeParse({
