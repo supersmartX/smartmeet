@@ -150,6 +150,7 @@ export default function Hero() {
                     fill
                     sizes="96px"
                     priority
+                    loading="eager"
                     className="object-contain"
                   />
                 </div>
