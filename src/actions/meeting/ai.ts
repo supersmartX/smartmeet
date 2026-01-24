@@ -17,13 +17,15 @@ import {
   summarizeText, 
   testCode,
   transcribeAudio,
-  transcribeDocument
+  transcribeDocument,
+  generatePlan
 } from "@/services/api";
 import {
   ActionResult,
   Summary
 } from "@/types/meeting";
 import { getAIConfiguration, enforceRateLimit } from "./utils";
+import { cache } from "@/lib/cache";
 
 /**
  * Internal processor that runs the full AI pipeline
@@ -60,11 +62,12 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
 
         // Download from Supabase
         if (!supabaseAdmin) throw new Error("Storage service not configured");
+        if (!meeting.audioUrl) throw new AppError("Audio file path missing", "ERR_FILE_NOT_FOUND");
         
         const { data: audioBlob, error: downloadError } = await supabaseAdmin
           .storage
           .from('recordings')
-          .download(meeting.audioUrl!);
+          .download(meeting.audioUrl);
 
         if (downloadError) throw new Error(`Storage error: ${downloadError.message}`);
 
@@ -95,6 +98,11 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
 
         if (!transcriptionResult) throw new ServiceError("Transcription failed");
         const transcription = transcriptionResult.transcription;
+
+        if (!transcription || transcription.trim().length === 0) {
+          throw new ServiceError("No speech detected in audio", "ERR_EMPTY_TRANSCRIPTION");
+        }
+
         const isTechnical = /api|cache|latency|database|testing|backend|frontend|pipeline|logic|code|deploy/i.test(transcription);
 
         // Step 2: SUMMARIZATION
@@ -109,7 +117,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             return await aiCircuitBreaker.execute(async () => {
               const res = await summarizeText(transcription, { 
                 api_key: effectiveApiKey, 
-                provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+                provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
                 summary_length: user.summaryLength || undefined,
                 summary_persona: user.summaryPersona || undefined,
                 language: user.defaultLanguage || undefined
@@ -180,6 +188,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                 status: "COMPLETED",
                 processingStep: "COMPLETED",
                 transcripts: {
+                  deleteMany: {},
                   create: [{
                     speaker: "AI Assistant",
                     time: "0:00",
@@ -215,10 +224,13 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
           link: `/dashboard/recordings/${meetingId}`
         });
 
+        await cache.invalidateUserCache(user.id);
+
         return { success: true };
 
-      } catch (error: unknown) {
-        const errorDetail = error instanceof Error ? error.message : "AI Pipeline failed";
+      } catch (error: any) {
+        const errorDetail = error.message || "AI Pipeline failed";
+        const errorCode = error.code || "AI_PIPELINE_ERROR";
         
         logger.error({ error, meetingId, userId: user.id }, "Pipeline failure details");
         
@@ -232,9 +244,11 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             processingStep: "FAILED",
             testResults: isBreakerOpen 
               ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
-              : `System Error: ${errorDetail}`
+              : `System Error [${errorCode}]: ${errorDetail}`
           }
         });
+
+        await cache.invalidateUserCache(user.id);
         
         // Send failure notification
         await createNotification(user.id, {
@@ -432,13 +446,13 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
     }
 
     const transcription = meeting.transcripts.map(t => t.text).join("\n");
-    const { apiKey: effectiveApiKey, rawProvider } = await getAIConfiguration(meeting.user);
+    const { apiKey: effectiveApiKey, provider: finalProvider } = await getAIConfiguration(meeting.user);
 
     if (!effectiveApiKey) return { success: false, error: "No API key configured" };
 
     const result = await summarizeText(transcription, { 
       api_key: effectiveApiKey, 
-      provider: rawProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+      provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
       summary_length: meeting.user.summaryLength || undefined,
       summary_persona: meeting.user.summaryPersona || undefined,
       language: meeting.user.defaultLanguage || undefined
@@ -457,6 +471,7 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
       });
 
       revalidatePath(`/dashboard/recordings/${meetingId}`);
+      await cache.invalidateUserCache(session.user.id);
       return { success: true, data: summary as Summary };
     }
 
@@ -516,13 +531,13 @@ export async function generateMeetingPlan(meetingId: string): Promise<ActionResu
 
     if (!effectiveApiKey) return { success: false, error: "No API key configured" };
 
-    const { generatePlan } = await import("@/services/api");
     const result = await generatePlan(transcription, { 
       api_key: effectiveApiKey, 
       provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" 
     });
 
     if (result.success && result.data) {
+      await cache.invalidateUserCache(session.user.id);
       return { success: true, data: result.data.plan };
     }
 

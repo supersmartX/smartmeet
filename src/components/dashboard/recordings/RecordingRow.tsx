@@ -41,17 +41,6 @@ export function RecordingRow({
 
   const status = recording.status?.toUpperCase();
 
-  // Polling for status updates if processing
-  useEffect(() => {
-    if (status !== "PROCESSING") return;
-
-    const interval = setInterval(() => {
-      if (fetchMeetings) fetchMeetings();
-    }, 5000); // Poll every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [status, fetchMeetings]);
-
   const getProgressLabel = (step: string) => {
     switch (step) {
       case "TRANSCRIPTION": return "Transcribing Audio...";
@@ -223,6 +212,8 @@ export function RecordingRow({
                     <button
                       onClick={handleTogglePinned}
                       disabled={isTogglingPinned}
+                      aria-pressed={recording.isPinned}
+                      aria-label={recording.isPinned ? "Unpin recording" : "Pin recording"}
                       className={`p-1 rounded-md transition-colors ${
                         recording.isPinned 
                           ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" 
@@ -241,6 +232,8 @@ export function RecordingRow({
                     <button
                       onClick={handleToggleFavorite}
                       disabled={isTogglingFavorite}
+                      aria-pressed={recording.isFavorite}
+                      aria-label={recording.isFavorite ? "Remove from favorites" : "Add to favorites"}
                       className={`p-1 rounded-md transition-colors ${
                         recording.isFavorite 
                           ? "text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20" 

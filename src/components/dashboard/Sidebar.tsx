@@ -75,12 +75,12 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           : [{ name: "Start New Project", icon: Plus, href: "/dashboard/recordings?action=upload" } as WorkspaceItem]
     },
     { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
+    { name: "API Settings", href: "/dashboard/settings/api", icon: Key },
     { 
       name: "Settings", 
       type: "folder",
       children: [
         { name: "Account", href: "/dashboard/settings", icon: User },
-        { name: "API Settings", href: "/dashboard/settings/api", icon: Key },
         { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
         { name: "Team Management", href: "/dashboard/team", icon: Users },
         { name: "Activity Logs", href: "/dashboard/security?tab=logs", icon: Activity },
