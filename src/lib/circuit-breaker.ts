@@ -101,3 +101,9 @@ export const aiCircuitBreaker = new RedisCircuitBreaker({
   failureThreshold: 5,    // Trip after 5 consecutive failures
   resetTimeout: 60000,    // Try again after 1 minute
 });
+
+export const billingCircuitBreaker = new RedisCircuitBreaker({
+  serviceName: "billing-service",
+  failureThreshold: 3,    // Trip after 3 failures
+  resetTimeout: 30000,    // Try again after 30 seconds
+});

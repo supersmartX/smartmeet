@@ -2,6 +2,7 @@ import { getRedisClient } from "@/lib/redis";
 import logger from "@/lib/logger";
 
 const QUEUE_NAME = "smartmeet_ai_queue";
+const DLQ_NAME = "smartmeet_ai_dlq";
 
 export interface Task {
   id: string;
@@ -10,6 +11,8 @@ export interface Task {
     meetingId: string;
   };
   createdAt: number;
+  retries?: number;
+  error?: string;
 }
 
 /**
@@ -25,6 +28,7 @@ export async function enqueueTask(task: Omit<Task, "createdAt">): Promise<boolea
   const fullTask: Task = {
     ...task,
     createdAt: Date.now(),
+    retries: task.retries || 0,
   };
 
   try {
@@ -32,6 +36,29 @@ export async function enqueueTask(task: Omit<Task, "createdAt">): Promise<boolea
     return true;
   } catch (error) {
     logger.error({ error, taskId: task.id }, "Failed to enqueue task");
+    return false;
+  }
+}
+
+/**
+ * Push a task to the Dead Letter Queue
+ */
+export async function enqueueDLQ(task: Task, error: string): Promise<boolean> {
+  const redis = await getRedisClient();
+  if (!redis) return false;
+
+  const failedTask: Task = {
+    ...task,
+    error,
+    retries: (task.retries || 0) + 1,
+  };
+
+  try {
+    await redis.rpush(DLQ_NAME, JSON.stringify(failedTask));
+    logger.error({ taskId: task.id, error }, "Task moved to DLQ");
+    return true;
+  } catch (err) {
+    logger.error({ err, taskId: task.id }, "Failed to enqueue to DLQ");
     return false;
   }
 }

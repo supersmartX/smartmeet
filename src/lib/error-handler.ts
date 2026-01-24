@@ -17,7 +17,7 @@ export function handleActionError(error: unknown, context?: Record<string, unkno
     return {
       success: false,
       error: error.message,
-      // We could potentially add error.code here if ActionResult supported it
+      code: error.code,
     };
   }
 
@@ -27,6 +27,7 @@ export function handleActionError(error: unknown, context?: Record<string, unkno
   return {
     success: false,
     error: error instanceof Error ? error.message : "An unexpected error occurred",
+    code: ApiErrorCode.INTERNAL_ERROR,
   };
 }
 

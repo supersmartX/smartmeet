@@ -24,7 +24,7 @@ export function RecordingTabs({ filter: activeTab, setFilter: onTabChange }: Rec
             aria-controls="recording-table"
             id={`tab-${tab.id.replace(/\s+/g, '-')}`}
             onClick={() => onTabChange(tab.id)}
-            className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[18px] text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300 ${
+            className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[18px] text-xs font-bold transition-all duration-300 ${
               isActive
                 ? "bg-white dark:bg-zinc-800 text-brand-via shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
                 : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/50 dark:hover:bg-zinc-800/50"

@@ -59,40 +59,34 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   }, [])
 
   const workspaceItems: WorkspaceItem[] = [
+    { name: "Overview", href: "/dashboard", icon: Layout },
+    { name: "Usage & Quotas", href: "/dashboard/usage", icon: BarChart3 },
     { 
-      name: "SUPERSMART", 
+      name: "My Projects", 
+      type: "folder",
+      children: isLoading 
+        ? [{ name: "Loading...", icon: Loader2 } as WorkspaceItem]
+        : recentMeetings.length > 0
+          ? recentMeetings.map(m => ({
+              name: m.title,
+              href: `/dashboard/recordings/${m.id}`,
+              icon: m.status === "PROCESSING" ? Loader2 : Video
+            }))
+          : [{ name: "Start New Project", icon: Plus, href: "/dashboard/recordings?action=upload" } as WorkspaceItem]
+    },
+    { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
+    { 
+      name: "Settings", 
       type: "folder",
       children: [
-        { name: "Overview", href: "/dashboard", icon: Layout },
-        { name: "Usage & Quotas", href: "/dashboard/usage", icon: BarChart3 },
-        { 
-          name: "My Projects", 
-          type: "folder",
-          children: isLoading 
-            ? [{ name: "Loading...", icon: Loader2 } as WorkspaceItem]
-            : recentMeetings.length > 0
-              ? recentMeetings.map(m => ({
-                  name: m.title,
-                  href: `/dashboard/recordings/${m.id}`,
-                  icon: m.status === "PROCESSING" ? Loader2 : Video
-                }))
-              : [{ name: "Start New Project", icon: Plus, href: "/dashboard/recordings?action=upload" } as WorkspaceItem]
-        },
-        { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
-        { 
-          name: "Settings", 
-          type: "folder",
-          children: [
-            { name: "Account", href: "/dashboard/settings", icon: User },
-            { name: "API Settings", href: "/dashboard/settings/api", icon: Key },
-            { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
-            { name: "Team Management", href: "/dashboard/team", icon: Users },
-            { name: "Activity Logs", href: "/dashboard/security?tab=logs", icon: Activity },
-          ]
-        },
-        { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
+        { name: "Account", href: "/dashboard/settings", icon: User },
+        { name: "API Settings", href: "/dashboard/settings/api", icon: Key },
+        { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
+        { name: "Team Management", href: "/dashboard/team", icon: Users },
+        { name: "Activity Logs", href: "/dashboard/security?tab=logs", icon: Activity },
       ]
-    }
+    },
+    { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
   ]
 
   const toggleFolder = (name: string) => {

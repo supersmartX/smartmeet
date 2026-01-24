@@ -87,7 +87,31 @@ export async function POST(request: NextRequest) {
     }
     
     // 4. Parse and validate request body
-    const body = await request.json();
+    let body: any;
+    const contentType = headersList.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      const data: Record<string, any> = {};
+      
+      // Reconstruct the data object from nested keys
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith("data[")) {
+          const actualKey = key.slice(5, -1);
+          data[actualKey] = value;
+        }
+      }
+
+      body = {
+        endpoint: formData.get("endpoint"),
+        method: formData.get("method"),
+        apiKey: formData.get("apiKey"),
+        data: Object.keys(data).length > 0 ? data : undefined
+      };
+    } else {
+      body = await request.json();
+    }
+
     const validation = proxyRequestSchema.safeParse(body);
     
     if (!validation.success) {
@@ -134,9 +158,26 @@ export async function POST(request: NextRequest) {
     
     const requestHeaders: Record<string, string> = {
       "Accept": "application/json",
-      "Content-Type": "application/json",
       "ngrok-skip-browser-warning": "true",
     };
+
+    let requestBody: any;
+    
+    // Check if we need to forward as FormData (e.g., for audio files)
+    const isAudioEndpoint = sanitizedEndpoint.includes('/audio/') || sanitizedEndpoint.includes('/document/');
+    
+    if (isAudioEndpoint && data) {
+      // Create new FormData for the backend API
+      const backendFormData = new FormData();
+      for (const [key, value] of Object.entries(data)) {
+        backendFormData.append(key, value as any);
+      }
+      requestBody = backendFormData;
+      // Fetch will automatically set the correct multipart/form-data header with boundary
+    } else {
+      requestHeaders["Content-Type"] = "application/json";
+      requestBody = data ? JSON.stringify(data) : undefined;
+    }
     
     if (apiKey) {
       requestHeaders["Authorization"] = `Bearer ${apiKey}`;
@@ -145,7 +186,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(apiUrl, {
       method: method || "GET",
       headers: requestHeaders,
-      body: data ? JSON.stringify(data) : undefined,
+      body: requestBody,
     });
     
     const responseData = await response.json();

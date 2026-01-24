@@ -45,8 +45,13 @@ export const enhancedAuthOptions: NextAuthOptions = {
                   received: receivedOrigin,
                   expected: expectedOrigin
                 }, "OAuth callback URL origin mismatch");
-                // In some environments (like preview deploys), this might be expected.
-                // We'll log it but not necessarily block it unless it's a completely different domain.
+                
+                // In production, we strictly block origin mismatches to prevent redirect attacks.
+                // In development/preview, we allow it for testing flexibility.
+                if (process.env.NODE_ENV === "production") {
+                  logger.error("Blocking sign-in due to OAuth origin mismatch in production");
+                  return false;
+                }
               }
             } catch (e) {
               logger.error({ error: e }, "Failed to parse callback URLs");

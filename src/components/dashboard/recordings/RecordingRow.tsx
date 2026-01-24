@@ -320,13 +320,20 @@ export function RecordingRow({
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+            aria-label="More actions"
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
           >
             <MoreHorizontal className="w-5 h-5" />
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div 
+              className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200"
+              role="menu"
+            >
               <button
+                role="menuitem"
                 onClick={() => {
                   setIsEditing(true);
                   setIsMenuOpen(false);
@@ -337,6 +344,7 @@ export function RecordingRow({
                 Rename
               </button>
               <button
+                role="menuitem"
                 disabled={isDeleting}
                 onClick={() => {
                   if (confirm("Are you sure you want to delete this recording?")) {

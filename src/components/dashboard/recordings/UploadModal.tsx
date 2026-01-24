@@ -222,8 +222,7 @@ export function UploadModal({
               {/* Progress Simulation (since we use PUT fetch) */}
               <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden max-w-[280px]">
                 <div 
-                  className="h-full bg-brand-via transition-all duration-500 ease-out" 
-                  style={{ width: `${progress}%` }} 
+                  className="h-full bg-brand-via transition-all duration-500 ease-out animate-pulse w-full"
                 />
               </div>
             </div>

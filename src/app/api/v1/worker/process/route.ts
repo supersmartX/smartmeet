@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dequeueTask } from "@/lib/queue";
+import { dequeueTask, enqueueTask, enqueueDLQ } from "@/lib/queue";
 import logger from "@/lib/logger";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/lib/api-response";
-
-// This would ideally be a dedicated worker, but for Next.js/Vercel, 
-// we can use an API route triggered by a Cron job or a long-running process.
-
-// Note: We'll need to manually import the internal function since we can't 
-// easily import it from server actions file if it's not exported.
-// I'll export it from meeting.ts first.
 
 export async function POST(request: NextRequest) {
   return await handleWorker(request);
@@ -34,6 +27,7 @@ async function handleWorker(request: NextRequest) {
   const MAX_TASKS = 5; 
   const START_TIME = Date.now();
   const MAX_DURATION = 50000; // 50 seconds (standard Vercel timeout is 60s)
+  const MAX_RETRIES = 3;
 
   while (tasksProcessed < MAX_TASKS) {
     // Check if we're approaching the timeout
@@ -46,7 +40,7 @@ async function handleWorker(request: NextRequest) {
     if (!task) break;
 
     try {
-      logger.info({ taskId: task.id, type: task.type }, "Worker processing task");
+      logger.info({ taskId: task.id, type: task.type, retries: task.retries }, "Worker processing task");
       
       if (task.type === "PROCESS_MEETING" || task.type === "PROCESS_MEETING_AI") {
         const { meetingId } = task.data;
@@ -59,8 +53,22 @@ async function handleWorker(request: NextRequest) {
       } else {
         results.push({ taskId: task.id, success: false, error: "Unknown task type" });
       }
-    } catch (error) {
-      logger.error({ error, taskId: task.id }, "Worker error processing task");
+    } catch (error: any) {
+      logger.error({ error, taskId: task.id, retries: task.retries }, "Worker error processing task");
+      
+      const currentRetries = task.retries || 0;
+      if (currentRetries < MAX_RETRIES) {
+        // Re-enqueue with incremented retry count
+        await enqueueTask({
+          ...task,
+          retries: currentRetries + 1
+        });
+        logger.info({ taskId: task.id, nextRetry: currentRetries + 1 }, "Task re-enqueued for retry");
+      } else {
+        // Move to DLQ
+        await enqueueDLQ(task, error instanceof Error ? error.message : "Processing failed after max retries");
+      }
+
       results.push({ 
         taskId: task.id, 
         success: false, 

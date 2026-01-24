@@ -152,20 +152,37 @@ export async function makeApiRequest<T>(
       // Use proxy if on client
       url = "/api/v1/proxy";
       
-      const proxyData = {
-        endpoint,
-        method,
-        data: data instanceof FormData ? Object.fromEntries(data.entries()) : data,
-        apiKey,
-      };
+      let proxyBody: any;
+      const headers: Record<string, string> = {};
+
+      if (data instanceof FormData) {
+        // If data is FormData, we need to send it as FormData to the proxy
+        // The proxy will then need to handle multipart/form-data
+        proxyBody = new FormData();
+        proxyBody.append("endpoint", endpoint);
+        proxyBody.append("method", method);
+        if (apiKey) proxyBody.append("apiKey", apiKey);
+        
+        // Append all original FormData entries
+        for (const [key, value] of data.entries()) {
+          proxyBody.append(`data[${key}]`, value);
+        }
+      } else {
+        // For JSON data, keep using application/json
+        headers["Content-Type"] = "application/json";
+        proxyBody = JSON.stringify({
+          endpoint,
+          method,
+          data,
+          apiKey,
+        });
+      }
 
       requestOptions = {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         credentials: "include",
-        body: JSON.stringify(proxyData),
+        body: proxyBody,
         signal: controller.signal,
       };
     }
