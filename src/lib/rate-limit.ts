@@ -1,6 +1,12 @@
-import { RateLimiterMemory, RateLimiterRedis, RateLimiterAbstract } from "rate-limiter-flexible";
 import { getUpstashRedis, getIORedisClient } from "@/lib/redis";
 import logger from "./logger";
+
+// Standard Flexible Implementation (Memory or ioredis) types
+interface RateLimiterAbstract {
+  points: number;
+  consume(key: string): Promise<{ remainingPoints: number; msBeforeNext: number }>;
+  delete(key: string): Promise<boolean>;
+}
 
 // Configuration for rate limiters
 type LimiterType = "api" | "login" | "general";
@@ -97,18 +103,22 @@ let flexibleLimiters: Record<string, RateLimiterAbstract> | null = null;
 
 async function getFlexibleLimiter(type: LimiterType): Promise<RateLimiterAbstract> {
   if (!flexibleLimiters) {
+    const { RateLimiterMemory, RateLimiterRedis } = await import("rate-limiter-flexible");
     const ioRedisClient = await getIORedisClient();
     flexibleLimiters = {
       api: ioRedisClient 
-        ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec, keyPrefix: "api" })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? new RateLimiterRedis({ storeClient: ioRedisClient as any, points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec, keyPrefix: "api" })
         : new RateLimiterMemory({ points: LIMITER_CONFIGS.api.points, duration: LIMITER_CONFIGS.api.durationSec }),
       login: ioRedisClient
-        ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec, keyPrefix: "login" })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? new RateLimiterRedis({ storeClient: ioRedisClient as any, points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec, keyPrefix: "login" })
         : new RateLimiterMemory({ points: LIMITER_CONFIGS.login.points, duration: LIMITER_CONFIGS.login.durationSec }),
       general: ioRedisClient
-        ? new RateLimiterRedis({ storeClient: ioRedisClient, points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec, keyPrefix: "general" })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? new RateLimiterRedis({ storeClient: ioRedisClient as any, points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec, keyPrefix: "general" })
         : new RateLimiterMemory({ points: LIMITER_CONFIGS.general.points, duration: LIMITER_CONFIGS.general.durationSec }),
-    };
+    } as Record<string, RateLimiterAbstract>;
   }
   return flexibleLimiters[type];
 }
@@ -196,7 +206,7 @@ export async function resetRateLimit(key: string, type: LimiterType): Promise<vo
       await ioRedisClient.del(`${type}:${key}`);
     } else {
       const limiter = await getFlexibleLimiter(type);
-      if (limiter instanceof RateLimiterMemory) {
+      if (typeof limiter.delete === 'function') {
         await limiter.delete(key);
       }
     }

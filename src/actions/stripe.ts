@@ -72,8 +72,8 @@ export async function createCheckoutSession(priceId: string): Promise<ActionResu
 
       return { success: true, data: { url: checkoutSession.url } };
     });
-  } catch (error: any) {
-    if (error.message?.includes("Circuit breaker")) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message?.includes("Circuit breaker")) {
       return { success: false, error: "Billing service is temporarily unavailable. Please try again in a few minutes." };
     }
     logger.error({ error, priceId }, "Stripe Checkout Error");
@@ -112,8 +112,8 @@ export async function createPortalSession(): Promise<ActionResult<{ url: string 
 
       return { success: true, data: { url: portalSession.url } };
     });
-  } catch (error: any) {
-    if (error.message?.includes("Circuit breaker")) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message?.includes("Circuit breaker")) {
       return { success: false, error: "Billing service is temporarily unavailable. Please try again in a few minutes." };
     }
     logger.error({ error }, "Stripe Portal Error");

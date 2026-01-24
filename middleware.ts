@@ -2,6 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import logger from "@/lib/logger";
+import { checkApiRateLimit, checkGeneralRateLimit } from "@/lib/rate-limit";
 
 // Rate limiting at the edge
 async function handleRateLimit(req: NextRequest) {
@@ -13,8 +14,6 @@ async function handleRateLimit(req: NextRequest) {
   }
 
   try {
-    const { checkApiRateLimit, checkGeneralRateLimit } = await import("@/lib/rate-limit");
-    
     const ip = req.headers.get("x-forwarded-for")?.split(',')[0] || 
                req.headers.get("x-real-ip") || 
                "127.0.0.1";

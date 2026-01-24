@@ -10,6 +10,7 @@ interface UploadModalProps {
   onUpload: (file: File) => Promise<void>
   isUploading: boolean
   uploadStatus: string
+  progress?: number
 }
 
 export function UploadModal({
@@ -17,31 +18,13 @@ export function UploadModal({
   onClose,
   onUpload,
   isUploading,
-  uploadStatus
+  uploadStatus,
+  progress = 0
 }: UploadModalProps) {
   const [dragActive, setDragActive] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [progress, setProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { showToast } = useToast()
-
-  // Simulate progress when uploading
-  React.useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isUploading) {
-      setProgress(10);
-      interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 95) return prev;
-          const increment = prev < 40 ? 5 : prev < 70 ? 2 : 1;
-          return prev + increment;
-        });
-      }, 500);
-    } else {
-      setProgress(0);
-    }
-    return () => clearInterval(interval);
-  }, [isUploading]);
 
   if (!isOpen) return null
 
@@ -55,7 +38,7 @@ export function UploadModal({
     }
   }
 
-  const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
+  const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
@@ -64,7 +47,7 @@ export function UploadModal({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
       if (file.size > MAX_FILE_SIZE) {
-        showToast("File size exceeds 500MB limit.", "error")
+        showToast("File size exceeds 1GB limit.", "error")
         return
       }
       if (file.type.startsWith('audio/') || file.type.startsWith('video/') || 
@@ -81,7 +64,7 @@ export function UploadModal({
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       if (file.size > MAX_FILE_SIZE) {
-        showToast("File size exceeds 500MB limit.", "error")
+        showToast("File size exceeds 1GB limit.", "error")
         return
       }
       setSelectedFile(file)
@@ -152,7 +135,7 @@ export function UploadModal({
                       Click to upload or drag and drop
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                      MP3, WAV, MP4, PDF, DOC, TXT (Max 500MB)
+                      MP3, WAV, MP4, PDF, DOC, TXT (Max 1GB)
                     </p>
                   </div>
                 </div>
@@ -219,11 +202,22 @@ export function UploadModal({
                 </div>
               </div>
               
-              {/* Progress Simulation (since we use PUT fetch) */}
-              <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden max-w-[280px]">
-                <div 
-                  className="h-full bg-brand-via transition-all duration-500 ease-out animate-pulse w-full"
-                />
+              {/* Real Progress Bar */}
+              <div className="w-full max-w-[320px] space-y-2">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[10px] font-black text-brand-via uppercase tracking-widest">
+                    {progress < 100 ? "Uploading..." : "Processing..."}
+                  </span>
+                  <span className="text-[10px] font-black text-zinc-900 dark:text-white uppercase">
+                    {progress}%
+                  </span>
+                </div>
+                <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-brand-via transition-all duration-300 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               </div>
             </div>
           )}

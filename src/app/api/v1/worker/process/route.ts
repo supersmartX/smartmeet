@@ -53,7 +53,7 @@ async function handleWorker(request: NextRequest) {
       } else {
         results.push({ taskId: task.id, success: false, error: "Unknown task type" });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, taskId: task.id, retries: task.retries }, "Worker error processing task");
       
       const currentRetries = task.retries || 0;

@@ -5,7 +5,7 @@ import {
   Zap, 
   Check, 
 } from "lucide-react"
-import { updateUserApiKey } from "@/actions/meeting"
+import { updateUserApiKey, validateApiKey } from "@/actions/meeting"
 import { UserSettings } from "@/types/meeting"
 import { generateMFASecret, verifyAndEnableMFA, disableMFA } from "@/actions/mfa"
 
@@ -38,6 +38,9 @@ type SettingsState = {
   isVerifyingMFA: boolean
   isDisablingMFA: boolean
   showDisableConfirm: boolean
+  isTesting: boolean
+  testResult: string | null
+  testSuccess: boolean | null
 }
 
 type SettingsAction =
@@ -61,6 +64,9 @@ type SettingsAction =
   | { type: 'SET_VERIFYING_MFA'; payload: boolean }
   | { type: 'SET_DISABLING_MFA'; payload: boolean }
   | { type: 'SET_SHOW_DISABLE_CONFIRM'; payload: boolean }
+  | { type: 'SET_TESTING'; payload: boolean }
+  | { type: 'SET_TEST_RESULT'; payload: string | null }
+  | { type: 'SET_TEST_SUCCESS'; payload: boolean | null }
 
 function settingsReducer(state: SettingsState, action: SettingsAction): SettingsState {
   switch (action.type) {
@@ -84,6 +90,9 @@ function settingsReducer(state: SettingsState, action: SettingsAction): Settings
     case 'SET_VERIFYING_MFA': return { ...state, isVerifyingMFA: action.payload }
     case 'SET_DISABLING_MFA': return { ...state, isDisablingMFA: action.payload }
     case 'SET_SHOW_DISABLE_CONFIRM': return { ...state, showDisableConfirm: action.payload }
+    case 'SET_TESTING': return { ...state, isTesting: action.payload }
+    case 'SET_TEST_RESULT': return { ...state, testResult: action.payload }
+    case 'SET_TEST_SUCCESS': return { ...state, testSuccess: action.payload }
     default: return state
   }
 }
@@ -116,13 +125,17 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
     isVerifyingMFA: false,
     isDisablingMFA: false,
     showDisableConfirm: false,
+    isTesting: false,
+    testResult: null,
+    testSuccess: null,
   })
 
   const {
     apiKeys, showKey, copied, isSaving, provider, model, allowedIps,
     defaultLanguage, summaryLength, summaryPersona, autoProcess,
     mfaEnabled, mfaSecret, qrCodeUrl, mfaToken, mfaPassword,
-    isSettingUpMFA, isVerifyingMFA, isDisablingMFA, showDisableConfirm
+    isSettingUpMFA, isVerifyingMFA, isDisablingMFA, showDisableConfirm,
+    isTesting, testResult, testSuccess
   } = state
 
   const lastUsedAt = initialSettings.lastUsedAt ? new Date(initialSettings.lastUsedAt).toLocaleString() : null
@@ -201,6 +214,38 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
       showToast("An unexpected error occurred while saving settings.", "error")
     } finally {
       dispatch({ type: 'SET_SAVING', payload: false })
+    }
+  }
+
+  const handleTestConnection = async () => {
+    if (!apiKey) {
+      showToast("Please enter an API key first.", "error")
+      return
+    }
+
+    dispatch({ type: 'SET_TESTING', payload: true })
+    dispatch({ type: 'SET_TEST_RESULT', payload: null })
+    dispatch({ type: 'SET_TEST_SUCCESS', payload: null })
+
+    try {
+      const result = await validateApiKey(provider, apiKey);
+
+      if (result.success) {
+        dispatch({ type: 'SET_TEST_RESULT', payload: "Connection successful! Your API key is valid and active." })
+        dispatch({ type: 'SET_TEST_SUCCESS', payload: true })
+        showToast("API connection test passed!", "success")
+      } else {
+        dispatch({ type: 'SET_TEST_RESULT', payload: result.error || "Invalid API key. Please check your credentials." })
+        dispatch({ type: 'SET_TEST_SUCCESS', payload: false })
+        showToast(result.error || "API connection test failed.", "error")
+      }
+    } catch (error) {
+      console.error("Connection test error:", error)
+      dispatch({ type: 'SET_TEST_RESULT', payload: "Connection test failed. Please check your network and try again." })
+      dispatch({ type: 'SET_TEST_SUCCESS', payload: false })
+      showToast("Connection test failed.", "error")
+    } finally {
+      dispatch({ type: 'SET_TESTING', payload: false })
     }
   }
 
@@ -303,6 +348,10 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
           isSaving={isSaving}
           providerModels={providerModels}
           decryptionError={initialSettings.decryptionError}
+          isTesting={isTesting}
+          testResult={testResult}
+          testSuccess={testSuccess}
+          handleTestConnection={handleTestConnection}
         />
 
         <PreferenceSection 

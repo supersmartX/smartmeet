@@ -87,18 +87,18 @@ export async function POST(request: NextRequest) {
     }
     
     // 4. Parse and validate request body
-    let body: any;
+    let body: unknown;
     const contentType = headersList.get("content-type") || "";
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
-      const data: Record<string, any> = {};
+      const data: Record<string, string | File> = {};
       
       // Reconstruct the data object from nested keys
       for (const [key, value] of formData.entries()) {
         if (key.startsWith("data[")) {
           const actualKey = key.slice(5, -1);
-          data[actualKey] = value;
+          data[actualKey] = value as string | File;
         }
       }
 
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       "ngrok-skip-browser-warning": "true",
     };
 
-    let requestBody: any;
+    let requestBody: string | FormData | undefined;
     
     // Check if we need to forward as FormData (e.g., for audio files)
     const isAudioEndpoint = sanitizedEndpoint.includes('/audio/') || sanitizedEndpoint.includes('/document/');
@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
     if (isAudioEndpoint && data) {
       // Create new FormData for the backend API
       const backendFormData = new FormData();
-      for (const [key, value] of Object.entries(data)) {
-        backendFormData.append(key, value as any);
+      for (const [key, value] of Object.entries(data as Record<string, string | Blob>)) {
+        backendFormData.append(key, value);
       }
       requestBody = backendFormData;
       // Fetch will automatically set the correct multipart/form-data header with boundary

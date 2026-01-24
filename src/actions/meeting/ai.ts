@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { ProcessingStep } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
@@ -25,6 +26,7 @@ import {
   Summary
 } from "@/types/meeting";
 import { getAIConfiguration, enforceRateLimit } from "./utils";
+import { normalizeProvider } from "@/lib/utils";
 import { cache } from "@/lib/cache";
 
 /**
@@ -44,10 +46,15 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
     const user = meeting.user;
 
     // 2. Prepare AI Configuration
-    const { apiKey: effectiveApiKey, provider: finalProvider, rawProvider, model: finalModel } = await getAIConfiguration(user);
+    const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel } = await getAIConfiguration(user);
 
     if (!effectiveApiKey) {
       throw new AppError("No API key configured. Please add your API key in Settings.", "ERR_CONFIG_MISSING");
+    }
+
+    // 3. Check Storage Configuration
+    if (!supabaseAdmin) {
+      throw new ServiceError("Storage service (Supabase) is not configured correctly.", "ERR_STORAGE_CONFIG");
     }
 
     try {
@@ -117,7 +124,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             return await aiCircuitBreaker.execute(async () => {
               const res = await summarizeText(transcription, { 
                 api_key: effectiveApiKey, 
-                provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+                provider: normalizeProvider(finalProvider, 'upper') as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
                 summary_length: user.summaryLength || undefined,
                 summary_persona: user.summaryPersona || undefined,
                 language: user.defaultLanguage || undefined
@@ -131,6 +138,40 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
 
         if (!summaryResult) throw new Error("Summarization failed");
         const { summary, project_doc } = summaryResult;
+        let finalProjectDoc = project_doc;
+
+        // Step 2.5: PLAN_GENERATION (Optional for technical meetings)
+        if (isTechnical) {
+          try {
+            await prisma.meeting.update({
+              where: { id: meetingId },
+              data: { processingStep: "PLANNING" as ProcessingStep }
+            });
+
+            const planResult = await Performance.measure(
+              "AI_PLAN_GEN",
+              async () => {
+                return await aiCircuitBreaker.execute(async () => {
+                  const res = await generatePlan(transcription, {
+                    api_key: effectiveApiKey,
+                    provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+                    model: finalModel || undefined
+                  });
+                  return res.success ? res.data : null;
+                });
+              },
+              { meetingId, userId: user.id }
+            );
+
+            if (planResult?.plan) {
+              // Append plan to project documentation
+              finalProjectDoc = `${finalProjectDoc}\n\n## Implementation Plan\n\n${planResult.plan}`;
+            }
+          } catch (planError) {
+            logger.warn({ planError, meetingId }, "Plan generation skipped or failed");
+            // Don't fail the whole pipeline if planning fails
+          }
+        }
 
         // Step 3: CODE_GENERATION
         await prisma.meeting.update({
@@ -144,7 +185,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             return await aiCircuitBreaker.execute(async () => {
               const res = await generateCode(transcription, { 
                 api_key: effectiveApiKey, 
-                provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+                provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
                 model: finalModel || undefined
               });
               if (!res.success) throw new Error(res.error?.message || "Code generation failed");
@@ -155,7 +196,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
         );
 
         if (!codeResult) throw new Error("Code generation failed");
-        const { code } = codeResult;
+        const { code, file_path } = codeResult;
 
         // Step 4: TESTING
         await prisma.meeting.update({
@@ -169,7 +210,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             return await aiCircuitBreaker.execute(async () => {
               const res = await testCode(code, { 
                 api_key: effectiveApiKey, 
-                provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" | "local"
+                provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : normalizeProvider(finalProvider, 'lower') as "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom"
               });
               // We don't throw error if test fails, just record it
               return res.data;
@@ -201,8 +242,8 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                 },
                 isTechnical: isTechnical,
                 code: code,
-                projectDoc: project_doc,
-                testResults: testResult?.output || testResult?.error || "No test results"
+                projectDoc: finalProjectDoc,
+                testResults: testResult?.output || testResult?.error || (file_path ? `File generated at: ${file_path}` : "No test results")
               }
             });
           },
@@ -228,9 +269,11 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
 
         return { success: true };
 
-      } catch (error: any) {
-        const errorDetail = error.message || "AI Pipeline failed";
-        const errorCode = error.code || "AI_PIPELINE_ERROR";
+      } catch (error: unknown) {
+        const errorDetail = error instanceof Error ? error.message : "AI Pipeline failed";
+        const errorCode = (error && typeof error === 'object' && 'code' in error) 
+          ? String((error as Record<string, unknown>).code) 
+          : "AI_PIPELINE_ERROR";
         
         logger.error({ error, meetingId, userId: user.id }, "Pipeline failure details");
         

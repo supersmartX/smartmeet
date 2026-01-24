@@ -11,3 +11,23 @@ export function maskEmail(email: string | null | undefined): string {
   if (!domain) return local.substring(0, 3) + "***";
   return local.substring(0, 3) + "***@" + domain;
 }
+
+/**
+ * Normalizes provider casing for different AI services
+ */
+export function normalizeProvider(provider: string, casing: 'upper' | 'lower'): string {
+  const p = provider.toLowerCase();
+  if (casing === 'upper') {
+    // Some endpoints expect exact uppercase names
+    const upperMap: Record<string, string> = {
+      'openai': 'OPENAI',
+      'claude': 'CLAUDE',
+      'gemini': 'GEMINI',
+      'groq': 'GROQ',
+      'openrouter': 'OPENROUTER',
+      'custom': 'CUSTOM'
+    };
+    return upperMap[p] || p.toUpperCase();
+  }
+  return p;
+}

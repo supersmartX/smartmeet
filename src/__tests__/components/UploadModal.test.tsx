@@ -49,12 +49,12 @@ describe('UploadModal', () => {
     expect(screen.queryByText('Upload Recording or Transcript')).not.toBeInTheDocument();
   });
 
-  it('validates file size (max 500MB) on drop', () => {
+  it('validates file size (max 1GB) on drop', () => {
     render(<UploadModal {...defaultProps} />);
     const dropzone = screen.getByText(/Click to upload or drag and drop/i).parentElement!;
     
     const largeFile = new File([''], 'large.mp3', { type: 'audio/mpeg' });
-    Object.defineProperty(largeFile, 'size', { value: 600 * 1024 * 1024 }); // 600MB
+    Object.defineProperty(largeFile, 'size', { value: 1100 * 1024 * 1024 }); // 1.1GB
 
     fireEvent.drop(dropzone, {
       dataTransfer: {
@@ -62,7 +62,7 @@ describe('UploadModal', () => {
       },
     });
 
-    expect(mockShowToast).toHaveBeenCalledWith('File size exceeds 500MB limit.', 'error');
+    expect(mockShowToast).toHaveBeenCalledWith('File size exceeds 1GB limit.', 'error');
     expect(screen.queryByText('large.mp3')).not.toBeInTheDocument();
   });
 
@@ -102,11 +102,11 @@ describe('UploadModal', () => {
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     
     const largeFile = new File([''], 'large.mp3', { type: 'audio/mpeg' });
-    Object.defineProperty(largeFile, 'size', { value: 600 * 1024 * 1024 });
+    Object.defineProperty(largeFile, 'size', { value: 1100 * 1024 * 1024 });
 
     fireEvent.change(input, { target: { files: [largeFile] } });
 
-    expect(mockShowToast).toHaveBeenCalledWith('File size exceeds 500MB limit.', 'error');
+    expect(mockShowToast).toHaveBeenCalledWith('File size exceeds 1GB limit.', 'error');
   });
 
   it('triggers onUpload when "Start Upload" is clicked', async () => {

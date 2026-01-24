@@ -1,3 +1,5 @@
+import { ProcessingStep } from "@prisma/client";
+
 export type ActionResult<T = unknown> = {
   success: boolean;
   data?: T;
@@ -67,7 +69,7 @@ export interface MeetingUpdateData {
   code?: string;
   projectDoc?: string;
   testResults?: string;
-  processingStep?: "IDLE" | "TRANSCRIPTION" | "SUMMARIZATION" | "CODE_GENERATION" | "TESTING" | "COMPLETED" | "FAILED";
+  processingStep?: ProcessingStep;
 }
 
 export interface DashboardStat {

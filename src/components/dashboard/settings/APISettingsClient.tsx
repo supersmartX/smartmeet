@@ -13,14 +13,13 @@ import {
   Check,
   Copy,
   Shield,
-  RefreshCcw,
   Save,
   CheckCircle2,
   AlertTriangle,
   Info,
   Loader2
 } from "lucide-react"
-import { updateUserApiKey } from "@/actions/meeting"
+import { updateUserApiKey, validateApiKey } from "@/actions/meeting"
 import { UserSettings } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
@@ -176,29 +175,20 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
     dispatch({ type: 'SET_TEST_SUCCESS', payload: null })
 
     try {
-      // Simulate API test - in a real app, this would call a backend endpoint
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      const result = await validateApiKey(provider, apiKey);
 
-      // Simple validation based on key format
-      const isValidFormat = apiKey.startsWith('sk-') ||
-                          apiKey.startsWith('sk-ant-') ||
-                          apiKey.startsWith('sk-or-v1-') ||
-                          apiKey.startsWith('gsk_') ||
-                          apiKey.startsWith('AIza') ||
-                          apiKey.length > 20
-
-      if (isValidFormat) {
-        dispatch({ type: 'SET_TEST_RESULT', payload: "Connection successful! API key format is valid." })
+      if (result.success) {
+        dispatch({ type: 'SET_TEST_RESULT', payload: "Connection successful! Your API key is valid and active." })
         dispatch({ type: 'SET_TEST_SUCCESS', payload: true })
         showToast("API connection test passed!", "success")
       } else {
-        dispatch({ type: 'SET_TEST_RESULT', payload: "Invalid API key format. Please check your key." })
+        dispatch({ type: 'SET_TEST_RESULT', payload: result.error || "Invalid API key. Please check your credentials." })
         dispatch({ type: 'SET_TEST_SUCCESS', payload: false })
-        showToast("API connection test failed.", "error")
+        showToast(result.error || "API connection test failed.", "error")
       }
     } catch (error) {
       console.error("Connection test error:", error)
-      dispatch({ type: 'SET_TEST_RESULT', payload: "Connection test failed. Please check your network and API key." })
+      dispatch({ type: 'SET_TEST_RESULT', payload: "Connection test failed. Please check your network and try again." })
       dispatch({ type: 'SET_TEST_SUCCESS', payload: false })
       showToast("Connection test failed.", "error")
     } finally {
@@ -257,213 +247,218 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
 
           <div className="p-8 space-y-8">
             {/* Provider Selection */}
-            <div className="space-y-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">AI Provider</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">AI Provider</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Active Provider:</span>
+                  <span className="text-[9px] font-black text-brand-via uppercase tracking-widest">{provider}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                 {[
-                  { id: 'openai', name: 'OpenAI', desc: 'GPT-4o & o1 models', icon: Cpu },
-                  { id: 'anthropic', name: 'Anthropic', desc: 'Claude 3.5 Sonnet', icon: Zap },
-                  { id: 'google', name: 'Google', desc: 'Gemini 1.5 Pro/Flash', icon: Zap },
-                  { id: 'groq', name: 'Groq', desc: 'Llama 3.1 70B', icon: Zap },
-                  { id: 'openrouter', name: 'OpenRouter', desc: 'Any model gateway', icon: ExternalLink },
-                  { id: 'custom', name: 'Custom Proxy', desc: 'Self-hosted or LiteLLM', icon: Server },
+                  { id: 'openai', name: 'OpenAI', icon: Cpu },
+                  { id: 'anthropic', name: 'Anthropic', icon: Zap },
+                  { id: 'google', name: 'Google', icon: Zap },
+                  { id: 'groq', name: 'Groq', icon: Zap },
+                  { id: 'openrouter', name: 'OpenRouter', icon: ExternalLink },
+                  { id: 'custom', name: 'Custom', icon: Server },
                 ].map((p) => {
                   const hasKey = !!apiKeys[p.id];
+                  const isActive = provider === p.id;
                   return (
                     <button
                       key={p.id}
                       onClick={() => dispatch({ type: 'SET_PROVIDER', payload: p.id })}
-                      className={`p-4 rounded-2xl border text-left transition-all group relative ${
-                        provider === p.id
-                          ? "border-brand-via bg-brand-via/5 ring-1 ring-brand-via"
-                          : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                      className={`p-3 rounded-xl border text-center transition-all group relative overflow-hidden ${
+                        isActive
+                          ? "border-brand-via bg-brand-via/5 ring-1 ring-brand-via shadow-sm shadow-brand-via/10"
+                          : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50"
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <p.icon className={`w-5 h-5 ${provider === p.id ? "text-brand-via" : "text-zinc-400"}`} />
-                        {hasKey && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
-                            <Check className="w-2.5 h-2.5 text-emerald-500" />
-                            <span className="text-[8px] font-black text-emerald-500 uppercase">Linked</span>
-                          </div>
-                        )}
+                      <div className={`w-8 h-8 rounded-lg mx-auto mb-2 flex items-center justify-center transition-colors ${
+                        isActive ? "bg-brand-via text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 group-hover:text-zinc-500"
+                      }`}>
+                        <p.icon className="w-4 h-4" />
                       </div>
-                      <p className={`text-xs font-black uppercase tracking-widest mb-1 ${provider === p.id ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-600 dark:text-zinc-400"}`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest truncate ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}>
                         {p.name}
                       </p>
-                      <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">{p.desc}</p>
+                      {hasKey && (
+                        <div className="absolute top-1 right-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* API Key Input */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <label htmlFor="api-key-input" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">
-                  {provider === 'custom' ? 'Proxy URL / API Key' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} API Key`}
-                </label>
-                <a
-                  href={
-                    provider === 'openai' ? "https://platform.openai.com/api-keys" :
-                    provider === 'anthropic' ? "https://console.anthropic.com/settings/keys" :
-                    provider === 'google' ? "https://aistudio.google.com/app/apikey" :
-                    provider === 'groq' ? "https://console.groq.com/keys" :
-                    provider === 'openrouter' ? "https://openrouter.ai/keys" : "#"
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[9px] font-black text-brand-via uppercase tracking-widest flex items-center gap-1 hover:underline"
-                >
-                  Get Key <ExternalLink className="w-2.5 h-2.5" />
-                </a>
-              </div>
-
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Shield className={`w-4 h-4 ${apiKey ? "text-brand-via" : "text-zinc-300"}`} />
-                </div>
-                <input
-                  id="api-key-input"
-                  type={showKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={onKeyChange}
-                  placeholder={
-                    provider === 'openai' ? "sk-..." :
-                    provider === 'anthropic' ? "sk-ant-..." :
-                    provider === 'google' ? "AIza..." :
-                    provider === 'groq' ? "gsk_..." :
-                    provider === 'openrouter' ? "sk-or-v1-..." : "Enter your key"
-                  }
-                  className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl pl-11 pr-24 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 transition-all"
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <button
-                    onClick={() => dispatch({ type: 'SET_SHOW_KEY', payload: !showKey })}
-                    className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors group/btn"
-                    title={showKey ? "Hide key" : "Show key"}
-                    aria-label={showKey ? "Hide key" : "Show key"}
-                  >
-                    {showKey ? <EyeOff className="w-3.5 h-3.5 text-zinc-400" /> : <Eye className="w-3.5 h-3.5 text-zinc-400" />}
-                  </button>
-                  <button
-                    onClick={handleCopy}
-                    disabled={!apiKey}
-                    className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
-                    title="Copy key"
-                    aria-label="Copy key"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
-                  </button>
-                </div>
-              </div>
-              {apiKey && !detectProvider(apiKey) && provider !== 'custom' && (
-                <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1">
-                  <RefreshCcw className="w-3 h-3 animate-spin-slow" /> Format doesn&apos;t match {provider} prefix. Please double-check.
-                </p>
-              )}
-            </div>
-
-            {/* Model Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-zinc-50 dark:border-zinc-800/50">
+            {/* API Key Configuration Panel */}
+            <div className="bg-zinc-50/50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-6 space-y-6">
               <div className="space-y-4">
-                <label htmlFor="model-select" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">Preferred Model</label>
-                <div className="relative">
-                  <select
-                    id="model-select"
-                    value={model}
-                    onChange={(e) => dispatch({ type: 'SET_MODEL', payload: e.target.value })}
-                    className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 appearance-none"
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="api-key-input" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                      {provider === 'custom' ? 'Proxy URL / API Key' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} API Key`}
+                    </label>
+                    {testSuccess === true && (
+                      <span className="flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                        <Check className="w-2.5 h-2.5" /> Verified
+                      </span>
+                    )}
+                  </div>
+                  <a
+                    href={
+                      provider === 'openai' ? "https://platform.openai.com/api-keys" :
+                      provider === 'anthropic' ? "https://console.anthropic.com/settings/keys" :
+                      provider === 'google' ? "https://aistudio.google.com/app/apikey" :
+                      provider === 'groq' ? "https://console.groq.com/keys" :
+                      provider === 'openrouter' ? "https://openrouter.ai/keys" : "#"
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[9px] font-black text-brand-via uppercase tracking-widest flex items-center gap-1 hover:underline"
                   >
-                    {providerModels[provider]?.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    )) || <option value={model}>{model}</option>}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <ChevronRight className="w-4 h-4 text-zinc-400 rotate-90" aria-hidden="true" />
+                    Get {provider} Key <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors">
+                    <Key className={`w-4 h-4 ${apiKey ? "text-brand-via" : "text-zinc-300"}`} />
+                  </div>
+                  <input
+                    id="api-key-input"
+                    type={showKey ? "text" : "password"}
+                    value={apiKey}
+                    onChange={onKeyChange}
+                    placeholder={
+                      provider === 'openai' ? "sk-..." :
+                      provider === 'anthropic' ? "sk-ant-..." :
+                      provider === 'google' ? "AIza..." :
+                      provider === 'groq' ? "gsk_..." :
+                      provider === 'openrouter' ? "sk-or-v1-..." : "Enter your key"
+                    }
+                    className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-11 pr-24 text-xs font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-via/20 transition-all shadow-sm"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button
+                      onClick={() => dispatch({ type: 'SET_SHOW_KEY', payload: !showKey })}
+                      className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                      title={showKey ? "Hide key" : "Show key"}
+                    >
+                      {showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={handleCopy}
+                      disabled={!apiKey}
+                      className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-30 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                      title="Copy key"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  {apiKey && !detectProvider(apiKey) && provider !== 'custom' && (
+                    <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                      <AlertTriangle className="w-3 h-3" /> Key format doesn&apos;t match {provider} prefix.
+                    </p>
+                  )}
+                  <p className="text-[10px] text-zinc-400 font-medium italic">
+                    {provider === 'openai' && "Your API key will be encrypted and used only for requests on your behalf."}
+                    {provider === 'anthropic' && "Claude models require a valid Anthropic API key starting with 'sk-ant-'."}
+                    {provider === 'google' && "Google Gemini keys can be generated for free in the AI Studio console."}
+                    {provider === 'openrouter' && "OpenRouter allows access to any model (GPT-4, Claude, Llama) with a single key."}
+                    {provider === 'groq' && "Groq provides lightning-fast inference for open-source models like Llama 3."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Model Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                <div className="space-y-3">
+                  <label htmlFor="model-select" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">Preferred Model</label>
+                  <div className="relative group">
+                    <select
+                      id="model-select"
+                      value={model}
+                      onChange={(e) => dispatch({ type: 'SET_MODEL', payload: e.target.value })}
+                      className="w-full h-11 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 appearance-none shadow-sm transition-all group-hover:border-zinc-300 dark:group-hover:border-zinc-700"
+                    >
+                      {providerModels[provider]?.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      )) || <option value={model}>{model}</option>}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
+                      <ChevronRight className="w-3.5 h-3.5 rotate-90" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label htmlFor="ip-restrictions" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 block">IP Restrictions</label>
+                  <div className="relative group">
+                    <input
+                      id="ip-restrictions"
+                      type="text"
+                      value={allowedIps}
+                      onChange={(e) => dispatch({ type: 'SET_ALLOWED_IPS', payload: e.target.value })}
+                      placeholder="e.g. 192.168.1.1, 10.0.0.1"
+                      className="w-full h-11 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 shadow-sm transition-all group-hover:border-zinc-300 dark:group-hover:border-zinc-700"
+                    />
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <label htmlFor="ip-restrictions" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">IP Restrictions (Security)</label>
-                <div className="relative">
-                  <input
-                    id="ip-restrictions"
-                    type="text"
-                    value={allowedIps}
-                    onChange={(e) => dispatch({ type: 'SET_ALLOWED_IPS', payload: e.target.value })}
-                    placeholder="e.g. 192.168.1.1, 10.0.0.1"
-                    className="w-full h-12 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20"
-                  />
-                  <p className="mt-2 text-[9px] font-medium text-zinc-400 italic">Comma-separated list of allowed IP addresses for API access.</p>
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <p className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight leading-tight">
+                    End-to-end encryption enabled.<br/>Keys are stored in a secure vault.
+                  </p>
                 </div>
-              </div>
-            </div>
-
-            {/* Action Bar */}
-            <div className="pt-6 flex items-center justify-between border-t border-zinc-50 dark:border-zinc-800/50">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-                  <Shield className="w-4 h-4" />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={isTesting || !apiKey}
+                    className="px-4 py-2 h-10 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                    {isTesting ? 'Testing...' : 'Test Connection'}
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-6 py-2 h-10 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex items-center gap-2 shadow-lg shadow-zinc-900/10 dark:shadow-zinc-100/10"
+                  >
+                    {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {isSaving ? 'Saving...' : 'Save Settings'}
+                  </button>
                 </div>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-tight leading-tight">
-                  All keys are encrypted at rest<br/>and never stored in plain text.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleTestConnection}
-                  disabled={isTesting || !apiKey}
-                  className="px-4 py-2 h-10 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isTesting ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Testing...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3 h-3" />
-                      Test Connection
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="px-6 py-2 h-10 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex items-center gap-2"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-3 h-3" />
-                      Save Settings
-                    </>
-                  )}
-                </button>
               </div>
             </div>
 
             {/* Test Results */}
             {testResult && (
-              <div className={`p-4 rounded-xl border ${testSuccess ? 'bg-emerald-50/50 border-emerald-200' : 'bg-red-50/50 border-red-200'}`}>
-                <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg ${testSuccess ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                    {testSuccess ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+              <div className={`p-5 rounded-2xl border animate-in fade-in slide-in-from-top-2 duration-300 ${testSuccess ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-500/5 dark:border-emerald-500/20' : 'bg-red-50/50 border-red-200 dark:bg-red-500/5 dark:border-red-500/20'}`}>
+                <div className="flex items-start gap-4">
+                  <div className={`p-2 rounded-xl ${testSuccess ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10' : 'bg-red-100 text-red-600 dark:bg-red-500/10'}`}>
+                    {testSuccess ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                   </div>
-                  <div className="flex-1">
-                    <p className={`text-xs font-bold ${testSuccess ? 'text-emerald-700' : 'text-red-700'} uppercase tracking-tight`}>
-                      {testSuccess ? 'Connection Test Successful' : 'Connection Test Failed'}
+                  <div className="flex-1 space-y-1">
+                    <p className={`text-xs font-black uppercase tracking-widest ${testSuccess ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                      {testSuccess ? 'Connection Verified' : 'Connection Failed'}
                     </p>
-                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1">{testResult}</p>
+                    <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 leading-relaxed">{testResult}</p>
                   </div>
                 </div>
               </div>

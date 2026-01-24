@@ -31,6 +31,7 @@ type RecordingsState = {
   isUploading: boolean
   isModalOpen: boolean
   uploadStatus: string
+  uploadProgress: number
 }
 
 type RecordingsAction =
@@ -42,6 +43,7 @@ type RecordingsAction =
   | { type: 'SET_UPLOADING'; payload: boolean }
   | { type: 'SET_MODAL_OPEN'; payload: boolean }
   | { type: 'SET_UPLOAD_STATUS'; payload: string }
+  | { type: 'SET_UPLOAD_PROGRESS'; payload: number }
   | { type: 'OPTIMISTIC_DELETE'; payload: string }
   | { type: 'ROLLBACK_DELETE'; payload: Meeting[] }
 
@@ -53,7 +55,8 @@ const initialState: RecordingsState = {
   error: null,
   isUploading: false,
   isModalOpen: false,
-  uploadStatus: ""
+  uploadStatus: "",
+  uploadProgress: 0
 }
 
 function recordingsReducer(state: RecordingsState, action: RecordingsAction): RecordingsState {
@@ -66,6 +69,7 @@ function recordingsReducer(state: RecordingsState, action: RecordingsAction): Re
     case 'SET_UPLOADING': return { ...state, isUploading: action.payload }
     case 'SET_MODAL_OPEN': return { ...state, isModalOpen: action.payload }
     case 'SET_UPLOAD_STATUS': return { ...state, uploadStatus: action.payload }
+    case 'SET_UPLOAD_PROGRESS': return { ...state, uploadProgress: action.payload }
     case 'OPTIMISTIC_DELETE': return { ...state, recordings: state.recordings.filter(r => r.id !== action.payload) }
     case 'ROLLBACK_DELETE': return { ...state, recordings: action.payload }
     default: return state
@@ -76,7 +80,7 @@ export default function RecordingsClient() {
   useSession()
   const searchParams = useSearchParams()
   const [state, dispatch] = useReducer(recordingsReducer, initialState)
-  const { recordings, filter, searchQuery, isLoading, error, isUploading, isModalOpen, uploadStatus } = state
+  const { recordings, filter, searchQuery, isLoading, error, isUploading, isModalOpen, uploadStatus, uploadProgress } = state
   const { toast, showToast: toastVisible, hideToast } = useToast()
 
   const fetchMeetings = useCallback(async (silent = false) => {
@@ -168,17 +172,33 @@ export default function RecordingsClient() {
     fetchMeetings()
   }, [fetchMeetings])
 
-  // Poll for updates if any meeting is in PROCESSING status
+  // Poll for updates if any meeting is in PROCESSING status with exponential backoff
+  const isAnyMeetingProcessing = recordings.some(r => r.status === "PROCESSING")
+
   useEffect(() => {
-    const hasProcessing = recordings.some(r => r.status === "PROCESSING")
-    if (!hasProcessing) return
+    if (!isAnyMeetingProcessing) return
 
-    const interval = setInterval(() => {
-      fetchMeetings(true)
-    }, 5000)
+    let timeoutId: NodeJS.Timeout
+    let pollCount = 0
+    const maxDelay = 30000 // Max 30 seconds
+    const baseDelay = 5000 // Start at 5 seconds
 
-    return () => clearInterval(interval)
-  }, [recordings, fetchMeetings])
+    const poll = async () => {
+      await fetchMeetings(true)
+      
+      // Calculate next delay: baseDelay * 1.5^pollCount, capped at maxDelay
+      pollCount++
+      const nextDelay = Math.min(baseDelay * Math.pow(1.5, pollCount), maxDelay)
+      
+      timeoutId = setTimeout(poll, nextDelay)
+    }
+
+    timeoutId = setTimeout(poll, baseDelay)
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [isAnyMeetingProcessing, fetchMeetings])
 
   useEffect(() => {
     if (searchParams.get("action") === "upload") {
@@ -228,18 +248,35 @@ export default function RecordingsClient() {
 
       const { signedUrl: uploadUrl, path: key } = data
       dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Uploading recording..." })
+      dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: 0 })
 
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type }
-      })
+      // Use XMLHttpRequest for real progress tracking
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
 
-      if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file to storage")
-      }
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: percentComplete });
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error during upload"));
+        xhr.send(file);
+      });
 
       dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Finalizing recording..." })
+      dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: 100 })
 
       const createResult = await createMeeting({
         title: file.name.replace(/\.[^/.]+$/, ""),
@@ -310,6 +347,7 @@ export default function RecordingsClient() {
         onUpload={handleUploadFile}
         isUploading={isUploading}
         uploadStatus={uploadStatus}
+        progress={uploadProgress}
       />
 
       <RecordingTabs filter={filter} setFilter={(f) => dispatch({ type: 'SET_FILTER', payload: f })} />

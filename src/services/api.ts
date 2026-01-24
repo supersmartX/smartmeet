@@ -152,7 +152,7 @@ export async function makeApiRequest<T>(
       // Use proxy if on client
       url = "/api/v1/proxy";
       
-      let proxyBody: any;
+      let proxyBody: FormData | string;
       const headers: Record<string, string> = {};
 
       if (data instanceof FormData) {

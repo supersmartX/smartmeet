@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { MeetingStatus } from "@prisma/client";
+import { MeetingStatus, ProcessingStep } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
@@ -156,6 +156,104 @@ export async function updateUserApiKey(data: ApiKeyUpdateInput): Promise<ActionR
   } catch (error: unknown) {
     logger.error({ error, userId: session?.user?.id }, "Update user API key error");
     return { success: false, error: error instanceof Error ? error.message : "Failed to update settings" };
+  }
+}
+
+export async function validateApiKey(provider: string, key: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+    if (!key) return { success: false, error: "API key is required" };
+
+    let isValid = false;
+    let errorMessage = "";
+
+    // Validation logic per provider
+    switch (provider) {
+      case 'openai':
+        try {
+          const response = await fetch("https://api.openai.com/v1/models", {
+            headers: { "Authorization": `Bearer ${key}` }
+          });
+          isValid = response.status === 200;
+          if (!isValid) errorMessage = "Invalid OpenAI API key or insufficient permissions.";
+        } catch {
+          errorMessage = "Failed to reach OpenAI API.";
+        }
+        break;
+      case 'anthropic':
+        try {
+          // Anthropic doesn't have a simple GET /models, so we check a small request
+          const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "x-api-key": key,
+              "anthropic-version": "2023-06-01",
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "claude-3-haiku-20240307",
+              max_tokens: 1,
+              messages: [{ role: "user", content: "Hi" }]
+            })
+          });
+          isValid = response.status === 200 || response.status === 400; // 400 might mean bad request but key is valid
+          if (response.status === 401) {
+            isValid = false;
+            errorMessage = "Invalid Anthropic API key.";
+          } else {
+            isValid = true;
+          }
+        } catch {
+          errorMessage = "Failed to reach Anthropic API.";
+        }
+        break;
+      case 'google':
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+          isValid = response.status === 200;
+          if (!isValid) errorMessage = "Invalid Google API key.";
+        } catch {
+          errorMessage = "Failed to reach Google API.";
+        }
+        break;
+      case 'groq':
+        try {
+          const response = await fetch("https://api.groq.com/openai/v1/models", {
+            headers: { "Authorization": `Bearer ${key}` }
+          });
+          isValid = response.status === 200;
+          if (!isValid) errorMessage = "Invalid Groq API key.";
+        } catch {
+          errorMessage = "Failed to reach Groq API.";
+        }
+        break;
+      case 'openrouter':
+        try {
+          const response = await fetch("https://openrouter.ai/api/v1/models", {
+            headers: { "Authorization": `Bearer ${key}` }
+          });
+          isValid = response.status === 200;
+          if (!isValid) errorMessage = "Invalid OpenRouter API key.";
+        } catch {
+          errorMessage = "Failed to reach OpenRouter API.";
+        }
+        break;
+      default:
+        // For custom or unknown, we just check if it's not empty
+        isValid = key.length > 5;
+        if (!isValid) errorMessage = "Invalid API key format.";
+    }
+
+    if (isValid) {
+      return { success: true };
+    } else {
+      return { success: false, error: errorMessage || "Validation failed." };
+    }
+  } catch (error: unknown) {
+    logger.error({ error, provider }, "Validate API key error");
+    return { success: false, error: "An error occurred during validation." };
   }
 }
 
@@ -318,7 +416,7 @@ export async function updateMeetingStatus(id: string, status: MeetingStatus, dat
       data: {
         status,
         ...(data && {
-          processingStep: data.processingStep,
+          processingStep: data.processingStep as ProcessingStep,
           testResults: data.testResults,
         })
       }
