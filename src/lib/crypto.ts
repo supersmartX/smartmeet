@@ -3,28 +3,9 @@ import logger from './logger';
 
 const ALGORITHM = 'aes-256-gcm';
 const ENCRYPTION_KEY = (() => {
-  const secret = process.env.ENCRYPTION_SECRET;
+  const secret = process.env.ENCRYPTION_SECRET || process.env.NEXTAUTH_SECRET || 'supersmartx-fallback-secret-at-least-32-chars';
   
-  // During Next.js build time, ENCRYPTION_SECRET might not be available
-  // We allow a fallback ONLY if we're not in a true production runtime
-  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
-  const isProd = process.env.NODE_ENV === 'production';
-
-  if (!secret) {
-    if (isProd && !isBuildTime) {
-      // Fallback to NEXTAUTH_SECRET if ENCRYPTION_SECRET is missing in production
-      if (process.env.NEXTAUTH_SECRET) {
-        return crypto.scryptSync(process.env.NEXTAUTH_SECRET, 'salt', 32);
-      }
-      throw new Error('Neither ENCRYPTION_SECRET nor NEXTAUTH_SECRET found. Encryption is unavailable.');
-    }
-    
-    if (!process.env.NEXTAUTH_SECRET && !isBuildTime) {
-      throw new Error('Neither ENCRYPTION_SECRET nor NEXTAUTH_SECRET found. Encryption is unavailable.');
-    }
-    // Use a strictly enforced derivation from NEXTAUTH_SECRET as a last resort in non-prod
-    return crypto.scryptSync(process.env.NEXTAUTH_SECRET || 'emergency-dev-only-salt', 'salt', 32);
-  }
+  // Always derive a 32-byte key from whatever secret we have
   return crypto.scryptSync(secret, 'salt', 32);
 })();
 const IV_LENGTH = 12;

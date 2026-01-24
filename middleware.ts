@@ -76,6 +76,29 @@ export default withAuth(
     return response;
   },
   {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const { pathname } = req.nextUrl;
+        
+        // Public routes that don't require authentication
+        const publicRoutes = [
+          "/",
+          "/login",
+          "/forgot-password",
+          "/reset-password",
+          "/api/auth",
+          "/api/v1/webhooks/stripe",
+          "/api/v1/health",
+        ];
+
+        // Allow access to public routes or if there is a valid token
+        if (publicRoutes.some(route => pathname === route || pathname.startsWith("/api/auth"))) {
+          return true;
+        }
+
+        return !!token;
+      },
+    },
     pages: {
       signIn: "/login",
     },
@@ -91,6 +114,6 @@ export const config = {
      * - api/auth (NextAuth routes)
      * - favicon.ico, logoX.png, etc.
      */
-    "/((?!_next/static|_next/image|api/auth|favicon.ico|logoX.png).*)",
+    "/((?!_next/static|_next/image|favicon.ico|logoX.png|android-chrome|apple-touch-icon|site.webmanifest).*)",
   ],
 };
