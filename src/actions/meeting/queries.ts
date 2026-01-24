@@ -281,6 +281,7 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
     if (!user) return { success: false, error: "User not found" };
 
     let apiKeys: Record<string, string> = {};
+    let decryptionError = false;
     const userApiKey = user.apiKey as string | null;
     
     if (userApiKey) {
@@ -293,11 +294,12 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
           const provider = user.preferredProvider || "openai";
           apiKeys = { [provider]: decrypted };
         }
-      } catch (decryptError) {
-        logger.error({ decryptError, userId: user.id }, "Failed to decrypt user API key in settings");
+      } catch (decryptErr) {
+        logger.error({ decryptError: decryptErr, userId: user.id }, "Failed to decrypt user API key in settings");
         // Don't crash the whole settings page if decryption fails
         // This allows the user to at least see their profile and re-enter their key
         apiKeys = {};
+        decryptionError = true;
       }
     }
 
@@ -319,7 +321,8 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
       plan: user.plan as "FREE" | "PRO" | "ENTERPRISE",
       meetingQuota: user.meetingQuota,
       meetingsUsed: user.meetingsUsed,
-      stripeSubscriptionId: user.stripeSubscriptionId
+      stripeSubscriptionId: user.stripeSubscriptionId,
+      decryptionError
     };
 
     return { success: true, data: settings };

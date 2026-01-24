@@ -137,4 +137,5 @@ export interface UserSettings {
   meetingQuota: number;
   meetingsUsed: number;
   stripeSubscriptionId?: string | null;
+  decryptionError?: boolean;
 }

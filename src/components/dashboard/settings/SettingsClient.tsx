@@ -302,6 +302,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
           handleSave={handleSave}
           isSaving={isSaving}
           providerModels={providerModels}
+          decryptionError={initialSettings.decryptionError}
         />
 
         <PreferenceSection 

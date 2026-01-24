@@ -37,6 +37,7 @@ interface AIConfigSectionProps {
   handleSave: () => void;
   isSaving: boolean;
   providerModels: Record<string, Model[]>;
+  decryptionError?: boolean;
 }
 
 export function AIConfigSection({
@@ -55,7 +56,8 @@ export function AIConfigSection({
   setAllowedIps,
   handleSave,
   isSaving,
-  providerModels
+  providerModels,
+  decryptionError
 }: AIConfigSectionProps) {
   const [isCustomModel, setIsCustomModel] = React.useState(false);
 
@@ -221,6 +223,11 @@ export function AIConfigSection({
               </button>
             </div>
           </div>
+          {decryptionError && (
+            <p className="text-[9px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
+              <Shield className="w-3 h-3" /> Failed to decrypt stored API key. Please re-enter your key to restore access.
+            </p>
+          )}
           {currentKey && !detectProvider(currentKey) && provider !== 'custom' && (
             <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1">
               <RefreshCcw className="w-3 h-3 animate-spin-slow" /> Format doesn&apos;t match {provider} prefix. Please double-check.
