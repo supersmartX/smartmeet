@@ -45,9 +45,23 @@ export const cache = {
   async invalidateUserCache(userId: string): Promise<void> {
     const redis = await getRedis();
     if (!redis) return;
-    const keys = await redis.keys(`user:${userId}:*`);
-    if (keys.length > 0) {
-      await redis.del(...keys);
+    
+    try {
+      // Explicitly delete common keys first for speed
+      const commonKeys = [
+        `user:${userId}:meetings`,
+        `user:${userId}:stats`
+      ];
+      await redis.del(...commonKeys);
+      
+      // Then clean up any others via pattern
+      const keys = await redis.keys(`user:${userId}:*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+      logger.info({ userId, keysDeleted: keys.length + commonKeys.length }, "User cache invalidated");
+    } catch (error) {
+      logger.error({ error, userId }, "Failed to invalidate user cache");
     }
   },
 

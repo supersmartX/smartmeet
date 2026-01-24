@@ -155,7 +155,7 @@ export async function getMeetings(): Promise<ActionResult<Meeting[]>> {
         return data as unknown as Meeting[];
       },
       60, // 1 minute TTL
-      3600 // 1 hour stale
+      300 // 5 minutes stale
     );
 
     return { success: true, data: meetings };

@@ -7,6 +7,7 @@ import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
 import { encrypt } from "@/lib/crypto";
 import { logSecurityEvent } from "@/lib/audit";
+import { cache } from "@/lib/cache";
 import logger from "@/lib/logger";
 import { 
   triggerWorker
@@ -46,7 +47,9 @@ export async function updateActionItemStatus(id: string, status: "PENDING" | "CO
       data: { status }
     });
 
+    await cache.invalidateUserCache(session.user.id);
     revalidatePath(`/dashboard/recordings/${actionItem.meetingId}`);
+    revalidatePath('/dashboard');
     return { success: true };
   } catch (error: unknown) {
     logger.error({ error, actionItemId: id }, "Update action item status error");
@@ -73,6 +76,7 @@ export async function togglePinned(id: string): Promise<ActionResult> {
       data: { isPinned: !meeting.isPinned }
     });
 
+    await cache.invalidateUserCache(session.user.id);
     revalidatePath('/dashboard');
     revalidatePath('/dashboard/recordings');
     return { success: true };
@@ -101,6 +105,7 @@ export async function toggleFavorite(id: string): Promise<ActionResult> {
       data: { isFavorite: !meeting.isFavorite }
     });
 
+    await cache.invalidateUserCache(session.user.id);
     revalidatePath('/dashboard');
     revalidatePath('/dashboard/recordings');
     return { success: true };
@@ -187,6 +192,7 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
       data: { meetingsUsed: { increment: 1 } }
     });
 
+    await cache.invalidateUserCache(session.user.id);
     revalidatePath('/dashboard');
     revalidatePath('/dashboard/recordings');
     
@@ -230,6 +236,7 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
       where: { id }
     });
 
+    await cache.invalidateUserCache(session.user.id);
     revalidatePath('/dashboard');
     revalidatePath('/dashboard/recordings');
     return { success: true };
@@ -260,7 +267,9 @@ export async function updateMeetingTitle(id: string, title: string): Promise<Act
       data: { title: validated.title }
     });
 
+    await cache.invalidateUserCache(session.user.id);
     revalidatePath(`/dashboard/recordings/${id}`);
+    revalidatePath('/dashboard/recordings');
     return { success: true, data: updated as Meeting };
   } catch (error: unknown) {
     logger.error({ error, meetingId: id }, "Update meeting title error");
@@ -289,7 +298,9 @@ export async function updateMeetingCode(id: string, code: string): Promise<Actio
       data: { code: validated.code }
     });
 
+    await cache.invalidateUserCache(session.user.id);
     revalidatePath(`/dashboard/recordings/${id}`);
+    revalidatePath('/dashboard/recordings');
     return { success: true, data: updated as Meeting };
   } catch (error: unknown) {
     logger.error({ error, meetingId: id }, "Update meeting code error");
@@ -313,7 +324,10 @@ export async function updateMeetingStatus(id: string, status: MeetingStatus, dat
       }
     });
 
+    await cache.invalidateUserCache(session.user.id);
     revalidatePath(`/dashboard/recordings/${id}`);
+    revalidatePath('/dashboard/recordings');
+    revalidatePath('/dashboard');
     return { success: true, data: updated as Meeting };
   } catch (error: unknown) {
     logger.error({ error, meetingId: id }, "Update meeting status error");
