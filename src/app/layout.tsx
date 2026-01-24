@@ -6,6 +6,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { headers } from "next/headers";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -116,6 +117,7 @@ export default async function RootLayout({
                 <main id="main-content">
                   {children}
                 </main>
+                <SpeedInsights />
               </ErrorBoundary>
             </ToastProvider>
           </ThemeProvider>
