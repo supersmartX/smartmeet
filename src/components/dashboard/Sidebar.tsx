@@ -166,6 +166,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               alt="SupersmartX AI Dashboard Logo" 
               width={32}
               height={32}
+              sizes="32px"
               className="object-contain"
               priority 
             />

@@ -25,7 +25,6 @@ export default function Navbar() {
               sizes="32px"
               className="object-contain"
               priority
-              loading="eager"
             />
           </div>
           <div className="flex flex-col">

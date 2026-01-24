@@ -312,6 +312,10 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
       email: user.email,
       image: user.image,
       mfaEnabled: user.mfaEnabled,
+      defaultLanguage: user.defaultLanguage || "en",
+      summaryLength: user.summaryLength || "medium",
+      summaryPersona: user.summaryPersona || "balanced",
+      autoProcess: user.autoProcess ?? true,
       plan: user.plan as "FREE" | "PRO" | "ENTERPRISE",
       meetingQuota: user.meetingQuota,
       meetingsUsed: user.meetingsUsed,
@@ -320,7 +324,11 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
 
     return { success: true, data: settings };
   } catch (error: unknown) {
-    logger.error({ error }, "Get user settings error");
+    logger.error({ 
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: session?.user?.id 
+    }, "Get user settings error");
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to fetch user settings" 
