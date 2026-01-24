@@ -73,13 +73,18 @@ export function AIConfigSection({
 
   const onKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newKey = e.target.value;
-    setApiKey(provider, newKey);
     
-    // Auto-switch provider if key matches a different one
+    // Auto-detect provider from key prefix
     const detected = detectProvider(newKey);
+    const targetProvider = detected || provider;
+    
+    // If a different provider was detected, switch to it first
     if (detected && detected !== provider) {
       setProvider(detected);
     }
+    
+    // Set the key for the correct provider
+    setApiKey(targetProvider, newKey);
   };
 
   return (

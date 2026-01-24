@@ -12,9 +12,9 @@ import {
   UserWithMeetings,
   DashboardStat,
   AuditLog,
-  Session,
   UserSettings,
-  ActionItem
+  ActionItem,
+  Session
 } from "@/types/meeting";
 import { meetingIdSchema } from "@/lib/validations/meeting";
 import { decrypt } from "@/lib/crypto";
@@ -24,6 +24,7 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
   try {
     session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
     const cacheKey = `user:${session.user.id}:stats`;
     
@@ -39,6 +40,8 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>
             meetingQuota: true,
             meetingsUsed: true,
             meetings: {
+              take: 1000,
+              orderBy: { date: 'desc' },
               include: {
                 _count: {
                   select: { actionItems: true }
@@ -214,6 +217,11 @@ export async function getMeetingById(id: string): Promise<ActionResult<MeetingWi
     session = await getServerSession(enhancedAuthOptions);
     if (!session?.user?.email) return { success: false, error: "Unauthorized" };
 
+    // Add input validation
+    if (!id || typeof id !== 'string' || id.trim().length === 0) {
+      return { success: false, error: "Invalid meeting ID" };
+    }
+
     const validatedId = meetingIdSchema.parse({ id });
 
     const meeting = await prisma.meeting.findUnique({
@@ -276,13 +284,20 @@ export async function getUserSettings(): Promise<ActionResult<UserSettings>> {
     const userApiKey = user.apiKey as string | null;
     
     if (userApiKey) {
-      const decrypted = decrypt(userApiKey);
       try {
-        apiKeys = JSON.parse(decrypted);
-      } catch {
-        // Fallback for legacy single-string API keys
-        const provider = user.preferredProvider || "openai";
-        apiKeys = { [provider]: decrypted };
+        const decrypted = decrypt(userApiKey);
+        try {
+          apiKeys = JSON.parse(decrypted);
+        } catch {
+          // Fallback for legacy single-string API keys
+          const provider = user.preferredProvider || "openai";
+          apiKeys = { [provider]: decrypted };
+        }
+      } catch (decryptError) {
+        logger.error({ decryptError, userId: user.id }, "Failed to decrypt user API key in settings");
+        // Don't crash the whole settings page if decryption fails
+        // This allows the user to at least see their profile and re-enter their key
+        apiKeys = {};
       }
     }
 
