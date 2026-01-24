@@ -116,6 +116,31 @@ export default function DashboardClient() {
     });
   }
 
+  // Onboarding Steps
+  const onboardingSteps = useMemo(() => [
+    { 
+      id: 'apiKey', 
+      label: 'Configure AI Node', 
+      isCompleted: !!user?.id, // In a real app, check if apiKey exists in settings
+      link: '/dashboard/settings',
+      description: 'Add your OpenAI/Claude key to power the intelligence engine.'
+    },
+    { 
+      id: 'upload', 
+      label: 'Initialize First Session', 
+      isCompleted: recordings.length > 0,
+      link: '/dashboard/recordings?action=upload',
+      description: 'Upload audio to start the automated analysis pipeline.'
+    },
+    { 
+      id: 'review', 
+      label: 'Audit Results', 
+      isCompleted: recordings.some(r => r.status === 'COMPLETED'),
+      link: '/dashboard/recordings',
+      description: 'Review summaries, action items, and generated logic.'
+    },
+  ], [user, recordings]);
+
   const mappedStats = useMemo(() => {
     return stats.map(stat => ({
       ...stat,
@@ -162,6 +187,38 @@ export default function DashboardClient() {
           </button>
         </div>
       </header>
+
+      {/* Onboarding Checklist - Only show if not all steps completed */}
+      {!isLoading && !onboardingSteps.every(s => s.isCompleted) && (
+        <section className="animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-1.5 h-4 bg-brand-via rounded-full" />
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">System Initialization</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {onboardingSteps.map((step) => (
+              <Link 
+                key={step.id}
+                href={step.link}
+                className={`group p-6 rounded-[32px] border transition-all ${
+                  step.isCompleted 
+                    ? "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800 opacity-60" 
+                    : "bg-white dark:bg-zinc-900 border-brand-via/20 hover:border-brand-via shadow-xl shadow-brand-via/5"
+                }`}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`p-3 rounded-2xl ${step.isCompleted ? "bg-emerald-500/10 text-emerald-500" : "bg-brand-via/10 text-brand-via"}`}>
+                    {step.isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+                  </div>
+                  {!step.isCompleted && <ArrowRight className="w-4 h-4 text-brand-via group-hover:translate-x-1 transition-transform" />}
+                </div>
+                <h3 className="text-xs font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">{step.label}</h3>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-tight">{step.description}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

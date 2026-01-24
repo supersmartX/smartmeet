@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkApiRateLimit, type RateLimitResult } from "@/lib/rate-limit";
 import { headers } from "next/headers";
 import logger from "@/lib/logger";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode, createValidationErrorResponse } from "@/lib/api-response";
+import { z } from "zod";
+import { getServerSession } from "next-auth";
+import { enhancedAuthOptions } from "@/lib/enhanced-auth";
+import { DataGovernance } from "@/lib/data-governance";
+
+const proxyRequestSchema = z.object({
+  endpoint: z.string().min(1, "Endpoint is required"),
+  method: z.enum(["GET", "POST", "PUT", "DELETE"]),
+  data: z.unknown().optional(),
+  apiKey: z.string().optional(),
+});
 
 /**
  * Get client IP address from request headers
@@ -29,39 +41,63 @@ function createRateLimitHeaders(result: RateLimitResult) {
  * Rate limited API proxy handler
  */
 export async function POST(request: NextRequest) {
+  const path = request.nextUrl.pathname;
   try {
     const clientIp = await getClientIp();
     const headersList = await headers();
     const userAgent = headersList.get("user-agent") || "unknown";
     const rateLimitKey = `${clientIp}-${userAgent}`;
     
-    // Check rate limit
+    // 1. Check rate limit
     const rateLimitResult = await checkApiRateLimit(rateLimitKey);
     
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: "Rate limit exceeded",
-          message: "Too many requests. Please try again later."
-        },
+        createErrorResponse(
+          ApiErrorCode.RATE_LIMIT_EXCEEDED,
+          "Too many requests. Please try again later.",
+          null,
+          "v1",
+          path
+        ),
         { 
           status: 429,
           headers: createRateLimitHeaders(rateLimitResult)
         }
       );
     }
-    
-    // Parse request body
-    const body = await request.json();
-    const { endpoint, method, data, apiKey } = body;
-    
-    if (!endpoint) {
+
+    // 2. Check Authentication
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { success: false, error: "Missing endpoint" },
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized", null, "v1", path),
+        { status: 401, headers: createRateLimitHeaders(rateLimitResult) }
+      );
+    }
+
+    // 3. Check Entitlement (AI Feature)
+    try {
+      await DataGovernance.checkEntitlement(session.user.id, "ai_processing");
+    } catch (error) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.QUOTA_EXCEEDED, error instanceof Error ? error.message : "Quota exceeded", null, "v1", path),
+        { status: 403, headers: createRateLimitHeaders(rateLimitResult) }
+      );
+    }
+    
+    // 4. Parse and validate request body
+    const body = await request.json();
+    const validation = proxyRequestSchema.safeParse(body);
+    
+    if (!validation.success) {
+      return NextResponse.json(
+        createValidationErrorResponse(validation.error.format(), "v1", path),
         { status: 400, headers: createRateLimitHeaders(rateLimitResult) }
       );
     }
+
+    const { endpoint, method, data, apiKey } = validation.data;
     
     // Define allowed endpoints to prevent SSRF attacks
     const ALLOWED_ENDPOINTS = [
@@ -78,7 +114,7 @@ export async function POST(request: NextRequest) {
     // Validate endpoint to prevent SSRF
     if (!ALLOWED_ENDPOINTS.includes(endpoint)) {
       return NextResponse.json(
-        { success: false, error: "Invalid endpoint" },
+        createErrorResponse(ApiErrorCode.BAD_REQUEST, "Invalid endpoint", null, "v1", path),
         { status: 400, headers: createRateLimitHeaders(rateLimitResult) }
       );
     }
@@ -87,13 +123,13 @@ export async function POST(request: NextRequest) {
     const sanitizedEndpoint = endpoint.replace(/[^a-zA-Z0-9\-\/]/g, '');
     if (sanitizedEndpoint !== endpoint) {
       return NextResponse.json(
-        { success: false, error: "Invalid endpoint format" },
+        createErrorResponse(ApiErrorCode.BAD_REQUEST, "Invalid endpoint format", null, "v1", path),
         { status: 400, headers: createRateLimitHeaders(rateLimitResult) }
       );
     }
     
     // Forward request to actual API
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://13.234.223.108:8000";
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://api.supersmartx.com:8000";
     const apiUrl = `${baseUrl}${sanitizedEndpoint}`;
     
     const requestHeaders: Record<string, string> = {
@@ -114,20 +150,23 @@ export async function POST(request: NextRequest) {
     
     const responseData = await response.json();
     
+    // Return standardized success response
     return NextResponse.json(
-      { success: true, data: responseData },
+      createSuccessResponse(responseData, "v1", path),
       { status: response.status, headers: createRateLimitHeaders(rateLimitResult) }
     );
     
-  } catch (error) {
-    logger.error({ error }, "API proxy error");
+  } catch (error: unknown) {
+    logger.error({ error: error instanceof Error ? error.message : error }, "API proxy error");
     
     return NextResponse.json(
-      { 
-        success: false, 
-        error: "Internal server error",
-        message: "Failed to process request"
-      },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        "Failed to process request",
+        null,
+        "v1",
+        path
+      ),
       { status: 500 }
     );
   }

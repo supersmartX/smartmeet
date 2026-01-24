@@ -20,6 +20,7 @@ export interface Meeting {
   audioUrl?: string;
   isPinned: boolean;
   isFavorite: boolean;
+  isTechnical?: boolean;
   image?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -42,6 +43,7 @@ export interface Transcript {
   speaker: string;
   time: string;
   text: string;
+  confidence?: number;
   meetingId: string;
 }
 
@@ -64,6 +66,7 @@ export interface MeetingUpdateData {
   code?: string;
   projectDoc?: string;
   testResults?: string;
+  processingStep?: "IDLE" | "TRANSCRIPTION" | "SUMMARIZATION" | "CODE_GENERATION" | "TESTING" | "COMPLETED" | "FAILED";
 }
 
 export interface DashboardStat {

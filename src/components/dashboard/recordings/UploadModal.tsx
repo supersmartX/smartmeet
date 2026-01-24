@@ -21,8 +21,27 @@ export function UploadModal({
 }: UploadModalProps) {
   const [dragActive, setDragActive] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [progress, setProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { showToast } = useToast()
+
+  // Simulate progress when uploading
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isUploading) {
+      setProgress(10);
+      interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) return prev;
+          const increment = prev < 40 ? 5 : prev < 70 ? 2 : 1;
+          return prev + increment;
+        });
+      }, 500);
+    } else {
+      setProgress(0);
+    }
+    return () => clearInterval(interval);
+  }, [isUploading]);
 
   if (!isOpen) return null
 
@@ -186,14 +205,26 @@ export function UploadModal({
                 <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
                   {uploadStatus}
                 </h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
-                  Please keep this window open until complete
-                </p>
+                <div className="flex flex-col gap-1 mt-2">
+                  <p className="text-[10px] font-bold text-brand-via uppercase tracking-[0.2em] animate-pulse">
+                    {uploadStatus.includes("Uploading") ? "Syncing to Cloud" : 
+                     uploadStatus.includes("Processing") ? "Initializing AI Pipeline" : 
+                     "Finalizing Session"}
+                  </p>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+                    {uploadStatus.includes("Uploading") ? "Transferring binary data to secure storage nodes." : 
+                     uploadStatus.includes("Processing") ? "Neural engine is warming up for transcription." : 
+                     "Your meeting intelligence is being generated."}
+                  </p>
+                </div>
               </div>
               
               {/* Progress Simulation (since we use PUT fetch) */}
               <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden max-w-[280px]">
-                <div className="h-full bg-brand-via animate-progress" style={{ width: '60%' }} />
+                <div 
+                  className="h-full bg-brand-via transition-all duration-500 ease-out" 
+                  style={{ width: `${progress}%` }} 
+                />
               </div>
             </div>
           )}

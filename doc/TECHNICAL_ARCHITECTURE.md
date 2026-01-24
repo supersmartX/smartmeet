@@ -27,15 +27,47 @@ The project follows a clean, layered approach typical of Next.js 15 applications
 - **Action Result Pattern**: Consistent return types `{ success: boolean; data?: T; error?: string }` for all server operations.
 - **Circuit Breaker Pattern**: Protects the AI pipeline from cascading failures during external API downtime.
 
-## AI Pipeline Flow
-The AI processing pipeline is a multi-step sequential workflow designed for robustness and observability:
+## Component Responsibilities
+### 1. UI Layer (Next.js Client Components)
+- **Role**: Presentation and user interaction.
+- **Responsibility**: State management for real-time UI updates, optimistic UI patterns, and calling Server Actions.
+- **Boundaries**: No direct database or external API access; strictly communicates via Server Actions or internal API proxy.
 
-1.  **Ingestion**: Audio uploaded to Supabase Storage; metadata stored in PostgreSQL.
-2.  **Transcription**: Raw audio processed via Whisper (or equivalent) to generate high-fidelity text.
-3.  **Summarization**: Transcription processed through selected LLM (OpenAI/Claude) to generate structured summaries and technical documentation.
-4.  **Code Generation**: Key technical discussion points converted into functional code snippets.
-5.  **Validation (Testing)**: Generated code is automatically passed through a testing service to verify syntactical and logical correctness.
-6.  **Notification**: User is notified via internal notification system once the pipeline completes.
+### 2. Action Layer (Next.js Server Actions)
+- **Role**: Transactional logic and security orchestration.
+- **Responsibility**: Validation (Zod), Authentication (NextAuth), Rate-limiting, Audit logging, and triggering background tasks.
+- **Boundaries**: Runs on the server; has full access to Prisma and Infrastructure libs.
+
+### 3. Service Layer (AI & External Integrations)
+- **Role**: Abstraction of external dependencies.
+- **Responsibility**: Unified interface for multiple AI providers (OpenAI, Claude, Groq, etc.) and Stripe payment processing.
+- **Boundaries**: Encapsulates external API complexities; uses Circuit Breakers for resilience.
+
+### 4. Background Worker (Next.js API Routes + Redis)
+- **Role**: Asynchronous long-running task processing.
+- **Responsibility**: Dequeuing tasks, managing the sequential AI pipeline, and ensuring reliability via retry logic.
+- **Boundaries**: Triggered internally or via cron; operates independently of the request-response cycle.
+
+## Data Flow & AI Boundaries
+### Data Flow Path
+1.  **Upload Phase**: Audio/Documents are uploaded to **Supabase Storage**.
+2.  **Registration Phase**: Metadata is saved in **PostgreSQL** via Prisma; status set to `PENDING`.
+3.  **Scheduling Phase**: Task is enqueued in **Redis**; Worker is triggered via `/api/v1/worker/process`.
+4.  **Intelligence Phase**: 
+    - **Transcription**: External Whisper-compatible API converts audio to text.
+    - **Transformation**: Text is processed via selected LLM (OpenAI/Claude) for summaries and code generation.
+    - **Validation**: Generated code is tested locally or via a specialized sandbox.
+5.  **Completion Phase**: Final assets are persisted; status updated to `COMPLETED`; User notified.
+
+### AI Boundaries & Security
+- **Privacy Boundary**: Sensitive user data is never sent to AI providers. Only the specific meeting content (audio/text) is processed.
+- **Secret Boundary**: All AI provider API keys are encrypted at rest using AES-256-GCM. Decryption happens only in memory during the execution phase.
+- **Intelligence Boundary**: AI providers are used for high-level semantic processing, while business logic, validation, and testing logic remain strictly internal to the SupersmartX backend.
+
+## Infrastructure Resilience
+- **Circuit Breakers**: Protect against external AI provider downtime.
+- **Concurrency Limiting**: Prevents resource exhaustion by capping simultaneous AI operations.
+- **Rate Limiting**: Multi-tier (IP, User, API) protection against abuse.
 
 ## Data Model
 - **User**: Core profile, subscription status, API keys (encrypted), and security settings (MFA/IP restrictions).

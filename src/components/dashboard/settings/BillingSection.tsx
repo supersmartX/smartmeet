@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { CreditCard, Zap, ArrowRight } from "lucide-react"
+import { CreditCard, Zap, ArrowRight, BarChart3 } from "lucide-react"
+import Link from "next/link"
 import Button from "@/components/Button"
 import { createPortalSession } from "@/actions/stripe"
 
@@ -89,6 +90,16 @@ export function BillingSection({
         </div>
 
         <div className="flex flex-col gap-3 min-w-[200px]">
+          <Link href="/dashboard/usage" className="w-full">
+            <Button
+              variant="secondary"
+              className="w-full group"
+            >
+              Detailed Usage
+              <BarChart3 className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform" />
+            </Button>
+          </Link>
+
           {stripeSubscriptionId ? (
             <Button
               variant="secondary"

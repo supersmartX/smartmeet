@@ -7,8 +7,7 @@ export const stripe = new Proxy({} as Stripe, {
     if (!stripeInstance) {
       const stripeKey = process.env.STRIPE_SECRET_KEY || "";
       stripeInstance = new Stripe(stripeKey, {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        apiVersion: "2025-12-15.clover" as any,
+        apiVersion: "2025-12-15.clover",
         typescript: true,
       });
     }

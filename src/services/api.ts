@@ -1,16 +1,13 @@
 import logger from "@/lib/logger";
+import { ApiErrorCode, ApiResponse } from "@/lib/api-response";
 
 /**
  * SupersmartX API Service
- * Handles all communication with the backend API
+ * Handles all communication with the backend API using the v1 contract.
  */
 
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
+// Re-export types for use in actions
+export type { ApiResponse };
 
 interface AudioToCodeParams {
   file: File | Blob;
@@ -73,30 +70,44 @@ interface CompletePipelineResponse {
 }
 
 /**
- * Handle API errors consistently
+ * Handle API errors consistently using the v1 contract
  */
-function handleApiError<T>(error: unknown): ApiResponse<T> {
+function handleApiError<T>(error: unknown, path?: string): ApiResponse<T> {
+  let code = ApiErrorCode.INTERNAL_ERROR;
+  let message = "Unknown error occurred";
+  
   if (error instanceof Error) {
-    return {
-      success: false,
-      error: error.message,
-      message: "API request failed"
-    };
+    message = error.message;
+    if (error.name === 'AbortError') {
+      code = ApiErrorCode.SERVICE_UNAVAILABLE;
+      message = "Request timed out. The AI processing might still be running in the background.";
+    }
   }
-
+  
   return {
     success: false,
-    error: "Unknown error occurred",
-    message: "API request failed"
+    data: null,
+    error: {
+      code,
+      message,
+    },
+    meta: {
+      timestamp: new Date().toISOString(),
+      version: "v1",
+      path,
+    }
   };
 }
 
 /**
  * Make authenticated API request through server-side proxy or directly if on server
  */
-async function makeApiRequest<T>(
+/**
+ * Base API request handler
+ */
+export async function makeApiRequest<T>(
   endpoint: string,
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
   data?: FormData | Record<string, unknown>,
   apiKey: string = "",
   timeout: number = 300000 // Increased default to 5 minutes for AI tasks
@@ -105,6 +116,7 @@ async function makeApiRequest<T>(
   const id = setTimeout(() => controller.abort(), timeout);
 
   const isServer = typeof window === 'undefined';
+  const path = isServer ? endpoint : "/api/v1/proxy";
 
   try {
     let url: string;
@@ -112,7 +124,7 @@ async function makeApiRequest<T>(
 
     if (isServer) {
       // Direct call to API if on server
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://13.234.223.108:8000";
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://api.supersmartx.com:8000";
       url = `${baseUrl}${endpoint}`;
       
       const headers: Record<string, string> = {
@@ -138,12 +150,7 @@ async function makeApiRequest<T>(
       };
     } else {
       // Use proxy if on client
-      url = "/api/proxy";
-      
-      // If data is FormData, we need to convert it to something JSON-serializable 
-      // because our current proxy only accepts JSON. 
-      // For audio files, we should really be using a multipart proxy or direct upload.
-      // However, since processMeetingAI is a SERVER ACTION, it will hit the 'isServer' block above.
+      url = "/api/v1/proxy";
       
       const proxyData = {
         endpoint,
@@ -166,55 +173,98 @@ async function makeApiRequest<T>(
     const response = await fetch(url, requestOptions);
     clearTimeout(id);
 
-    // Handle rate limit errors
-    if (response.status === 429) {
+    // Handle standard HTTP error statuses
+    if (!response.ok) {
+      let errorCode = ApiErrorCode.INTERNAL_ERROR;
+      let errorMessage = `API Error: ${response.statusText}`;
+
+      switch (response.status) {
+        case 401:
+          errorCode = ApiErrorCode.UNAUTHORIZED;
+          errorMessage = "Session expired or invalid. Please log in again.";
+          break;
+        case 403:
+          errorCode = ApiErrorCode.FORBIDDEN;
+          errorMessage = "You don't have permission to perform this action.";
+          break;
+        case 404:
+          errorCode = ApiErrorCode.NOT_FOUND;
+          errorMessage = "The requested resource was not found.";
+          break;
+        case 429:
+          errorCode = ApiErrorCode.RATE_LIMIT_EXCEEDED;
+          errorMessage = "Too many requests. Please try again later.";
+          break;
+        case 503:
+          errorCode = ApiErrorCode.SERVICE_UNAVAILABLE;
+          errorMessage = "AI service is temporarily overloaded. Please try again in a moment.";
+          break;
+      }
+
+      // Try to parse error details from response body
+      let details: unknown = null;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) errorMessage = errorData.error.message;
+        if (errorData.error?.details) details = errorData.error.details;
+        if (errorData.error?.code) errorCode = errorData.error.code;
+      } catch {
+        // Fallback to status text if JSON parsing fails
+      }
+
       return {
         success: false,
-        error: "Rate limit exceeded",
-        message: "Too many requests. Please try again later.",
+        data: null,
+        error: {
+          code: errorCode,
+          message: errorMessage,
+          details,
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: "v1",
+          path,
+        }
       };
     }
 
     const result = await response.json();
     
     // Normalize response structure
-    // Case 1: Proxy response { success: true, data: { ... } }
-    if (result.success !== undefined && result.data !== undefined && !isServer) {
-      return result.data;
+    // If it's already a ApiResponse, return it
+    if (
+      result && 
+      typeof result === 'object' && 
+      'success' in result && 
+      'meta' in result && 
+      result.meta && 
+      typeof result.meta === 'object' && 
+      'version' in result.meta
+    ) {
+      return result as ApiResponse<T>;
     }
 
-    // Case 2: Direct API response that is already an ApiResponse
-    if (result.success !== undefined) {
-      return result;
-    }
+    // Fallback for legacy API responses that might not follow the contract yet
+    const legacyResult = result as { data?: T; error?: string; message?: string };
+    
+    return {
+      success: response.ok,
+      data: (legacyResult?.data !== undefined ? legacyResult.data : result) as T,
+      error: response.ok ? null : {
+        code: ApiErrorCode.INTERNAL_ERROR,
+        message: legacyResult?.error || legacyResult?.message || "Request failed",
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: "v1",
+        path,
+      }
+    };
 
-    // Case 3: Direct API response that is just the data
-    if (response.ok) {
-      return {
-        success: true,
-        data: result
-      };
-    }
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: result.error || "Request failed",
-        message: result.message || "API request failed",
-      };
-    }
-
-    return result;
-  } catch (error: unknown) {
+  } catch (error) {
     clearTimeout(id);
-    if (error instanceof Error && error.name === 'AbortError') {
-      return {
-        success: false,
-        error: "Request timeout",
-        message: `Request exceeded ${timeout / 1000} seconds`
-      };
-    }
-    return handleApiError(error);
+    logger.error({ error, endpoint, method }, "API request failed");
+    return handleApiError<T>(error, path);
   }
 }
 

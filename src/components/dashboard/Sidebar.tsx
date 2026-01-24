@@ -16,7 +16,8 @@ import {
   Users,
   Plus,
   Loader2,
-  LucideIcon
+  LucideIcon,
+  BarChart3
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getMeetings } from "@/actions/meeting"
@@ -61,6 +62,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       type: "folder",
       children: [
         { name: "Overview", href: "/dashboard", icon: Layout },
+        { name: "Usage & Quotas", href: "/dashboard/usage", icon: BarChart3 },
         { 
           name: "My Projects", 
           type: "folder",

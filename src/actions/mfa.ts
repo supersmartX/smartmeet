@@ -52,7 +52,7 @@ export async function verifyAndEnableMFA(token: string, secret: string): Promise
 
     // Generate 10 recovery codes
     const recoveryCodes = Array.from({ length: 10 }).map(() => 
-      crypto.randomBytes(4).toString("hex").toUpperCase()
+      crypto.randomBytes(10).toString("hex").toUpperCase() // Increased to 20 characters
     );
 
     const user = await prisma.user.update({

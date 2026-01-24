@@ -17,7 +17,7 @@ function getResend() {
 const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verifyLink = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${token}`;
+  const verifyLink = `${process.env.NEXTAUTH_URL}/api/v1/auth/verify-email?token=${token}`;
   const resend = getResend();
 
   if (!resend) {

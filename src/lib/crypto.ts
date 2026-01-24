@@ -3,12 +3,22 @@ import logger from './logger';
 
 const ALGORITHM = 'aes-256-gcm';
 const ENCRYPTION_KEY = (() => {
-  const secret = process.env.ENCRYPTION_SECRET || process.env.NEXTAUTH_SECRET;
+  const secret = process.env.ENCRYPTION_SECRET;
+  
+  // During Next.js build time, ENCRYPTION_SECRET might not be available
+  // We allow a fallback ONLY if we're not in a true production runtime
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
+  const isProd = process.env.NODE_ENV === 'production';
+
   if (!secret) {
-    throw new Error('ENCRYPTION_SECRET or NEXTAUTH_SECRET is required for encryption operations');
-  }
-  if (!process.env.ENCRYPTION_SECRET && process.env.NODE_ENV === 'production') {
-    logger.warn('ENCRYPTION_SECRET is not set. Falling back to NEXTAUTH_SECRET. It is recommended to use a dedicated ENCRYPTION_SECRET.');
+    if (isProd && !isBuildTime) {
+      throw new Error('ENCRYPTION_SECRET is required for production runtime');
+    }
+    if (!process.env.NEXTAUTH_SECRET && !isBuildTime) {
+      throw new Error('Neither ENCRYPTION_SECRET nor NEXTAUTH_SECRET found. Encryption is unavailable.');
+    }
+    // Use a strictly enforced derivation from NEXTAUTH_SECRET as a last resort in non-prod
+    return crypto.scryptSync(process.env.NEXTAUTH_SECRET || 'emergency-dev-only-salt', 'salt', 32);
   }
   return crypto.scryptSync(secret, 'salt', 32);
 })();
@@ -41,4 +51,15 @@ export function decrypt(text: string): string {
     }
     throw new Error('Failed to decrypt data');
   }
+}
+
+/**
+ * Masking Rule: Partially mask sensitive strings (e.g., API keys)
+ * Example: sk-ant-api...abcd
+ */
+export function maskSensitiveData(text: string, visibleChars: number = 4): string {
+  if (!text || text.length <= visibleChars * 2) return "********";
+  const start = text.slice(0, visibleChars);
+  const end = text.slice(-visibleChars);
+  return `${start}...${end}`;
 }

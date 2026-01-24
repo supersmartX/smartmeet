@@ -65,9 +65,12 @@ export class RedisCircuitBreaker {
   }
 
   /**
-   * Execute a function with circuit breaker protection
+   * Execute a function with circuit breaker and optional retry protection
    */
-  async execute<T>(fn: () => Promise<T>): Promise<T> {
+  async execute<T>(
+    fn: () => Promise<T>,
+    retryOptions?: Partial<import("./retry").RetryOptions>
+  ): Promise<T> {
     const state = await this.getState();
 
     if (state === "OPEN") {
@@ -75,7 +78,14 @@ export class RedisCircuitBreaker {
     }
 
     try {
-      const result = await fn();
+      let result: T;
+      if (retryOptions) {
+        const { RetryService } = await import("./retry");
+        result = await RetryService.execute(fn, retryOptions, this.config.serviceName);
+      } else {
+        result = await fn();
+      }
+      
       await this.recordSuccess();
       return result;
     } catch (error) {

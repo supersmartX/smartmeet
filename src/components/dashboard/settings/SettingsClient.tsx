@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useReducer } from "react"
 import { 
   Zap, 
   Check, 
@@ -17,6 +17,77 @@ import { MFASection } from "@/components/dashboard/settings/MFASection"
 import { PreferenceSection } from "@/components/dashboard/settings/PreferenceSection"
 import { BillingSection } from "./BillingSection"
 
+type SettingsState = {
+  apiKeys: Record<string, string>
+  showKey: boolean
+  copied: boolean
+  isSaving: boolean
+  provider: string
+  model: string
+  allowedIps: string
+  defaultLanguage: string
+  summaryLength: string
+  summaryPersona: string
+  autoProcess: boolean
+  mfaEnabled: boolean
+  mfaSecret: string
+  qrCodeUrl: string
+  mfaToken: string
+  mfaPassword: string
+  isSettingUpMFA: boolean
+  isVerifyingMFA: boolean
+  isDisablingMFA: boolean
+  showDisableConfirm: boolean
+}
+
+type SettingsAction =
+  | { type: 'SET_API_KEY'; provider: string; key: string }
+  | { type: 'SET_SHOW_KEY'; payload: boolean }
+  | { type: 'SET_COPIED'; payload: boolean }
+  | { type: 'SET_SAVING'; payload: boolean }
+  | { type: 'SET_PROVIDER'; payload: string }
+  | { type: 'SET_MODEL'; payload: string }
+  | { type: 'SET_ALLOWED_IPS'; payload: string }
+  | { type: 'SET_DEFAULT_LANGUAGE'; payload: string }
+  | { type: 'SET_SUMMARY_LENGTH'; payload: string }
+  | { type: 'SET_SUMMARY_PERSONA'; payload: string }
+  | { type: 'SET_AUTO_PROCESS'; payload: boolean }
+  | { type: 'SET_MFA_ENABLED'; payload: boolean }
+  | { type: 'SET_MFA_SECRET'; payload: string }
+  | { type: 'SET_QR_CODE_URL'; payload: string }
+  | { type: 'SET_MFA_TOKEN'; payload: string }
+  | { type: 'SET_MFA_PASSWORD'; payload: string }
+  | { type: 'SET_SETTING_UP_MFA'; payload: boolean }
+  | { type: 'SET_VERIFYING_MFA'; payload: boolean }
+  | { type: 'SET_DISABLING_MFA'; payload: boolean }
+  | { type: 'SET_SHOW_DISABLE_CONFIRM'; payload: boolean }
+
+function settingsReducer(state: SettingsState, action: SettingsAction): SettingsState {
+  switch (action.type) {
+    case 'SET_API_KEY': return { ...state, apiKeys: { ...state.apiKeys, [action.provider]: action.key } }
+    case 'SET_SHOW_KEY': return { ...state, showKey: action.payload }
+    case 'SET_COPIED': return { ...state, copied: action.payload }
+    case 'SET_SAVING': return { ...state, isSaving: action.payload }
+    case 'SET_PROVIDER': return { ...state, provider: action.payload }
+    case 'SET_MODEL': return { ...state, model: action.payload }
+    case 'SET_ALLOWED_IPS': return { ...state, allowedIps: action.payload }
+    case 'SET_DEFAULT_LANGUAGE': return { ...state, defaultLanguage: action.payload }
+    case 'SET_SUMMARY_LENGTH': return { ...state, summaryLength: action.payload }
+    case 'SET_SUMMARY_PERSONA': return { ...state, summaryPersona: action.payload }
+    case 'SET_AUTO_PROCESS': return { ...state, autoProcess: action.payload }
+    case 'SET_MFA_ENABLED': return { ...state, mfaEnabled: action.payload }
+    case 'SET_MFA_SECRET': return { ...state, mfaSecret: action.payload }
+    case 'SET_QR_CODE_URL': return { ...state, qrCodeUrl: action.payload }
+    case 'SET_MFA_TOKEN': return { ...state, mfaToken: action.payload }
+    case 'SET_MFA_PASSWORD': return { ...state, mfaPassword: action.payload }
+    case 'SET_SETTING_UP_MFA': return { ...state, isSettingUpMFA: action.payload }
+    case 'SET_VERIFYING_MFA': return { ...state, isVerifyingMFA: action.payload }
+    case 'SET_DISABLING_MFA': return { ...state, isDisablingMFA: action.payload }
+    case 'SET_SHOW_DISABLE_CONFIRM': return { ...state, showDisableConfirm: action.payload }
+    default: return state
+  }
+}
+
 interface SettingsClientProps {
   initialSettings: UserSettings
 }
@@ -24,39 +95,44 @@ interface SettingsClientProps {
 export function SettingsClient({ initialSettings }: SettingsClientProps) {
   const { toast, showToast, hideToast } = useToast()
   
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>(initialSettings.apiKeys || {})
-  const [showKey, setShowKey] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [provider, setProvider] = useState(initialSettings.preferredProvider || "openai")
-  const [model, setModel] = useState(initialSettings.preferredModel || "gpt-4o")
-  const [allowedIps, setAllowedIps] = useState(initialSettings.allowedIps || "")
-  const [defaultLanguage, setDefaultLanguage] = useState(initialSettings.defaultLanguage || "en")
-  const [summaryLength, setSummaryLength] = useState(initialSettings.summaryLength || "medium")
-  const [summaryPersona, setSummaryPersona] = useState(initialSettings.summaryPersona || "balanced")
-  const [autoProcess, setAutoProcess] = useState(initialSettings.autoProcess ?? true)
-  const [lastUsedAt] = useState<string | null>(
-    initialSettings.lastUsedAt ? new Date(initialSettings.lastUsedAt).toLocaleString() : null
-  )
-  const [userProfile] = useState({ 
+  const [state, dispatch] = useReducer(settingsReducer, {
+    apiKeys: initialSettings.apiKeys || {},
+    showKey: false,
+    copied: false,
+    isSaving: false,
+    provider: initialSettings.preferredProvider || "openai",
+    model: initialSettings.preferredModel || "gpt-4o",
+    allowedIps: initialSettings.allowedIps || "",
+    defaultLanguage: initialSettings.defaultLanguage || "en",
+    summaryLength: initialSettings.summaryLength || "medium",
+    summaryPersona: initialSettings.summaryPersona || "balanced",
+    autoProcess: initialSettings.autoProcess ?? true,
+    mfaEnabled: initialSettings.mfaEnabled || false,
+    mfaSecret: "",
+    qrCodeUrl: "",
+    mfaToken: "",
+    mfaPassword: "",
+    isSettingUpMFA: false,
+    isVerifyingMFA: false,
+    isDisablingMFA: false,
+    showDisableConfirm: false,
+  })
+
+  const {
+    apiKeys, showKey, copied, isSaving, provider, model, allowedIps,
+    defaultLanguage, summaryLength, summaryPersona, autoProcess,
+    mfaEnabled, mfaSecret, qrCodeUrl, mfaToken, mfaPassword,
+    isSettingUpMFA, isVerifyingMFA, isDisablingMFA, showDisableConfirm
+  } = state
+
+  const lastUsedAt = initialSettings.lastUsedAt ? new Date(initialSettings.lastUsedAt).toLocaleString() : null
+  const userProfile = { 
     name: initialSettings.name || "", 
     email: initialSettings.email || "", 
     image: initialSettings.image || "" 
-  })
-  const [mfaEnabled, setMfaEnabled] = useState(initialSettings.mfaEnabled || false)
-  const [mfaSecret, setMfaSecret] = useState("")
-  const [qrCodeUrl, setQrCodeUrl] = useState("")
-  const [mfaToken, setMfaToken] = useState("")
-  const [mfaPassword, setMfaPassword] = useState("")
-  const [isSettingUpMFA, setIsSettingUpMFA] = useState(false)
-  const [isVerifyingMFA, setIsVerifyingMFA] = useState(false)
-  const [isDisablingMFA, setIsDisablingMFA] = useState(false)
-  const [showDisableConfirm, setShowDisableConfirm] = useState(false)
-
-  const setApiKey = (p: string, key: string) => {
-    setApiKeys(prev => ({ ...prev, [p]: key }))
   }
 
+  const setApiKey = (p: string, key: string) => dispatch({ type: 'SET_API_KEY', provider: p, key })
   const apiKey = apiKeys[provider] || ""
 
   const providerModels = {
@@ -97,12 +173,12 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
   const handleCopy = () => {
     if (!apiKey) return
     navigator.clipboard.writeText(apiKey)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    dispatch({ type: 'SET_COPIED', payload: true })
+    setTimeout(() => dispatch({ type: 'SET_COPIED', payload: false }), 2000)
   }
 
   const handleSave = async () => {
-    setIsSaving(true)
+    dispatch({ type: 'SET_SAVING', payload: true })
     try {
       const result = await updateUserApiKey({ 
         apiKeys, 
@@ -124,17 +200,17 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
       console.error("Failed to save API key:", error)
       showToast("An unexpected error occurred while saving settings.", "error")
     } finally {
-      setIsSaving(false)
+      dispatch({ type: 'SET_SAVING', payload: false })
     }
   }
 
   const handleSetupMFA = async () => {
     try {
-      setIsSettingUpMFA(true)
+      dispatch({ type: 'SET_SETTING_UP_MFA', payload: true })
       const result = await generateMFASecret()
       if (result.success && result.data) {
-        setMfaSecret(result.data.secret)
-        setQrCodeUrl(result.data.qrCodeUrl)
+        dispatch({ type: 'SET_MFA_SECRET', payload: result.data.secret })
+        dispatch({ type: 'SET_QR_CODE_URL', payload: result.data.qrCodeUrl })
       } else {
         showToast(result.error || "Failed to initialize MFA setup.", "error")
       }
@@ -142,20 +218,20 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
       console.error("MFA Setup error:", error)
       showToast("An unexpected error occurred during MFA setup.", "error")
     } finally {
-      setIsSettingUpMFA(false)
+      dispatch({ type: 'SET_SETTING_UP_MFA', payload: false })
     }
   }
 
   const handleVerifyMFA = async () => {
     if (!mfaToken) return
     try {
-      setIsVerifyingMFA(true)
+      dispatch({ type: 'SET_VERIFYING_MFA', payload: true })
       const result = await verifyAndEnableMFA(mfaToken, mfaSecret)
       if (result.success) {
-        setMfaEnabled(true)
-        setQrCodeUrl("")
-        setMfaSecret("")
-        setMfaToken("")
+        dispatch({ type: 'SET_MFA_ENABLED', payload: true })
+        dispatch({ type: 'SET_QR_CODE_URL', payload: "" })
+        dispatch({ type: 'SET_MFA_SECRET', payload: "" })
+        dispatch({ type: 'SET_MFA_TOKEN', payload: "" })
         showToast("MFA enabled successfully!")
       } else {
         showToast(result.error || "Failed to verify MFA code.", "error")
@@ -164,20 +240,20 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
       console.error("MFA verification error:", error)
       showToast("An unexpected error occurred during verification.", "error")
     } finally {
-      setIsVerifyingMFA(false)
+      dispatch({ type: 'SET_VERIFYING_MFA', payload: false })
     }
   }
 
   const handleDisableMFA = async () => {
     if (!mfaToken) return
     try {
-      setIsDisablingMFA(true)
+      dispatch({ type: 'SET_DISABLING_MFA', payload: true })
       const result = await disableMFA(mfaToken, mfaPassword)
       if (result.success) {
-        setMfaEnabled(false)
-        setShowDisableConfirm(false)
-        setMfaToken("")
-        setMfaPassword("")
+        dispatch({ type: 'SET_MFA_ENABLED', payload: false })
+        dispatch({ type: 'SET_SHOW_DISABLE_CONFIRM', payload: false })
+        dispatch({ type: 'SET_MFA_TOKEN', payload: "" })
+        dispatch({ type: 'SET_MFA_PASSWORD', payload: "" })
         showToast("MFA disabled.")
       } else {
         const message = result.error || "Failed to disable MFA."
@@ -191,7 +267,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
       console.error("Disable MFA error:", error)
       showToast("An unexpected error occurred while disabling MFA.", "error")
     } finally {
-      setIsDisablingMFA(false)
+      dispatch({ type: 'SET_DISABLING_MFA', payload: false })
     }
   }
 
@@ -211,18 +287,18 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
 
         <AIConfigSection 
           provider={provider}
-          setProvider={setProvider}
+          setProvider={(p) => dispatch({ type: 'SET_PROVIDER', payload: p })}
           model={model}
-          setModel={setModel}
+          setModel={(m) => dispatch({ type: 'SET_MODEL', payload: m })}
           apiKeys={apiKeys}
           setApiKey={setApiKey}
           showKey={showKey}
-          setShowKey={setShowKey}
+          setShowKey={(s) => dispatch({ type: 'SET_SHOW_KEY', payload: s })}
           handleCopy={handleCopy}
           copied={copied}
           lastUsedAt={lastUsedAt}
           allowedIps={allowedIps}
-          setAllowedIps={setAllowedIps}
+          setAllowedIps={(ips) => dispatch({ type: 'SET_ALLOWED_IPS', payload: ips })}
           handleSave={handleSave}
           isSaving={isSaving}
           providerModels={providerModels}
@@ -230,13 +306,13 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
 
         <PreferenceSection 
           defaultLanguage={defaultLanguage}
-          setDefaultLanguage={setDefaultLanguage}
+          setDefaultLanguage={(l) => dispatch({ type: 'SET_DEFAULT_LANGUAGE', payload: l })}
           summaryLength={summaryLength}
-          setSummaryLength={setSummaryLength}
+          setSummaryLength={(sl) => dispatch({ type: 'SET_SUMMARY_LENGTH', payload: sl })}
           summaryPersona={summaryPersona}
-          setSummaryPersona={setSummaryPersona}
+          setSummaryPersona={(sp) => dispatch({ type: 'SET_SUMMARY_PERSONA', payload: sp })}
           autoProcess={autoProcess}
-          setAutoProcess={setAutoProcess}
+          setAutoProcess={(ap) => dispatch({ type: 'SET_AUTO_PROCESS', payload: ap })}
         />
 
         <MFASection 
@@ -244,19 +320,19 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
           qrCodeUrl={qrCodeUrl}
           mfaSecret={mfaSecret}
           mfaToken={mfaToken}
-          setMfaToken={setMfaToken}
+          setMfaToken={(t) => dispatch({ type: 'SET_MFA_TOKEN', payload: t })}
           mfaPassword={mfaPassword}
-          setMfaPassword={setMfaPassword}
+          setMfaPassword={(p) => dispatch({ type: 'SET_MFA_PASSWORD', payload: p })}
           isSettingUpMFA={isSettingUpMFA}
           isVerifyingMFA={isVerifyingMFA}
           isDisablingMFA={isDisablingMFA}
           showDisableConfirm={showDisableConfirm}
-          setShowDisableConfirm={setShowDisableConfirm}
+          setShowDisableConfirm={(s) => dispatch({ type: 'SET_SHOW_DISABLE_CONFIRM', payload: s })}
           handleSetupMFA={handleSetupMFA}
           handleVerifyMFA={handleVerifyMFA}
           handleDisableMFA={handleDisableMFA}
-          setQrCodeUrl={setQrCodeUrl}
-          setMfaSecret={setMfaSecret}
+          setQrCodeUrl={(url) => dispatch({ type: 'SET_QR_CODE_URL', payload: url })}
+          setMfaSecret={(s) => dispatch({ type: 'SET_MFA_SECRET', payload: s })}
         />
 
         <BillingSection 

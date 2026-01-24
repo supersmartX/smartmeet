@@ -118,6 +118,7 @@ model Meeting {
   processingStep ProcessingStep @default(IDLE)
   isPinned       Boolean        @default(false)
   isFavorite     Boolean        @default(false)
+  isTechnical    Boolean        @default(false)
   actionItems    ActionItem[]
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   summary        Summary?
@@ -131,6 +132,7 @@ model Transcript {
   speaker   String
   time      String
   text      String
+  confidence Float?
   meetingId String
   meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 

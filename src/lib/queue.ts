@@ -5,7 +5,7 @@ const QUEUE_NAME = "smartmeet_ai_queue";
 
 export interface Task {
   id: string;
-  type: "PROCESS_MEETING";
+  type: "PROCESS_MEETING" | "PROCESS_MEETING_AI";
   data: {
     meetingId: string;
   };

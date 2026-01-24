@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import logger from "./logger";
+import { DataGovernance } from "./data-governance";
 
 const prismaClientSingleton = () => {
   const client = new PrismaClient({
@@ -19,7 +20,7 @@ const prismaClientSingleton = () => {
     if (e.duration >= 300) {
       logger.warn({
         query: e.query,
-        params: e.params,
+        params: DataGovernance.maskLogData(e.params),
         duration: e.duration,
       }, "Slow DB Query Detected");
     }

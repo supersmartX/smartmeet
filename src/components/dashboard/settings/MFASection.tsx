@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { 
   ShieldCheck, 
   Smartphone, 
   RefreshCcw, 
-  QrCode 
+  QrCode,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 interface MFASectionProps {
@@ -46,6 +48,17 @@ export function MFASection({
   setQrCodeUrl,
   setMfaSecret,
 }: MFASectionProps) {
+  const [showSecret, setShowSecret] = useState(false);
+  const [showRevealConfirm, setShowRevealConfirm] = useState(false);
+
+  const toggleSecret = () => {
+    if (!showSecret) {
+      setShowRevealConfirm(true);
+    } else {
+      setShowSecret(false);
+    }
+  };
+
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
@@ -161,21 +174,45 @@ export function MFASection({
           <div className="mt-8 p-6 bg-zinc-50 dark:bg-zinc-950/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 animate-in zoom-in-95 duration-300">
             <div className="flex flex-col md:flex-row gap-8">
               <div className="space-y-4 flex-shrink-0">
-                <div className="w-48 h-48 bg-white p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 mb-6">
-                  <Image 
-                    src={qrCodeUrl} 
-                    alt="MFA QR Code" 
-                    width={192} 
-                    height={192} 
-                    className="w-full h-full"
-                    unoptimized
-                  />
+                <div className="w-48 h-48 bg-white p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 mb-6 relative group overflow-hidden">
+                  <div className={`transition-all duration-300 ${showSecret ? 'blur-0' : 'blur-xl grayscale'}`}>
+                    <Image 
+                      src={qrCodeUrl} 
+                      alt="MFA QR Code" 
+                      width={192} 
+                      height={192} 
+                      className="w-full h-full"
+                      unoptimized
+                    />
+                  </div>
+                  
+                  {!showSecret && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/10 dark:bg-black/20 backdrop-blur-sm transition-all">
+                      <button
+                        onClick={toggleSecret}
+                        className="p-3 bg-white dark:bg-zinc-900 rounded-full shadow-2xl hover:scale-110 transition-transform text-zinc-900 dark:text-white"
+                        title="Reveal QR Code"
+                      >
+                        <Eye size={24} />
+                      </button>
+                    </div>
+                  )}
                 </div>
+                
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Backup Code</p>
-                  <code className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 block bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">
-                    {mfaSecret}
-                  </code>
+                  <div className="flex items-center gap-2">
+                    <code className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 block bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded flex-1">
+                      {showSecret ? mfaSecret : "•••• •••• •••• ••••"}
+                    </code>
+                    <button 
+                      onClick={toggleSecret}
+                      className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500"
+                      title={showSecret ? "Hide secret" : "Show secret"}
+                    >
+                      {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -227,6 +264,44 @@ export function MFASection({
           </div>
         )}
       </div>
+
+      {/* Reveal Confirmation Modal */}
+      {showRevealConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center space-y-6">
+              <div className="w-16 h-16 rounded-3xl bg-amber-500/10 flex items-center justify-center">
+                <Eye className="w-8 h-8 text-amber-500" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-lg font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Reveal Secret?</h3>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-tight leading-relaxed">
+                  Make sure nobody is looking at your screen. The QR code and secret key will be visible.
+                </p>
+              </div>
+
+              <div className="flex flex-col w-full gap-3">
+                <button
+                  onClick={() => {
+                    setShowSecret(true);
+                    setShowRevealConfirm(false);
+                  }}
+                  className="w-full h-14 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all"
+                >
+                  Reveal MFA Details
+                </button>
+                <button
+                  onClick={() => setShowRevealConfirm(false)}
+                  className="w-full h-14 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

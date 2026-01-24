@@ -1,23 +1,27 @@
 import { testDatabaseConnection, testOAuthDatabaseOperations } from "@/lib/test-db";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
+import { NextResponse } from "next/server";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/lib/api-response";
 
 export async function GET() {
   const session = await getServerSession(enhancedAuthOptions);
+  
   if (!session?.user?.email) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+      { status: 401 }
+    );
   }
 
   // Only allow ADMIN users to access debug endpoints
   if (session.user.role !== 'ADMIN') {
-    return new Response(JSON.stringify({ error: "Forbidden" }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.FORBIDDEN, "Forbidden"),
+      { status: 403 }
+    );
   }
+
   try {
     const [basicTest, oauthTest] = await Promise.all([
       testDatabaseConnection(),
@@ -25,26 +29,23 @@ export async function GET() {
     ]);
 
     const results = {
-      timestamp: new Date().toISOString(),
       basicConnection: basicTest,
       oauthOperations: oauthTest,
       overallStatus: basicTest.success && oauthTest.success ? 'HEALTHY' : 'UNHEALTHY'
     };
     
-    return new Response(JSON.stringify(results, null, 2), {
-      status: results.overallStatus === 'HEALTHY' ? 200 : 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json(
+      createSuccessResponse(results),
+      { status: results.overallStatus === 'HEALTHY' ? 200 : 500 }
+    );
     
   } catch (error) {
-    return new Response(JSON.stringify({
-      timestamp: new Date().toISOString(),
-      error: 'Diagnostics failed',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      overallStatus: 'ERROR'
-    }, null, 2), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json(
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR, 
+        error instanceof Error ? error.message : "Diagnostics failed"
+      ),
+      { status: 500 }
+    );
   }
 }

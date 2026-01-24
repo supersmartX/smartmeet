@@ -8,7 +8,7 @@ const envSchema = z.object({
   DIRECT_URL: isServer ? z.string().optional() : z.string().optional(),
   NEXTAUTH_SECRET: isServer ? z.string().min(1, "NEXTAUTH_SECRET is required") : z.string().optional(),
   NEXTAUTH_URL: z.string().url().default("http://localhost:3000"),
-  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://13.234.223.108:8000"),
+  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://api.supersmartx.com:8000"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   
   // OAuth Providers
@@ -30,6 +30,9 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: isServer ? z.string().optional() : z.string().optional(),
   STRIPE_WEBHOOK_SECRET: isServer ? z.string().optional() : z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+  
+  // Security
+  ENCRYPTION_SECRET: isServer ? z.string().min(1, "ENCRYPTION_SECRET is required").optional() : z.string().optional(),
 });
 
 const _env = envSchema.safeParse({
@@ -51,6 +54,7 @@ const _env = envSchema.safeParse({
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+  ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET,
 });
 
 if (!_env.success) {

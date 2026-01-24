@@ -33,6 +33,7 @@ import {
   Code,
   CheckCircle2,
   ChevronRight,
+  ArrowRight,
   Copy,
   Loader2,
   ShieldCheck,
@@ -137,21 +138,37 @@ export default function RecordingDetailPage() {
 
     fetchMeeting()
 
-    // Start polling if status is PROCESSING
-    pollInterval = setInterval(() => {
-      // Use a functional check to avoid stale closure of 'meeting'
-      fetchMeeting(true)
-    }, 5000)
+    let eventSource: EventSource | null = null
+
+    // Use SSE for real-time status updates if meeting is processing
+    if (meeting?.status === 'PROCESSING' || meeting?.status === 'PENDING') {
+      const statusUrl = `/api/v1/meetings/${params.id}/status`
+      eventSource = new EventSource(statusUrl)
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.status && data.status !== meeting?.status) {
+            fetchMeeting(true)
+          }
+        } catch (error) {
+          console.error("SSE parse error:", error)
+        }
+      }
+
+      eventSource.onerror = (error) => {
+        console.error("SSE connection error:", error)
+        eventSource?.close()
+      }
+    }
 
     return () => {
-      if (pollInterval) clearInterval(pollInterval)
+      if (eventSource) eventSource.close()
     }
-  }, [params.id, isAuthorized, session?.user?.id])
+  }, [params.id, isAuthorized, session?.user?.id, meeting?.status])
 
-  // Check if meeting is technical based on keywords
-  const isTechnicalMeeting = meeting?.transcripts?.some((item: Transcript) => 
-    /api|cache|latency|database|testing|backend|frontend|pipeline|logic|code|deploy/i.test(item.text)
-  ) || false
+  // Check if meeting is technical (calculated on backend)
+  const isTechnicalMeeting = meeting?.isTechnical || false
 
   // Terminal Resize Logic
   const [terminalHeight, setTerminalHeight] = useState(192) // 48 * 4
@@ -286,7 +303,7 @@ export default function RecordingDetailPage() {
     
     try {
       const path = docData.split(": ")[1].trim();
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://13.234.223.108:8000";
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://api.supersmartx.com:8000";
       const downloadUrl = `${baseUrl}/${path}`;
       const filename = path.split('/').pop() || "project_doc.docx";
       
@@ -360,11 +377,31 @@ export default function RecordingDetailPage() {
   const suggestions: string[] = []
 
   const journeySteps = [
-    { label: "Captured", status: meeting ? "completed" as const : "pending" as const },
-    { label: "Transcribed", status: (meeting?.transcripts?.length || 0) > 0 ? "completed" as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const },
-    { label: "AI Summary", status: meeting?.summary ? "completed" as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const },
-    { label: "Logic", status: (isLogicGenerated || meeting?.code) ? "completed" as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const },
-    { label: "Documentation", status: (planResult || meeting?.projectDoc) ? "completed" as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const },
+    { 
+      label: "Captured", 
+      status: meeting ? "completed" as const : "pending" as const,
+      description: "Audio file received and stored safely."
+    },
+    { 
+      label: "Transcribed", 
+      status: (meeting?.transcripts?.length || 0) > 0 ? "completed" as const : meeting?.processingStep === 'TRANSCRIPTION' ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
+      description: meeting?.processingStep === 'TRANSCRIPTION' ? "Neural engine is active..." : "Neural engine converting audio to text."
+    },
+    { 
+      label: "AI Summary", 
+      status: meeting?.summary ? "completed" as const : meeting?.processingStep === 'SUMMARIZATION' ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
+      description: meeting?.processingStep === 'SUMMARIZATION' ? "Synthesizing themes..." : "Extracting key discussions and themes."
+    },
+    { 
+      label: "Logic", 
+      status: (isLogicGenerated || meeting?.code) ? "completed" as const : meeting?.processingStep === 'CODE_GENERATION' ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
+      description: meeting?.processingStep === 'CODE_GENERATION' ? "Synthesizing logic..." : "Translating talk into executable code."
+    },
+    { 
+      label: "Documentation", 
+      status: (planResult || meeting?.projectDoc) ? "completed" as const : (meeting?.processingStep === 'TESTING' || meeting?.processingStep === 'DOCUMENTATION') ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
+      description: (meeting?.processingStep === 'TESTING' || meeting?.processingStep === 'DOCUMENTATION') ? "Drafting roadmap..." : "Generating final roadmap and tests."
+    },
   ]
 
   const [copyStatus, setCopyStatus] = useState("Copy Code")
@@ -532,25 +569,28 @@ export default function RecordingDetailPage() {
                 <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
                   step.status === 'completed' 
                     ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' 
-                    : step.status === 'failed'
-                      ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
-                      : 'bg-zinc-300 dark:bg-zinc-700'
+                    : step.status === 'processing'
+                      ? 'bg-brand-via animate-pulse shadow-[0_0_8px_rgba(var(--brand-via-rgb),0.5)]'
+                      : step.status === 'failed'
+                        ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                        : 'bg-zinc-300 dark:bg-zinc-700'
                 }`} />
                 <div className="flex flex-col">
                   <span className={`text-[8px] font-black uppercase tracking-tighter leading-none ${
-                    step.status === 'completed' ? 'text-zinc-900 dark:text-zinc-100' : step.status === 'failed' ? 'text-red-500' : 'text-zinc-400'
+                    step.status === 'completed' ? 'text-zinc-900 dark:text-zinc-100' : step.status === 'processing' ? 'text-brand-via' : step.status === 'failed' ? 'text-red-500' : 'text-zinc-400'
                   }`}>
                     {step.label}
                   </span>
                   <span className="text-[7px] font-bold text-zinc-400 uppercase tracking-tighter">
-                    {step.status === 'completed' ? 'Verified' : step.status === 'failed' ? 'Failed' : 'Pending'}
+                    {step.status === 'completed' ? 'Verified' : step.status === 'processing' ? 'Processing...' : step.status === 'failed' ? 'Failed' : 'Pending'}
                   </span>
                 </div>
                 {i < journeySteps.length - 1 && <div className="w-6 h-[1px] bg-zinc-200 dark:bg-zinc-800 ml-2" />}
                 
                 {/* Hover Tooltip */}
-                <div className="absolute top-full left-0 mt-2 py-1 px-2 bg-zinc-900 text-white text-[7px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                  Step {i + 1}: {step.label} {step.status === 'completed' ? 'Successful' : step.status === 'failed' ? 'Failed' : 'In Progress'}
+                <div className="absolute top-full left-0 mt-2 py-2 px-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[8px] font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-50 pointer-events-none shadow-2xl border border-white/10 dark:border-black/5 -translate-y-1 group-hover:translate-y-0">
+                  <p className="mb-1 uppercase tracking-widest text-[7px] opacity-50">{step.label}</p>
+                  <p className="tracking-tight">{step.description}</p>
                 </div>
               </div>
             ))}
@@ -659,6 +699,11 @@ export default function RecordingDetailPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{renderHighlightedText(item.speaker, searchQuery)}</span>
                           <span className="text-[10px] text-zinc-400 font-medium">{item.time}</span>
+                          {item.confidence && (
+                            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20 ml-1">
+                              {Math.round(item.confidence * 100)}% Confidence
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
                           {renderHighlightedText(item.text, searchQuery)}
@@ -976,6 +1021,60 @@ export default function RecordingDetailPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Next Steps Guidance */}
+            {meeting?.status === 'COMPLETED' && (
+              <div className="mt-12 pt-8 border-t border-zinc-100 dark:border-zinc-900 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-1.5 h-4 bg-brand-via rounded-full" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Recommended Next Steps</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <button 
+                    onClick={() => setActiveTab("summary")}
+                    className="flex flex-col gap-3 p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:bg-white dark:hover:bg-zinc-900 transition-all group text-left"
+                  >
+                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 group-hover:text-brand-via transition-colors">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">Review Summary</h4>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-tight">Verify the key takeaways and discussion points.</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-zinc-300 group-hover:text-brand-via group-hover:translate-x-1 transition-all mt-auto" />
+                  </button>
+
+                  <button 
+                    onClick={() => setActiveTab("tests")}
+                    className="flex flex-col gap-3 p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:bg-white dark:hover:bg-zinc-900 transition-all group text-left"
+                  >
+                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 group-hover:text-brand-via transition-colors">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">Track Actions</h4>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-tight">Follow up on assigned tasks and compliance items.</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-zinc-300 group-hover:text-brand-via group-hover:translate-x-1 transition-all mt-auto" />
+                  </button>
+
+                  <button 
+                    onClick={() => setActiveTab("code")}
+                    className="flex flex-col gap-3 p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:bg-white dark:hover:bg-zinc-900 transition-all group text-left"
+                  >
+                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 group-hover:text-brand-via transition-colors">
+                      <Code className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">Implement Logic</h4>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-tight">Integrate the generated code into your project.</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-zinc-300 group-hover:text-brand-via group-hover:translate-x-1 transition-all mt-auto" />
+                  </button>
+                </div>
               </div>
             )}
           </div>

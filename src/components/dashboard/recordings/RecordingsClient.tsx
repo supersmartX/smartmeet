@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
-import { useState, useEffect, useCallback } from "react"
+import { useEffect, useCallback, useReducer } from "react"
 import { highlightText } from "@/utils/text"
 import { 
   getMeetings, 
@@ -22,38 +22,82 @@ import { RecordingTabs } from "@/components/dashboard/recordings/RecordingTabs"
 import { RecordingTable } from "@/components/dashboard/recordings/RecordingTable"
 import { UploadModal } from "@/components/dashboard/recordings/UploadModal"
 
+type RecordingsState = {
+  recordings: Meeting[]
+  filter: string
+  searchQuery: string
+  isLoading: boolean
+  error: string | null
+  isUploading: boolean
+  isModalOpen: boolean
+  uploadStatus: string
+}
+
+type RecordingsAction =
+  | { type: 'SET_RECORDINGS'; payload: Meeting[] }
+  | { type: 'SET_FILTER'; payload: string }
+  | { type: 'SET_SEARCH_QUERY'; payload: string }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_UPLOADING'; payload: boolean }
+  | { type: 'SET_MODAL_OPEN'; payload: boolean }
+  | { type: 'SET_UPLOAD_STATUS'; payload: string }
+  | { type: 'OPTIMISTIC_DELETE'; payload: string }
+  | { type: 'ROLLBACK_DELETE'; payload: Meeting[] }
+
+const initialState: RecordingsState = {
+  recordings: [],
+  filter: "all meetings",
+  searchQuery: "",
+  isLoading: true,
+  error: null,
+  isUploading: false,
+  isModalOpen: false,
+  uploadStatus: ""
+}
+
+function recordingsReducer(state: RecordingsState, action: RecordingsAction): RecordingsState {
+  switch (action.type) {
+    case 'SET_RECORDINGS': return { ...state, recordings: action.payload }
+    case 'SET_FILTER': return { ...state, filter: action.payload }
+    case 'SET_SEARCH_QUERY': return { ...state, searchQuery: action.payload }
+    case 'SET_LOADING': return { ...state, isLoading: action.payload }
+    case 'SET_ERROR': return { ...state, error: action.payload }
+    case 'SET_UPLOADING': return { ...state, isUploading: action.payload }
+    case 'SET_MODAL_OPEN': return { ...state, isModalOpen: action.payload }
+    case 'SET_UPLOAD_STATUS': return { ...state, uploadStatus: action.payload }
+    case 'OPTIMISTIC_DELETE': return { ...state, recordings: state.recordings.filter(r => r.id !== action.payload) }
+    case 'ROLLBACK_DELETE': return { ...state, recordings: action.payload }
+    default: return state
+  }
+}
+
 export default function RecordingsClient() {
   useSession()
   const searchParams = useSearchParams()
-  const [recordings, setRecordings] = useState<Meeting[]>([])
-  const [filter, setFilter] = useState("all meetings")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [state, dispatch] = useReducer(recordingsReducer, initialState)
+  const { recordings, filter, searchQuery, isLoading, error, isUploading, isModalOpen, uploadStatus } = state
   const { toast, showToast: toastVisible, hideToast } = useToast()
-  const [uploadStatus, setUploadStatus] = useState("")
 
   const fetchMeetings = useCallback(async (silent = false) => {
     try {
-      if (!silent) setIsLoading(true)
-      setError(null)
+      if (!silent) dispatch({ type: 'SET_LOADING', payload: true })
+      dispatch({ type: 'SET_ERROR', payload: null })
       const result = await getMeetings()
       if (result.success && result.data) {
-        setRecordings(result.data)
+        dispatch({ type: 'SET_RECORDINGS', payload: result.data })
       } else if (!silent) {
-        setError(result.error || "Failed to load recordings")
+        dispatch({ type: 'SET_ERROR', payload: result.error || "Failed to load recordings" })
         toastVisible(result.error || "Failed to load recordings", "error")
       }
     } catch (err) {
       logger.error({ err }, "Fetch meetings error")
       if (!silent) {
-        setError("Failed to load recordings. Please try again.")
+        dispatch({ type: 'SET_ERROR', payload: "Failed to load recordings. Please try again." })
         toastVisible("Failed to load recordings. Please try again.", "error")
       }
     } finally {
-      if (!silent) setIsLoading(false)
+      if (!silent) dispatch({ type: 'SET_LOADING', payload: false })
     }
   }, [toastVisible])
 
@@ -73,26 +117,21 @@ export default function RecordingsClient() {
   }
 
   const handleDelete = async (id: string) => {
-    // Optimistic update
     const previousRecordings = [...recordings];
-    setRecordings(prev => prev.filter(rec => rec.id !== id));
+    dispatch({ type: 'OPTIMISTIC_DELETE', payload: id })
 
     try {
       const result = await deleteMeeting(id)
       if (result.success) {
         toastVisible("Recording deleted successfully", "success")
-        // No need to fetchMeetings() here as we already updated the state
-        // But we can do it silently to sync with server
         await fetchMeetings(true)
       } else {
-        // Rollback on failure
-        setRecordings(previousRecordings);
+        dispatch({ type: 'ROLLBACK_DELETE', payload: previousRecordings })
         toastVisible(result.error || "Failed to delete recording.", "error")
       }
     } catch (error) {
       logger.error({ error }, "Delete error")
-      // Rollback on error
-      setRecordings(previousRecordings);
+      dispatch({ type: 'ROLLBACK_DELETE', payload: previousRecordings })
       toastVisible("An unexpected error occurred.", "error")
     }
   }
@@ -143,7 +182,7 @@ export default function RecordingsClient() {
 
   useEffect(() => {
     if (searchParams.get("action") === "upload") {
-      setIsModalOpen(true)
+      dispatch({ type: 'SET_MODAL_OPEN', payload: true })
     }
   }, [searchParams])
 
@@ -176,23 +215,20 @@ export default function RecordingsClient() {
 
   const handleUploadFile = async (file: File) => {
     try {
-      setIsUploading(true)
-      setUploadStatus("Getting upload permission...")
+      dispatch({ type: 'SET_UPLOADING', payload: true })
+      dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Getting upload permission..." })
 
-      // 0. Detect duration
       const duration = await getFileDuration(file);
-      setUploadStatus("Uploading recording...")
+      dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Uploading recording..." })
 
-      // 1. Get signed URL
       const { success, data, error: uploadUrlError } = await createSignedUploadUrl(file.name)
       if (!success || !data) {
         throw new Error(uploadUrlError || "Failed to get upload URL")
       }
 
       const { signedUrl: uploadUrl, path: key } = data
-      setUploadStatus("Uploading recording...")
+      dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Uploading recording..." })
 
-      // 2. Upload to storage
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
@@ -203,9 +239,8 @@ export default function RecordingsClient() {
         throw new Error("Failed to upload file to storage")
       }
 
-      setUploadStatus("Finalizing recording...")
+      dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Finalizing recording..." })
 
-      // 3. Create database entry
       const createResult = await createMeeting({
         title: file.name.replace(/\.[^/.]+$/, ""),
         audioUrl: key,
@@ -217,19 +252,14 @@ export default function RecordingsClient() {
       }
 
       toastVisible("Recording uploaded and processing started!", "success")
-      setIsModalOpen(false)
-      
-      // Re-fetch immediately to show the new "PROCESSING" row
+      dispatch({ type: 'SET_MODAL_OPEN', payload: false })
       await fetchMeetings(true)
-
-      // The AI processing is now triggered on the server inside createMeeting
-      // No need to call enqueueMeetingAI from the client anymore.
 
     } catch (err) {
       console.error("Upload error:", err)
       toastVisible(err instanceof Error ? err.message : "Failed to upload recording", "error")
     } finally {
-      setIsUploading(false)
+      dispatch({ type: 'SET_UPLOADING', payload: false })
     }
   }
 
@@ -269,20 +299,20 @@ export default function RecordingsClient() {
       <Toast {...toast} onClose={hideToast} />
       <RecordingHeader
         searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onUploadClick={() => setIsModalOpen(true)}
+        setSearchQuery={(q) => dispatch({ type: 'SET_SEARCH_QUERY', payload: q })}
+        onUploadClick={() => dispatch({ type: 'SET_MODAL_OPEN', payload: true })}
         isUploading={isUploading}
       />
 
       <UploadModal 
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => dispatch({ type: 'SET_MODAL_OPEN', payload: false })}
         onUpload={handleUploadFile}
         isUploading={isUploading}
         uploadStatus={uploadStatus}
       />
 
-      <RecordingTabs filter={filter} setFilter={setFilter} />
+      <RecordingTabs filter={filter} setFilter={(f) => dispatch({ type: 'SET_FILTER', payload: f })} />
 
       <RecordingTable
         recordings={filteredRecordings}
@@ -293,7 +323,7 @@ export default function RecordingsClient() {
         onDelete={handleDelete}
         onTogglePinned={handleTogglePinned}
         onToggleFavorite={handleToggleFavorite}
-        setFilter={setFilter}
+        setFilter={(f) => dispatch({ type: 'SET_FILTER', payload: f })}
         fetchMeetings={fetchMeetings}
         renderHighlightedText={renderHighlightedText}
       />

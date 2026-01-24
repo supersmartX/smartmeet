@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
 import Stripe from "stripe";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,10 @@ export async function POST(req: Request) {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown Error";
-    return new NextResponse(`Webhook Error: ${message}`, { status: 400 });
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.BAD_REQUEST, `Webhook Error: ${message}`),
+      { status: 400 }
+    );
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
@@ -32,7 +36,10 @@ export async function POST(req: Request) {
     );
 
     if (!session?.metadata?.userId) {
-      return new NextResponse("User id is required", { status: 400 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.BAD_REQUEST, "User id is required"),
+        { status: 400 }
+      );
     }
 
     // Map your Stripe Price IDs to your internal plans and quotas
@@ -44,8 +51,7 @@ export async function POST(req: Request) {
 
     const planInfo = planMapping[subscription.items.data[0].price.id] || { plan: "FREE", quota: 10 };
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    await (prisma.user.update as any)({
+    await prisma.user.update({
       where: {
         id: session.metadata.userId,
       },
@@ -54,13 +60,12 @@ export async function POST(req: Request) {
         stripeCustomerId: subscription.customer as string,
         stripePriceId: subscription.items.data[0].price.id,
         stripeCurrentPeriodEnd: new Date(
-          (subscription as any).current_period_end * 1000
+          subscription.items.data[0].current_period_end * 1000
         ),
-        plan: planInfo.plan as any,
+        plan: planInfo.plan,
         meetingQuota: planInfo.quota,
       },
     });
-    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     await createNotification(session.metadata.userId, {
       title: "Subscription Activated",
@@ -71,25 +76,26 @@ export async function POST(req: Request) {
   }
 
   if (event.type === "invoice.payment_succeeded") {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const invoice = event.data.object as any;
+    const invoice = event.data.object as Stripe.Invoice;
     
-    if (typeof invoice.subscription !== 'string') {
-      return new NextResponse(null, { status: 200 });
+    const subscriptionId = invoice.parent?.subscription_details?.subscription;
+    
+    if (typeof subscriptionId !== 'string') {
+      return NextResponse.json(createSuccessResponse({ received: true }));
     }
 
     const subscription = await stripe.subscriptions.retrieve(
-      invoice.subscription
+      subscriptionId
     );
 
-    const updatedUser = await (prisma.user.update as any)({
+    const updatedUser = await prisma.user.update({
       where: {
         stripeSubscriptionId: subscription.id,
       },
       data: {
         stripePriceId: subscription.items.data[0].price.id,
         stripeCurrentPeriodEnd: new Date(
-          (subscription as any).current_period_end * 1000
+          subscription.items.data[0].current_period_end * 1000
         ),
       },
     });
@@ -100,8 +106,7 @@ export async function POST(req: Request) {
       type: "SUCCESS",
       link: "/dashboard/settings"
     });
-    /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
-  return new NextResponse(null, { status: 200 });
+  return NextResponse.json(createSuccessResponse({ received: true }));
 }

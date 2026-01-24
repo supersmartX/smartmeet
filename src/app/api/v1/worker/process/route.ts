@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dequeueTask } from "@/lib/queue";
 import logger from "@/lib/logger";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/lib/api-response";
 
 // This would ideally be a dedicated worker, but for Next.js/Vercel, 
 // we can use an API route triggered by a Cron job or a long-running process.
@@ -10,11 +11,22 @@ import logger from "@/lib/logger";
 // I'll export it from meeting.ts first.
 
 export async function POST(request: NextRequest) {
+  return await handleWorker(request);
+}
+
+export async function GET(request: NextRequest) {
+  return await handleWorker(request);
+}
+
+async function handleWorker(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const workerSecret = process.env.WORKER_SECRET;
 
   if (workerSecret && authHeader !== `Bearer ${workerSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Invalid worker secret"),
+      { status: 401 }
+    );
   }
 
   const results = [];
@@ -36,11 +48,11 @@ export async function POST(request: NextRequest) {
     try {
       logger.info({ taskId: task.id, type: task.type }, "Worker processing task");
       
-      if (task.type === "PROCESS_MEETING") {
+      if (task.type === "PROCESS_MEETING" || task.type === "PROCESS_MEETING_AI") {
         const { meetingId } = task.data;
         
         // We need to dynamically import to avoid circular dependencies
-        const { internalProcessMeetingAI } = await import("@/actions/meeting");
+        const { internalProcessMeetingAI } = await import("@/actions/meeting/ai");
         
         const result = await internalProcessMeetingAI(meetingId);
         results.push({ taskId: task.id, success: true, result });
@@ -58,8 +70,10 @@ export async function POST(request: NextRequest) {
     tasksProcessed++;
   }
 
-  return NextResponse.json({ 
-    processedCount: tasksProcessed,
-    results 
-  });
+  return NextResponse.json(
+    createSuccessResponse({ 
+      processedCount: tasksProcessed,
+      results 
+    })
+  );
 }
