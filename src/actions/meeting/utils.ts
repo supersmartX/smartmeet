@@ -123,15 +123,32 @@ export async function createSignedDownloadUrl(path: string, expiresIn: number = 
 }
 
 export async function triggerWorker(meetingId: string): Promise<ActionResult> {
-  const workerSecret = process.env.WORKER_SECRET;
+  const { env } = await import("@/lib/env");
+  const workerSecret = env.WORKER_SECRET;
+  
   if (!workerSecret) {
     logger.warn("WORKER_SECRET not configured. Background worker will not be triggered.");
     return { success: false, error: "Worker secret not configured" };
   }
 
   try {
-    // Use the internal URL if possible, otherwise use the public one
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000";
+    // Determine the base URL:
+    // 1. Try env.APP_URL (which we just added)
+    // 2. Fallback to detection from headers if available
+    let baseUrl = env.APP_URL;
+    
+    try {
+      const headerList = await headers();
+      const host = headerList.get("host");
+      const protocol = headerList.get("x-forwarded-proto") || "http";
+      if (host && !baseUrl.includes(host)) {
+        baseUrl = `${protocol}://${host}`;
+      }
+    } catch {
+      // Headers might not be available in all contexts (e.g. some background jobs)
+    }
+
+    logger.info({ meetingId, baseUrl }, "Triggering background worker");
     
     // Fire and forget the worker trigger
     fetch(`${baseUrl}/api/v1/worker/process`, {
@@ -141,7 +158,7 @@ export async function triggerWorker(meetingId: string): Promise<ActionResult> {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ triggeredAt: new Date().toISOString() })
-    }).catch(err => logger.error({ err }, "Failed to trigger worker"));
+    }).catch(err => logger.error({ err, meetingId }, "Failed to trigger worker fetch"));
 
     return { success: true };
   } catch (error: unknown) {

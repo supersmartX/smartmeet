@@ -35,7 +35,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   
   // Security
-  ENCRYPTION_SECRET: z.string().optional(),
+  ENCRYPTION_SECRET: isServer ? z.string().min(1, "ENCRYPTION_SECRET is required") : z.string().optional(),
+  WORKER_SECRET: isServer ? z.string().min(1, "WORKER_SECRET is required") : z.string().optional(),
+  APP_URL: z.string().url().default("http://localhost:3000"),
 });
 
 const isBuildTime = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
@@ -46,6 +48,8 @@ const buildTimeMocks = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "mock-anon-key",
   DATABASE_URL: "postgresql://mock:mock@localhost:5432/mock",
   NEXTAUTH_SECRET: "mock-secret",
+  ENCRYPTION_SECRET: "mock-encryption-secret",
+  WORKER_SECRET: "mock-worker-secret",
 };
 
 const _env = envSchema.safeParse({
@@ -68,6 +72,8 @@ const _env = envSchema.safeParse({
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET,
+  WORKER_SECRET: process.env.WORKER_SECRET,
+  APP_URL: process.env.APP_URL,
 });
 
 if (!_env.success) {
