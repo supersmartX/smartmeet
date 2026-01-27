@@ -363,6 +363,11 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                 </div>
 
                 <div className="flex flex-col gap-2">
+                  {!apiKey && provider !== 'custom' && (
+                    <p className="text-[9px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/5 border border-red-500/10">
+                      <AlertTriangle className="w-3 h-3" /> No API key configured for {provider}. AI features will not work.
+                    </p>
+                  )}
                   {apiKey && !detectProvider(apiKey) && provider !== 'custom' && (
                     <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
                       <AlertTriangle className="w-3 h-3" /> Key format doesn&apos;t match {provider} prefix.

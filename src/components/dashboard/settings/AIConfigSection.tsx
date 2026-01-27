@@ -251,6 +251,11 @@ export function AIConfigSection({
             </div>
 
             <div className="flex flex-col gap-2">
+              {!currentKey && provider !== 'custom' && (
+                <p className="text-[9px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/5 border border-red-500/10">
+                  <AlertTriangle className="w-3 h-3" /> No API key configured for {provider}. AI features will not work.
+                </p>
+              )}
               {decryptionError && (
                 <p className="text-[9px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/5 border border-red-500/10">
                   <Shield className="w-3 h-3" /> Failed to decrypt stored API key. Please re-enter your key.

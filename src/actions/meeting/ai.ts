@@ -109,7 +109,11 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
               return await getProviderBreaker(finalProvider).execute(async () => {
                 const res = isDocument 
                   ? await transcribeDocument(audioBlob, effectiveApiKey, user.defaultLanguage || undefined)
-                  : await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
+                  : await transcribeAudio(
+                      new File([audioBlob], meeting.audioUrl?.split('/').pop() || 'audio.mp3', { type: audioBlob.type || 'audio/mpeg' }),
+                      effectiveApiKey, 
+                      user.defaultLanguage || undefined
+                    );
                 if (!res.success) {
                   throw new ServiceError(
                     res.error?.message || "Transcription failed", 
