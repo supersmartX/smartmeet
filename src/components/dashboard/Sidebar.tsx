@@ -20,10 +20,11 @@ import {
   Key,
   User
 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { getMeetings } from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
 import logger from "@/lib/logger"
+import { supabase } from "@/lib/supabase"
 
 interface WorkspaceItem {
   name: string;
@@ -40,22 +41,45 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const [recentMeetings, setRecentMeetings] = useState<Meeting[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchRecent = async () => {
-      try {
-        const result = await getMeetings()
-        if (result.success && result.data) {
-          // Get 5 most recent meetings
-          setRecentMeetings(result.data.slice(0, 5))
-        }
-      } catch (error) {
-        logger.error({ error }, "Failed to fetch sidebar meetings")
-      } finally {
-        setIsLoading(false)
+  const fetchRecent = useCallback(async () => {
+    try {
+      const result = await getMeetings()
+      if (result.success && result.data) {
+        // Get 5 most recent meetings
+        setRecentMeetings(result.data.slice(0, 5))
       }
+    } catch (error) {
+      logger.error({ error }, "Failed to fetch sidebar meetings")
+    } finally {
+      setIsLoading(false)
     }
-    fetchRecent()
   }, [])
+
+  useEffect(() => {
+    fetchRecent()
+  }, [fetchRecent])
+
+  // Subscribe to real-time updates for meeting status changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('sidebar_meeting_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'Meeting'
+        },
+        () => {
+          fetchRecent()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchRecent])
 
   const workspaceItems: WorkspaceItem[] = [
     { name: "Overview", href: "/dashboard", icon: Layout },
