@@ -174,23 +174,28 @@ export async function POST(request: NextRequest) {
     const isAudioEndpoint = sanitizedEndpoint.includes('/audio/') || 
                             sanitizedEndpoint.includes('/document/') || 
                             sanitizedEndpoint.includes('/process') ||
-                            sanitizedEndpoint.includes('/transcribe');
+                            sanitizedEndpoint.includes('/transcribe') ||
+                            sanitizedEndpoint.includes('/generate-code');
     
     if (isAudioEndpoint && data) {
-      logger.info({ endpoint, sanitizedEndpoint, dataType: typeof data }, "Proxying audio/document request");
+      logger.info({ endpoint, sanitizedEndpoint, dataType: typeof data }, "Proxying multipart request to AWS");
       // Create new FormData for the backend API
       const backendFormData = new FormData();
-      for (const [key, value] of Object.entries(data as Record<string, string | Blob>)) {
-        if (value instanceof Blob && !(value instanceof File)) {
-          // If it's a blob but not a file, convert to file to ensure filename/type are preserved
-          const filename = key === 'file' ? 'audio.mp3' : key;
-          backendFormData.append(key, value, filename);
-        } else {
-          backendFormData.append(key, value);
+      
+      // If data is already an object (reconstructed above), iterate through it
+      if (typeof data === 'object' && data !== null) {
+        for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+          if (value instanceof Blob) {
+            // Ensure blobs are forwarded as files with names
+            const filename = (value as File).name || (key === 'file' ? 'audio.mp3' : key);
+            backendFormData.append(key, value, filename);
+          } else {
+            backendFormData.append(key, String(value));
+          }
         }
       }
+      
       requestBody = backendFormData;
-      // Fetch will automatically set the correct multipart/form-data header with boundary
     } else {
       requestHeaders["Content-Type"] = "application/json";
       requestBody = data ? JSON.stringify(data) : undefined;

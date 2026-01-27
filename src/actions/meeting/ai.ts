@@ -107,6 +107,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             "AI_TRANSCRIPTION",
             async () => {
               return await getProviderBreaker(finalProvider).execute(async () => {
+                logger.info({ meetingId, provider: finalProvider, isDocument }, "Triggering AWS transcription");
                 const res = isDocument 
                   ? await transcribeDocument(audioBlob, effectiveApiKey, user.defaultLanguage || undefined)
                   : await transcribeAudio(
@@ -114,13 +115,16 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                       effectiveApiKey, 
                       user.defaultLanguage || undefined
                     );
+                
                 if (!res.success) {
+                  logger.error({ error: res.error, meetingId }, "AWS transcription failed");
                   throw new ServiceError(
                     res.error?.message || "Transcription failed", 
                     res.error?.code as string, 
                     res.error?.details
                   );
                 }
+                logger.info({ meetingId }, "AWS transcription completed successfully");
                 return res.data;
               });
             },
