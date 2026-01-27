@@ -101,11 +101,15 @@ export const QuotaService = {
    * Record token usage for AI operations
    */
   async recordTokenUsage(userId: string, tokens: number): Promise<void> {
-    // This would typically involve a separate Usage table for monthly tracking
-    // For now, we log it and could update a field in User or a new Usage model
-    logger.info({ userId, tokens }, "Token usage recorded");
-    
-    // Logic for monthly cap checks would go here
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { tokensUsed: { increment: tokens } }
+      });
+      logger.info({ userId, tokens }, "Token usage recorded in database");
+    } catch (error) {
+      logger.error({ error, userId, tokens }, "Failed to record token usage");
+    }
   },
 
   /**

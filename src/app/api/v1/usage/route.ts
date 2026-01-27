@@ -15,12 +15,14 @@ export async function GET() {
       );
     }
 
+    // Fetch user with updated tokensUsed field
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
         plan: true,
         meetingsUsed: true,
         meetingQuota: true,
+        tokensUsed: true,
       }
     });
 
@@ -33,8 +35,6 @@ export async function GET() {
 
     const planLimits = PLAN_CONFIGS[user.plan as keyof typeof PLAN_CONFIGS];
     
-    // In a real app, we would track token usage in a separate table
-    // For now, we return the plan limits and user's current meeting usage
     const usageData = {
       plan: user.plan,
       meetingUsage: {
@@ -44,9 +44,9 @@ export async function GET() {
         percentage: Math.min((user.meetingsUsed / user.meetingQuota) * 100, 100),
       },
       tokenUsage: {
-        used: 0, // Placeholder
+        used: user.tokensUsed,
         limit: planLimits.monthlyTokenLimit,
-        percentage: 0,
+        percentage: Math.min((user.tokensUsed / planLimits.monthlyTokenLimit) * 100, 100),
       },
       features: planLimits.features,
       limits: {

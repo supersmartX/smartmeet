@@ -68,6 +68,7 @@ model User {
   stripeCustomerId         String?        @unique
   stripePriceId            String?
   stripeSubscriptionId     String?        @unique
+  tokensUsed               Int            @default(0)
   autoProcess              Boolean        @default(true)
   defaultLanguage          String?        @default("en")
   summaryLength            String?        @default("medium")

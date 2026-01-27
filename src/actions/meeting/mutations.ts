@@ -9,6 +9,7 @@ import { encrypt } from "@/lib/crypto";
 import { logSecurityEvent } from "@/lib/audit";
 import { cache } from "@/lib/cache";
 import logger from "@/lib/logger";
+import { QuotaService } from "@/lib/quota";
 import { 
   triggerWorker
 } from "./utils";
@@ -264,13 +265,10 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
     if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
     const validated = meetingSchema.parse(data);
-
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { meetingsUsed: true, meetingQuota: true }
-    });
-
-    if (!user || user.meetingsUsed >= user.meetingQuota) {
+    
+    // Check comprehensive meeting quota (total + daily)
+    const quotaCheck = await QuotaService.checkMeetingQuota(session.user.id);
+    if (!quotaCheck.allowed) {
       return { success: false, error: "Meeting quota exceeded. Please upgrade your plan." };
     }
 
