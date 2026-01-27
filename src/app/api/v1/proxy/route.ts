@@ -133,7 +133,8 @@ export async function POST(request: NextRequest) {
       '/api/AI/code/generate-code',
       '/api/AI/code/test-code',
       '/api/AI/prompt/build',
-      '/api/AI/plan'
+      '/api/AI/plan',
+      '/api/v1/usage'
     ];
     
     // Validate endpoint to prevent SSRF

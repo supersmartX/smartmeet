@@ -116,16 +116,21 @@ export async function makeApiRequest<T>(
   const id = setTimeout(() => controller.abort(), timeout);
 
   const isServer = typeof window === 'undefined';
-  const path = isServer ? endpoint : "/api/v1/proxy";
+  const isLocalRoute = endpoint.startsWith("/api/v1/");
+  const useProxy = !isServer && !isLocalRoute;
+  const path = isServer ? endpoint : (useProxy ? "/api/v1/proxy" : endpoint);
 
   try {
     let url: string;
     let requestOptions: RequestInit;
 
-    if (isServer) {
-      // Direct call to API if on server
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://api.supersmartx.com:8000";
-      url = `${baseUrl}${endpoint}`;
+    if (!useProxy) {
+      // Direct call to API if on server OR if it's a local route on the client
+      const baseUrl = isServer 
+        ? (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://api.supersmartx.com:8000")
+        : ""; // Empty base for client-side local calls to use current origin
+      
+      url = isLocalRoute ? endpoint : `${baseUrl}${endpoint}`;
       
       const headers: Record<string, string> = {
         "Accept": "application/json",

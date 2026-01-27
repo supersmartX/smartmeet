@@ -23,7 +23,10 @@ const envSchema = z.object({
 
   // Supabase
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().min(1, "Supabase URL is required"),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "Supabase Anon Key is required"),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "Supabase Anon Key is required").refine(
+    (val) => val !== "your-supabase-anon-key",
+    { message: "Please replace 'your-supabase-anon-key' with your actual Supabase Anon Key in .env" }
+  ),
   SUPABASE_SECRET_KEY: isServer ? z.string().optional() : z.string().optional(),
   
   // Stripe
