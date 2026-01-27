@@ -38,6 +38,8 @@ const envSchema = z.object({
   ENCRYPTION_SECRET: z.string().optional(),
 });
 
+const isBuildTime = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
+
 const _env = envSchema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
   DIRECT_URL: process.env.DIRECT_URL,
@@ -61,8 +63,13 @@ const _env = envSchema.safeParse({
 });
 
 if (!_env.success) {
-  logger.error({ errors: _env.error.format() }, "Invalid environment variables");
-  throw new Error("Invalid environment variables");
+  if (isBuildTime) {
+    console.warn("⚠️ [Build Time] Invalid environment variables detected. Skipping strict validation for build phase.");
+    logger.warn({ errors: _env.error.format() }, "Invalid environment variables during build");
+  } else {
+    logger.error({ errors: _env.error.format() }, "Invalid environment variables");
+    throw new Error(`Invalid environment variables: ${JSON.stringify(_env.error.format())}`);
+  }
 }
 
-export const env = _env.data;
+export const env = _env.success ? _env.data : ({} as z.infer<typeof envSchema>);
