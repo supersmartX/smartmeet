@@ -18,8 +18,7 @@ import {
   LucideIcon,
   BarChart3,
   Key,
-  User,
-  Activity
+  User
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getMeetings } from "@/actions/meeting"
@@ -37,7 +36,7 @@ interface WorkspaceItem {
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
-  const [openFolders, setOpenFolders] = useState<string[]>(["SUPERSMART", "ACTIVE SESSIONS", "My Projects", "Settings"])
+  const [openFolders, setOpenFolders] = useState<string[]>(["Recordings", "Settings"])
   const [recentMeetings, setRecentMeetings] = useState<Meeting[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -62,7 +61,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     { name: "Overview", href: "/dashboard", icon: Layout },
     { name: "Usage & Quotas", href: "/dashboard/usage", icon: BarChart3 },
     { 
-      name: "My Projects", 
+      name: "Recordings", 
       type: "folder",
       children: isLoading 
         ? [{ name: "Loading...", icon: Loader2 } as WorkspaceItem]
@@ -74,16 +73,15 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             }))
           : [{ name: "Start New Project", icon: Plus, href: "/dashboard/recordings?action=upload" } as WorkspaceItem]
     },
-    { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
-    { name: "API Settings", href: "/dashboard/settings/api", icon: Key },
     { 
       name: "Settings", 
       type: "folder",
       children: [
         { name: "Account", href: "/dashboard/settings", icon: User },
+        { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
+        { name: "API Keys", href: "/dashboard/settings/api", icon: Key },
         { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
         { name: "Team Management", href: "/dashboard/team", icon: Users },
-        { name: "Activity Logs", href: "/dashboard/security?tab=logs", icon: Activity },
       ]
     },
     { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
@@ -174,27 +172,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto custom-scrollbar py-2" aria-label="Workspace Links">
-        {/* Active Sessions Section */}
-        <div className="mb-2">
-          <button
-            onClick={() => toggleFolder("ACTIVE SESSIONS")}
-            aria-expanded={openFolders.includes("ACTIVE SESSIONS")}
-            className="w-full px-2 py-1 flex items-center gap-1 text-[11px] font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-900 transition-colors uppercase tracking-tight"
-          >
-            {openFolders.includes("ACTIVE SESSIONS") ? (
-              <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-            )}
-            Active Sessions
-          </button>
-          {openFolders.includes("ACTIVE SESSIONS") && (
-            <div className="mt-0.5 px-6 py-2" role="group">
-              <p className="text-[10px] text-zinc-500 font-medium italic">No active sessions</p>
-            </div>
-          )}
-        </div>
-
         {workspaceItems.map((item) => renderWorkspaceItem(item))}
       </nav>
 

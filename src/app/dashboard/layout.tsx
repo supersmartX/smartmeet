@@ -3,12 +3,11 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import Image from "next/image"
 import Sidebar from "@/components/dashboard/Sidebar"
 import { ModeToggle } from "@/components/ModeToggle"
 import { useSession, signOut } from "next-auth/react"
 import {
-  Menu, Layout, FileVideo, Settings, Search, HelpCircle, LogOut, ChevronDown,
+  Menu, Layout, Search, LogOut, ChevronDown,
   Command, Sparkles, Zap
 } from "lucide-react"
 
@@ -57,7 +56,7 @@ export default function DashboardLayout({
 
   const resize = useCallback((e: MouseEvent) => {
     if (isResizing) {
-      const newWidth = e.clientX - 64 // 64 is the width of the activity bar (w-16)
+      const newWidth = e.clientX
       if (newWidth > 160 && newWidth < 480) {
         setSidebarWidth(newWidth)
       }
@@ -76,36 +75,6 @@ export default function DashboardLayout({
   return (
     <div className={`flex flex-col h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 overflow-hidden ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Editor-style Activity Bar (Narrow Left Strip) */}
-          <aside className="hidden lg:flex w-16 flex-col items-center py-4 bg-zinc-100 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 shrink-0 z-50">
-            <div className="w-8 h-8 mb-8 relative">
-              <Image 
-                src="/logoX.png" 
-                alt="SupersmartX AI Navigation Logo" 
-                width={32} 
-                height={32} 
-                className="object-contain"
-                priority 
-              />
-            </div>
-            <div className="flex flex-col gap-4 flex-1">
-              <Link href="/dashboard" className={`p-3 rounded-xl transition-all ${pathname === "/dashboard" ? "text-brand-via bg-brand-via/5" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-900"}`}>
-                <Layout className="w-6 h-6" />
-              </Link>
-              <Link href="/dashboard/recordings" className={`p-3 rounded-xl transition-all ${pathname.startsWith("/dashboard/recordings") ? "text-brand-via bg-brand-via/5" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-900"}`}>
-                <FileVideo className="w-6 h-6" />
-              </Link>
-              <Link href="/dashboard/settings" className={`p-3 rounded-xl transition-all ${pathname === "/dashboard/settings" ? "text-brand-via bg-brand-via/5" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-900"}`}>
-                <Settings className="w-6 h-6" />
-              </Link>
-            </div>
-            <div className="flex flex-col gap-4 mb-4">
-              <Link href="/dashboard/help" className={`p-3 rounded-xl transition-all ${pathname === "/dashboard/help" ? "text-brand-via bg-brand-via/5" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-900"}`}>
-                <HelpCircle className="w-6 h-6" />
-              </Link>
-            </div>
-          </aside>
-
           {/* Mobile Sidebar Overlay */}
           {isSidebarOpen && (
             <div 

@@ -303,7 +303,7 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
       });
       
       // Trigger worker to start processing immediately
-      await triggerWorker();
+      await triggerWorker(meeting.id);
     } catch (enqueueError) {
       logger.error({ enqueueError, meetingId: meeting.id }, "Failed to enqueue meeting processing");
       // We don't fail the meeting creation here, as the record is already saved

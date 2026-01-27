@@ -258,6 +258,9 @@ export default function RecordingsClient() {
         xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
         xhr.setRequestHeader("x-upsert", "true");
 
+        // Log upload details for debugging
+        console.log(`Starting upload for ${file.name} (${file.type}) to ${uploadUrl.split('?')[0]}`);
+
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
             const percentComplete = Math.round((event.loaded / event.total) * 100);

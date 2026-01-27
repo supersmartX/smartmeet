@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
     const validation = proxyRequestSchema.safeParse(body);
     
     if (!validation.success) {
+      logger.warn({ errors: validation.error.format(), body }, "Proxy validation failed");
       return NextResponse.json(
         createValidationErrorResponse(validation.error.format(), "v1", path),
         { status: 400, headers: createRateLimitHeaders(rateLimitResult) }
@@ -137,6 +138,7 @@ export async function POST(request: NextRequest) {
     
     // Validate endpoint to prevent SSRF
     if (!ALLOWED_ENDPOINTS.includes(endpoint)) {
+      logger.warn({ endpoint }, "Proxy rejected unauthorized endpoint");
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.BAD_REQUEST, "Invalid endpoint", null, "v1", path),
         { status: 400, headers: createRateLimitHeaders(rateLimitResult) }
@@ -146,6 +148,7 @@ export async function POST(request: NextRequest) {
     // Sanitize endpoint to prevent path traversal
     const sanitizedEndpoint = endpoint.replace(/[^a-zA-Z0-9\-\/]/g, '');
     if (sanitizedEndpoint !== endpoint) {
+      logger.warn({ endpoint, sanitizedEndpoint }, "Proxy rejected invalid endpoint format");
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.BAD_REQUEST, "Invalid endpoint format", null, "v1", path),
         { status: 400, headers: createRateLimitHeaders(rateLimitResult) }
