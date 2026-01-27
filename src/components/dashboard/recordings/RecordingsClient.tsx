@@ -254,7 +254,9 @@ export default function RecordingsClient() {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", uploadUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
+        // Ensure we always have a content type, fallback to octet-stream
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.setRequestHeader("x-upsert", "true");
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {

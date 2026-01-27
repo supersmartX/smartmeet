@@ -84,7 +84,7 @@ export async function createSignedUploadUrl(fileName: string): Promise<ActionRes
     const { data, error } = await supabaseAdmin
       .storage
       .from('recordings')
-      .createSignedUploadUrl(path);
+      .createSignedUploadUrl(path, { upsert: true });
 
     if (error) throw error;
 
