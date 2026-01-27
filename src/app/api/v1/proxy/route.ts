@@ -37,6 +37,9 @@ function createRateLimitHeaders(result: RateLimitResult) {
   };
 }
 
+export const maxDuration = 300; // 5 minutes
+export const dynamic = 'force-dynamic';
+
 /**
  * Rate limited API proxy handler
  */

@@ -27,11 +27,13 @@ async function createBucket() {
 
   if (bucketExists) {
     console.log('Bucket "recordings" already exists.');
+    const bucket = buckets.find(b => b.name === 'recordings');
+    console.log('Current bucket settings:', bucket);
     
     // Update public access just in case
     const { error: updateError } = await supabase.storage.updateBucket('recordings', {
       public: false,
-      fileSizeLimit: 104857600, // 100MB
+      fileSizeLimit: null, // Use project default
       allowedMimeTypes: ['audio/*', 'video/*', 'application/pdf', 'text/plain']
     });
     
@@ -44,7 +46,7 @@ async function createBucket() {
     console.log('Creating "recordings" bucket...');
     const { data, error } = await supabase.storage.createBucket('recordings', {
       public: false,
-      fileSizeLimit: 104857600, // 100MB
+      fileSizeLimit: null, // Use project default
       allowedMimeTypes: ['audio/*', 'video/*', 'application/pdf', 'text/plain']
     });
 
