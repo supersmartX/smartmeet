@@ -269,7 +269,17 @@ export default function RecordingsClient() {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve();
           } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
+            // Try to parse error details from Supabase response
+            let errorMessage = `Upload failed with status ${xhr.status}`;
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.error || response.message) {
+                errorMessage = response.error || response.message;
+              }
+            } catch {
+              // Not a JSON response
+            }
+            reject(new Error(errorMessage));
           }
         };
 

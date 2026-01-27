@@ -101,24 +101,51 @@ export async function createSignedUploadUrl(fileName: string): Promise<ActionRes
   }
 }
 
-export async function triggerWorker() {
+/**
+ * Creates a signed URL for downloading/playing a file
+ */
+export async function createSignedDownloadUrl(path: string, expiresIn: number = 3600): Promise<ActionResult<string>> {
+  try {
+    if (!supabaseAdmin) throw new Error("Storage service not configured");
+
+    const { data, error } = await supabaseAdmin
+      .storage
+      .from('recordings')
+      .createSignedUrl(path, expiresIn);
+
+    if (error) throw error;
+
+    return { success: true, data: data.signedUrl };
+  } catch (error: unknown) {
+    logger.error({ error, path }, "Failed to create signed download URL");
+    return { success: false, error: error instanceof Error ? error.message : "Failed to create download URL" };
+  }
+}
+
+export async function triggerWorker(meetingId: string): Promise<ActionResult> {
   const workerSecret = process.env.WORKER_SECRET;
   if (!workerSecret) {
     logger.warn("WORKER_SECRET not configured. Background worker will not be triggered.");
-    return;
+    return { success: false, error: "Worker secret not configured" };
   }
 
-  // Use the internal URL if possible, otherwise use the public one
-  // In Next.js, we can often hit our own API route
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000";
-  
-  // Fire and forget the worker trigger
-  fetch(`${baseUrl}/api/v1/worker/process`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${workerSecret}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ triggeredAt: new Date().toISOString() })
-  }).catch(err => logger.error({ err }, "Failed to trigger worker"));
+  try {
+    // Use the internal URL if possible, otherwise use the public one
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000";
+    
+    // Fire and forget the worker trigger
+    fetch(`${baseUrl}/api/v1/worker/process`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${workerSecret}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ triggeredAt: new Date().toISOString() })
+    }).catch(err => logger.error({ err }, "Failed to trigger worker"));
+
+    return { success: true };
+  } catch (error: unknown) {
+    logger.error({ error, meetingId }, "Failed to trigger worker");
+    return { success: false, error: error instanceof Error ? error.message : "Failed to trigger worker" };
+  }
 }

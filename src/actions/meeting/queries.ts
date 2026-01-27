@@ -18,6 +18,7 @@ import {
 } from "@/types/meeting";
 import { meetingIdSchema } from "@/lib/validations/meeting";
 import { decrypt } from "@/lib/crypto";
+import { createSignedDownloadUrl } from "./utils";
 
 export async function getDashboardStats(): Promise<ActionResult<DashboardStat[]>> {
   let session;
@@ -237,6 +238,14 @@ export async function getMeetingById(id: string): Promise<ActionResult<MeetingWi
     }) as MeetingWithRelations | null;
 
     if (!meeting) return { success: false, error: "Meeting not found" };
+
+    // Generate signed URL for playback if audioUrl is a path
+    if (meeting.audioUrl && !meeting.audioUrl.startsWith('http')) {
+      const signedResult = await createSignedDownloadUrl(meeting.audioUrl);
+      if (signedResult.success && signedResult.data) {
+        meeting.audioUrl = signedResult.data;
+      }
+    }
 
     return { success: true, data: meeting };
   } catch (error: unknown) {
