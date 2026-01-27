@@ -45,6 +45,7 @@ export function RecordingRow({
     switch (step) {
       case "TRANSCRIPTION": return "Transcribing Audio...";
       case "SUMMARIZATION": return "Summarizing Meeting...";
+      case "PLANNING": return "Creating Implementation Plan...";
       case "CODE_GENERATION": return "Generating Logic...";
       case "TESTING": return "Verifying Code...";
       case "COMPLETED": return "Completed";

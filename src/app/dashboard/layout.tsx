@@ -116,18 +116,20 @@ export default function DashboardLayout({
                   </Link>
                   <span className="text-zinc-300 dark:text-zinc-700 font-light text-xs">/</span>
                   <div className="flex items-center gap-1 group/ws cursor-pointer">
-                    <Link href="/dashboard" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors uppercase tracking-wider">smartmeet</Link>
+                    <Link href="/dashboard/recordings" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors uppercase tracking-wider">Meetings</Link>
                     <ChevronDown className="w-2.5 h-2.5 text-zinc-300 group-hover/ws:text-zinc-600 transition-colors" />
                   </div>
                   <span className="text-zinc-300 dark:text-zinc-700 font-light text-xs">/</span>
                   <span className="text-brand-via font-black uppercase tracking-tighter bg-brand-via/5 px-2 py-0.5 rounded">
                     {pathname === '/dashboard' 
                       ? 'Overview' 
-                      : pathname === '/dashboard/settings'
-                        ? 'API Settings'
-                        : pathname.includes('/recordings/') 
-                          ? 'Meeting Analysis' 
-                          : pathname.split('/').pop()?.replace(/-/g, ' ')}
+                      : pathname === '/dashboard/recordings'
+                        ? 'All Meetings'
+                        : pathname === '/dashboard/settings'
+                          ? 'API Settings'
+                          : pathname.includes('/recordings/') 
+                            ? 'Meeting Analysis' 
+                            : pathname.split('/').pop()?.replace(/-/g, ' ')}
                   </span>
                 </div>
               </div>

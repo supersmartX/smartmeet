@@ -46,11 +46,14 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
     const user = meeting.user;
 
     // 2. Prepare AI Configuration
-    const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel } = await getAIConfiguration(user);
+    const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel, deepgramKey } = await getAIConfiguration(user);
 
     if (!effectiveApiKey) {
       throw new AppError("No API key configured. Please add your API key in Settings.", "ERR_CONFIG_MISSING");
     }
+
+    // Transcription requires deepgramKey
+    const transcriptionKey = deepgramKey || effectiveApiKey;
 
     // 3. Check Storage Configuration
     if (!supabaseAdmin) {
@@ -112,7 +115,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                   ? await transcribeDocument(audioBlob, effectiveApiKey, user.defaultLanguage || undefined)
                   : await transcribeAudio(
                       new File([audioBlob], meeting.audioUrl?.split('/').pop() || 'audio.mp3', { type: audioBlob.type || 'audio/mpeg' }),
-                      effectiveApiKey, 
+                      transcriptionKey, 
                       user.defaultLanguage || undefined
                     );
                 
@@ -439,14 +442,17 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
     const transcription = meeting.transcripts.map(t => t.text).join("\n");
     if (!transcription) return { success: false, error: "No transcription available" };
 
+    const { getProviderBreaker } = await import("@/lib/circuit-breaker");
     const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel } = await getAIConfiguration(meeting.user);
 
     if (!effectiveApiKey) return { success: false, error: "No API key configured" };
 
-    const result = await generateCode(transcription, { 
-      api_key: effectiveApiKey, 
-      provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
-      model: finalModel || undefined
+    const result = await getProviderBreaker(finalProvider).execute(async () => {
+      return await generateCode(transcription, { 
+        api_key: effectiveApiKey, 
+        provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+        model: finalModel || undefined
+      });
     });
 
     if (result.success && result.data) {

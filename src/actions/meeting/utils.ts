@@ -14,7 +14,7 @@ import logger from "@/lib/logger";
  * Helper to get decrypted API key and mapped provider for a user
  */
 export async function getAIConfiguration(user: { id?: string; apiKey: string | null; preferredProvider: string | null; preferredModel?: string | null }) {
-  if (!user.apiKey) return { apiKey: null, provider: "openai", rawProvider: "openai", model: "gpt-4o" };
+  if (!user.apiKey) return { apiKey: null, provider: "openai", rawProvider: "openai", model: "gpt-4o", deepgramKey: null };
 
   const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
   const model = user.preferredModel || (rawProvider === "openai" ? "gpt-4o" : undefined);
@@ -27,10 +27,14 @@ export async function getAIConfiguration(user: { id?: string; apiKey: string | n
   }
 
   let apiKey = decrypted;
+  let deepgramKey = null;
 
   try {
     const keys = JSON.parse(decrypted);
-    apiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
+    // Extract the preferred LLM key
+    apiKey = keys[rawProvider] || keys["openai"] || Object.values(keys).find(k => k !== keys["deepgram"]) as string;
+    // Extract Deepgram key separately
+    deepgramKey = keys["deepgram"] || null;
   } catch {
     // Legacy single key format
   }
@@ -46,7 +50,7 @@ export async function getAIConfiguration(user: { id?: string; apiKey: string | n
 
   const provider = providerMap[rawProvider] || rawProvider;
 
-  return { apiKey, provider, rawProvider, model };
+  return { apiKey, provider, rawProvider, model, deepgramKey };
 }
 
 /**

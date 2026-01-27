@@ -38,7 +38,7 @@ export function UploadModal({
     }
   }
 
-  const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB
+  const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
@@ -47,7 +47,7 @@ export function UploadModal({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
       if (file.size > MAX_FILE_SIZE) {
-        showToast("File size exceeds 1GB limit.", "error")
+        showToast("File size exceeds 500MB limit.", "error")
         return
       }
       if (file.type.startsWith('audio/') || file.type.startsWith('video/') || 
@@ -64,7 +64,7 @@ export function UploadModal({
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       if (file.size > MAX_FILE_SIZE) {
-        showToast("File size exceeds 1GB limit.", "error")
+        showToast("File size exceeds 500MB limit.", "error")
         return
       }
       setSelectedFile(file)
@@ -131,13 +131,13 @@ export function UploadModal({
                     <Upload className="w-8 h-8" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                      MP3, WAV, MP4, PDF, DOC, TXT (Max 1GB)
-                    </p>
-                  </div>
+                      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                        MP3, WAV, MP4, PDF, DOC, TXT (Max 500MB)
+                      </p>
+                    </div>
                 </div>
               ) : (
                 <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-[24px] p-6 border border-zinc-100 dark:border-zinc-800 flex items-center gap-4">

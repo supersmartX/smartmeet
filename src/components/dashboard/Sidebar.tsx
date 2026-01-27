@@ -93,9 +93,10 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
   const workspaceItems: WorkspaceItem[] = [
     { name: "Overview", href: "/dashboard", icon: Layout },
+    { name: "My Meetings", href: "/dashboard/recordings", icon: Video },
     { name: "Usage & Quotas", href: "/dashboard/usage", icon: BarChart3 },
     { 
-      name: "Recordings", 
+      name: "Recent Activity", 
       type: "folder", 
       children: isLoading 
         ? [{ name: "Loading...", icon: Loader2 }] 
@@ -105,7 +106,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               href: `/dashboard/recordings/${m.id}`,
               icon: Video
             }))
-          : [{ name: "No recordings yet", icon: Video, upcoming: true }]
+          : [{ name: "No recent meetings", icon: Video, upcoming: true }]
     },
     { 
       name: "Settings", 
@@ -136,18 +137,30 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     const Icon = item.icon
 
     if (item.type === "folder") {
+      const isRecentActivity = item.name === "Recent Activity"
+      
       return (
         <div key={item.name} className="flex flex-col">
-          <button
-        onClick={() => toggleFolder(item.name)}
-        aria-expanded={isOpen}
-        className={`flex items-center gap-1 py-1 px-2 hover:bg-zinc-200 dark:hover:bg-zinc-900 transition-colors text-[13px] text-zinc-600 dark:text-zinc-400 group w-full`}
-        style={{ paddingLeft: `${depth * 12 + 8}px` }}
-      >
-        {isOpen ? <ChevronDown className="w-4 h-4" aria-hidden="true" /> : <ChevronRight className="w-4 h-4" aria-hidden="true" />}
-        <Folder className={`w-4 h-4 ${isOpen ? "text-brand-via" : "text-zinc-400"}`} aria-hidden="true" />
-        <span className="truncate font-medium">{item.name}</span>
-      </button>
+          <div className="flex items-center group">
+            <button
+              onClick={() => toggleFolder(item.name)}
+              aria-expanded={isOpen}
+              className={`flex items-center gap-1 py-1 px-2 hover:bg-zinc-200 dark:hover:bg-zinc-900 transition-colors text-[13px] text-zinc-600 dark:text-zinc-400 group flex-1 min-w-0`}
+              style={{ paddingLeft: `${depth * 12 + 8}px` }}
+            >
+              {isOpen ? <ChevronDown className="w-4 h-4" aria-hidden="true" /> : <ChevronRight className="w-4 h-4" aria-hidden="true" />}
+              <Folder className={`w-4 h-4 ${isOpen ? "text-brand-via" : "text-zinc-400"}`} aria-hidden="true" />
+              <span className="truncate font-medium">{item.name}</span>
+            </button>
+            {isRecentActivity && (
+              <Link 
+                href="/dashboard/recordings"
+                className="px-2 py-1 text-[10px] font-bold text-brand-via hover:text-brand-via/80 transition-colors opacity-0 group-hover:opacity-100 uppercase tracking-tighter"
+              >
+                View All
+              </Link>
+            )}
+          </div>
           {isOpen && (
             <div role="group">
               {item.children?.map((child) => renderWorkspaceItem(child, depth + 1))}

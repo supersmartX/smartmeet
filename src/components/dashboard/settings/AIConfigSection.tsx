@@ -3,7 +3,6 @@ import {
   Key, 
   Cpu, 
   Zap, 
-  Server, 
   ChevronRight, 
   ExternalLink, 
   EyeOff, 
@@ -76,8 +75,6 @@ export function AIConfigSection({
 
   // Helper to detect provider from key prefix
   const detectProvider = (key: string) => {
-    if (key.startsWith("sk-ant-")) return "anthropic";
-    if (key.startsWith("sk-or-v1-")) return "openrouter";
     if (key.startsWith("sk-")) return "openai";
     if (key.startsWith("gsk_")) return "groq";
     if (key.startsWith("AIza")) return "google";
@@ -132,14 +129,11 @@ export function AIConfigSection({
               <span className="text-[9px] font-black text-brand-via uppercase tracking-widest">{provider}</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
               { id: 'openai', name: 'OpenAI', icon: Cpu },
-              { id: 'anthropic', name: 'Anthropic', icon: Zap },
-              { id: 'google', name: 'Google', icon: Zap },
+              { id: 'google', name: 'Gemini', icon: Zap },
               { id: 'groq', name: 'Groq', icon: Zap },
-              { id: 'openrouter', name: 'OpenRouter', icon: ExternalLink },
-              { id: 'custom', name: 'Custom', icon: Server },
             ].map((p) => {
               const hasKey = !!apiKeys[p.id];
               const isActive = provider === p.id;
@@ -198,10 +192,9 @@ export function AIConfigSection({
               <a 
                 href={
                   provider === 'openai' ? "https://platform.openai.com/api-keys" :
-                  provider === 'anthropic' ? "https://console.anthropic.com/settings/keys" :
                   provider === 'google' ? "https://aistudio.google.com/app/apikey" :
                   provider === 'groq' ? "https://console.groq.com/keys" :
-                  provider === 'openrouter' ? "https://openrouter.ai/keys" : "#"
+                  provider === 'deepgram' ? "https://console.deepgram.com/" : "#"
                 }
                 target="_blank"
                 rel="noopener noreferrer"
@@ -222,10 +215,9 @@ export function AIConfigSection({
                 onChange={onKeyChange}
                 placeholder={
                   provider === 'openai' ? "sk-..." :
-                  provider === 'anthropic' ? "sk-ant-..." :
                   provider === 'google' ? "AIza..." :
                   provider === 'groq' ? "gsk_..." :
-                  provider === 'openrouter' ? "sk-or-v1-..." : "Enter your key"
+                  provider === 'deepgram' ? "Enter your Deepgram key" : "Enter your key"
                 }
                 className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-11 pr-24 text-xs font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-via/20 transition-all shadow-sm"
               />
@@ -275,11 +267,9 @@ export function AIConfigSection({
               )}
               <p className="text-[10px] text-zinc-400 font-medium italic">
                 {provider === 'openai' && "Your API key will be encrypted and used only for requests on your behalf."}
-                {provider === 'anthropic' && "Claude models require a valid Anthropic API key starting with 'sk-ant-'."}
                 {provider === 'google' && "Google Gemini keys can be generated for free in the AI Studio console."}
-                {provider === 'openrouter' && "OpenRouter allows access to any model (GPT-4, Claude, Llama) with a single key."}
                 {provider === 'groq' && "Groq provides lightning-fast inference for open-source models like Llama 3."}
-                {provider === 'custom' && "Use a custom endpoint or proxy URL (e.g., LiteLLM or self-hosted gateway)."}
+                {provider === 'deepgram' && "Deepgram provides world-class speech-to-text models like Nova-2."}
               </p>
             </div>
           </div>
