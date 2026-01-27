@@ -34,7 +34,7 @@ import { cache } from "@/lib/cache";
  */
 export async function internalProcessMeetingAI(meetingId: string): Promise<ActionResult> {
   try {
-    const { aiCircuitBreaker } = await import("@/lib/circuit-breaker");
+    const { getProviderBreaker } = await import("@/lib/circuit-breaker");
     
     // 1. Fetch meeting and user
     const meeting = await prisma.meeting.findUnique({
@@ -106,7 +106,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
           const transcriptionResult = await Performance.measure(
             "AI_TRANSCRIPTION",
             async () => {
-              return await aiCircuitBreaker.execute(async () => {
+              return await getProviderBreaker(finalProvider).execute(async () => {
                 const res = isDocument 
                   ? await transcribeDocument(audioBlob, effectiveApiKey, user.defaultLanguage || undefined)
                   : await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
@@ -155,7 +155,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
         const summaryResult = await Performance.measure(
           "AI_SUMMARIZATION",
           async () => {
-            return await aiCircuitBreaker.execute(async () => {
+            return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await summarizeText(transcription, { 
                 api_key: effectiveApiKey, 
                 provider: normalizeProvider(finalProvider, 'upper') as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
@@ -185,7 +185,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             const planResult = await Performance.measure(
               "AI_PLAN_GEN",
               async () => {
-                return await aiCircuitBreaker.execute(async () => {
+                return await getProviderBreaker(finalProvider).execute(async () => {
                   const res = await generatePlan(transcription, {
                     api_key: effectiveApiKey,
                     provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
@@ -216,7 +216,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
         const codeResult = await Performance.measure(
           "AI_CODE_GEN",
           async () => {
-            return await aiCircuitBreaker.execute(async () => {
+            return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await generateCode(transcription, { 
                 api_key: effectiveApiKey, 
                 provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
@@ -241,7 +241,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
         const testResult = await Performance.measure(
           "AI_TESTING",
           async () => {
-            return await aiCircuitBreaker.execute(async () => {
+            return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await testCode(code, { 
                 api_key: effectiveApiKey, 
                 provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : normalizeProvider(finalProvider, 'lower') as "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom"
@@ -311,7 +311,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
         
         logger.error({ error, meetingId, userId: user.id }, "Pipeline failure details");
         
-        const breakerState = await aiCircuitBreaker.getState();
+        const breakerState = await getProviderBreaker(finalProvider).getState();
         const isBreakerOpen = breakerState === "OPEN";
 
         await prisma.meeting.update({

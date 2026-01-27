@@ -10,6 +10,7 @@ import { logSecurityEvent } from "@/lib/audit";
 import { cache } from "@/lib/cache";
 import logger from "@/lib/logger";
 import { QuotaService } from "@/lib/quota";
+import { supabaseAdmin } from "@/lib/supabase";
 import { 
   triggerWorker
 } from "./utils";
@@ -321,11 +322,27 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
 
     const meeting = await prisma.meeting.findUnique({
       where: { id },
-      select: { userId: true }
+      select: { userId: true, audioUrl: true }
     });
 
     if (!meeting || meeting.userId !== session.user.id) {
       return { success: false, error: "Meeting not found" };
+    }
+
+    // Delete from Supabase Storage if file exists
+    if (meeting.audioUrl && supabaseAdmin) {
+      try {
+        const { error: storageError } = await supabaseAdmin
+          .storage
+          .from('recordings')
+          .remove([meeting.audioUrl]);
+        
+        if (storageError) {
+          logger.error({ storageError, path: meeting.audioUrl }, "Failed to delete file from storage");
+        }
+      } catch (err) {
+        logger.error({ err, path: meeting.audioUrl }, "Error deleting file from storage");
+      }
     }
 
     await prisma.meeting.delete({

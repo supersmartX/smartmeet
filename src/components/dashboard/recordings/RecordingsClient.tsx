@@ -21,6 +21,7 @@ import { RecordingHeader } from "@/components/dashboard/recordings/RecordingHead
 import { RecordingTabs } from "@/components/dashboard/recordings/RecordingTabs"
 import { RecordingTable } from "@/components/dashboard/recordings/RecordingTable"
 import { UploadModal } from "@/components/dashboard/recordings/UploadModal"
+import { supabase } from "@/lib/supabase"
 
 type RecordingsState = {
   recordings: Meeting[]
@@ -172,33 +173,39 @@ export default function RecordingsClient() {
     fetchMeetings()
   }, [fetchMeetings])
 
-  // Poll for updates if any meeting is in PROCESSING status with exponential backoff
-  const isAnyMeetingProcessing = recordings.some(r => r.status === "PROCESSING")
-
+  // Subscribe to real-time updates for meeting status changes
   useEffect(() => {
-    if (!isAnyMeetingProcessing) return
-
-    let timeoutId: NodeJS.Timeout
-    let pollCount = 0
-    const maxDelay = 30000 // Max 30 seconds
-    const baseDelay = 5000 // Start at 5 seconds
-
-    const poll = async () => {
-      await fetchMeetings(true)
-      
-      // Calculate next delay: baseDelay * 1.5^pollCount, capped at maxDelay
-      pollCount++
-      const nextDelay = Math.min(baseDelay * Math.pow(1.5, pollCount), maxDelay)
-      
-      timeoutId = setTimeout(poll, nextDelay)
-    }
-
-    timeoutId = setTimeout(poll, baseDelay)
+    const channel = supabase
+      .channel('meeting_status_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'Meeting'
+        },
+        (payload) => {
+          logger.info({ payload }, "Real-time meeting update received")
+          fetchMeetings(true)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'Meeting'
+        },
+        () => {
+          fetchMeetings(true)
+        }
+      )
+      .subscribe()
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId)
+      supabase.removeChannel(channel)
     }
-  }, [isAnyMeetingProcessing, fetchMeetings])
+  }, [fetchMeetings])
 
   useEffect(() => {
     if (searchParams.get("action") === "upload") {

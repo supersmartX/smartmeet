@@ -102,6 +102,19 @@ export const aiCircuitBreaker = new RedisCircuitBreaker({
   resetTimeout: 60000,    // Try again after 1 minute
 });
 
+export const providerBreakers: Record<string, RedisCircuitBreaker> = {
+  openai: new RedisCircuitBreaker({ serviceName: "ai-openai", failureThreshold: 5, resetTimeout: 60000 }),
+  claude: new RedisCircuitBreaker({ serviceName: "ai-claude", failureThreshold: 5, resetTimeout: 60000 }),
+  gemini: new RedisCircuitBreaker({ serviceName: "ai-gemini", failureThreshold: 5, resetTimeout: 60000 }),
+  groq: new RedisCircuitBreaker({ serviceName: "ai-groq", failureThreshold: 5, resetTimeout: 60000 }),
+  openrouter: new RedisCircuitBreaker({ serviceName: "ai-openrouter", failureThreshold: 5, resetTimeout: 60000 }),
+};
+
+export function getProviderBreaker(provider: string): RedisCircuitBreaker {
+  const p = provider.toLowerCase();
+  return providerBreakers[p] || aiCircuitBreaker;
+}
+
 export const billingCircuitBreaker = new RedisCircuitBreaker({
   serviceName: "billing-service",
   failureThreshold: 3,    // Trip after 3 failures
