@@ -51,6 +51,7 @@ export async function GET() {
       features: planLimits.features,
       limits: {
         maxFileSizeMb: planLimits.maxFileSizeMb,
+        maxTokens: planLimits.monthlyTokenLimit,
       }
     };
 

@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     let requestBody: string | FormData | undefined;
     
     // Check if we need to forward as FormData (e.g., for audio files)
-    const isAudioEndpoint = sanitizedEndpoint.includes('/audio/') || sanitizedEndpoint.includes('/document/');
+    const isAudioEndpoint = sanitizedEndpoint.includes('/audio/') || sanitizedEndpoint.includes('/document/') || sanitizedEndpoint.includes('/process');
     
     if (isAudioEndpoint && data) {
       // Create new FormData for the backend API
