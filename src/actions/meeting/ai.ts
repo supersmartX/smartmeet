@@ -83,31 +83,65 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                           meeting.audioUrl?.toLowerCase().endsWith('.docx') ||
                           meeting.audioUrl?.toLowerCase().endsWith('.txt');
 
-        const transcriptionResult = await Performance.measure(
-          "AI_TRANSCRIPTION",
-          async () => {
-            return await aiCircuitBreaker.execute(async () => {
-              const res = isDocument 
-                ? await transcribeDocument(audioBlob, effectiveApiKey, user.defaultLanguage || undefined)
-                : await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
-              if (!res.success) {
-                throw new ServiceError(
-                  res.error?.message || "Transcription failed", 
-                  res.error?.code as string, 
-                  res.error?.details
-                );
-              }
-              return res.data;
-            });
-          },
-          { meetingId, userId: user.id }
-        );
+        let transcription = "";
 
-        if (!transcriptionResult) throw new ServiceError("Transcription failed");
-        const transcription = transcriptionResult.transcription;
+        if (meeting.audioUrl?.toLowerCase().endsWith('.txt')) {
+          // If it's a TXT file, we can use the content directly
+          try {
+            const text = await audioBlob.text();
+            transcription = text;
+          } catch (textError) {
+            logger.warn({ textError, meetingId }, "Failed to get text via .text(), trying toString()");
+            transcription = audioBlob.toString();
+          }
+          
+          // Fallback if we still don't have good text
+          if (!transcription || transcription.includes('[object') || transcription.length === 0) {
+            // Last resort: try reading as arrayBuffer then decoder
+            const buffer = await audioBlob.arrayBuffer();
+            const decoder = new TextDecoder('utf-8');
+            transcription = decoder.decode(buffer);
+          }
+        } else {
+          const transcriptionResult = await Performance.measure(
+            "AI_TRANSCRIPTION",
+            async () => {
+              return await aiCircuitBreaker.execute(async () => {
+                const res = isDocument 
+                  ? await transcribeDocument(audioBlob, effectiveApiKey, user.defaultLanguage || undefined)
+                  : await transcribeAudio(audioBlob, effectiveApiKey, user.defaultLanguage || undefined);
+                if (!res.success) {
+                  throw new ServiceError(
+                    res.error?.message || "Transcription failed", 
+                    res.error?.code as string, 
+                    res.error?.details
+                  );
+                }
+                return res.data;
+              });
+            },
+            { meetingId, userId: user.id }
+          );
+
+          if (!transcriptionResult) throw new ServiceError("Transcription failed");
+          transcription = transcriptionResult.transcription;
+        }
 
         if (!transcription || transcription.trim().length === 0) {
-          throw new ServiceError("No speech detected in audio", "ERR_EMPTY_TRANSCRIPTION");
+          throw new ServiceError("No content detected in file", "ERR_EMPTY_TRANSCRIPTION");
+        }
+
+        // Step 1.5: Save transcription to database for TXT/Documents
+        if (isDocument) {
+          await prisma.transcript.create({
+            data: {
+              meetingId: meeting.id,
+              text: transcription,
+              speaker: "Document Content",
+              time: "0:00",
+              confidence: 1.0
+            }
+          });
         }
 
         const isTechnical = /api|cache|latency|database|testing|backend|frontend|pipeline|logic|code|deploy/i.test(transcription);
@@ -234,7 +268,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                     speaker: "AI Assistant",
                     time: "0:00",
                     text: transcription,
-                    confidence: transcriptionResult.language_probability
+                    confidence: 1.0
                   }]
                 },
                 summary: {
@@ -367,7 +401,7 @@ export async function enqueueMeetingAI(meetingId: string): Promise<ActionResult>
     });
 
     const { triggerWorker } = await import("./utils");
-    await triggerWorker();
+    await triggerWorker(meetingId);
 
     return { success: true };
   } catch (error: unknown) {

@@ -239,7 +239,7 @@ export async function getMeetingById(id: string): Promise<ActionResult<MeetingWi
 
     if (!meeting) return { success: false, error: "Meeting not found" };
 
-    // Generate signed URL for playback if audioUrl is a path
+    // Generate signed URL for playback/download if audioUrl is a path
     if (meeting.audioUrl && !meeting.audioUrl.startsWith('http')) {
       const signedResult = await createSignedDownloadUrl(meeting.audioUrl);
       if (signedResult.success && signedResult.data) {
