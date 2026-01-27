@@ -84,7 +84,7 @@ export async function createSignedUploadUrl(fileName: string): Promise<ActionRes
     const { data, error } = await supabaseAdmin
       .storage
       .from('recordings')
-      .createSignedUrl(path, 3600);
+      .createSignedUploadUrl(path);
 
     if (error) throw error;
 
@@ -103,7 +103,10 @@ export async function createSignedUploadUrl(fileName: string): Promise<ActionRes
 
 export async function triggerWorker() {
   const workerSecret = process.env.WORKER_SECRET;
-  if (!workerSecret) return;
+  if (!workerSecret) {
+    logger.warn("WORKER_SECRET not configured. Background worker will not be triggered.");
+    return;
+  }
 
   // Use the internal URL if possible, otherwise use the public one
   // In Next.js, we can often hit our own API route

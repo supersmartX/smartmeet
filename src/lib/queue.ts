@@ -21,8 +21,7 @@ export interface Task {
 export async function enqueueTask(task: Omit<Task, "createdAt">): Promise<boolean> {
   const redis = await getRedisClient();
   if (!redis) {
-    logger.warn("Redis not configured. Task not enqueued.");
-    return false;
+    throw new Error("Redis not configured. AI processing queue is unavailable.");
   }
 
   const fullTask: Task = {
