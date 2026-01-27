@@ -171,7 +171,10 @@ export async function POST(request: NextRequest) {
     let requestBody: string | FormData | undefined;
     
     // Check if we need to forward as FormData (e.g., for audio files)
-    const isAudioEndpoint = sanitizedEndpoint.includes('/audio/') || sanitizedEndpoint.includes('/document/') || sanitizedEndpoint.includes('/process');
+    const isAudioEndpoint = sanitizedEndpoint.includes('/audio/') || 
+                            sanitizedEndpoint.includes('/document/') || 
+                            sanitizedEndpoint.includes('/process') ||
+                            sanitizedEndpoint.includes('/transcribe');
     
     if (isAudioEndpoint && data) {
       logger.info({ endpoint, sanitizedEndpoint, dataType: typeof data }, "Proxying audio/document request");

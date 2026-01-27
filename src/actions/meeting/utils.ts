@@ -22,8 +22,8 @@ export async function getAIConfiguration(user: { id?: string; apiKey: string | n
   try {
     decrypted = decrypt(user.apiKey);
   } catch (error) {
-    logger.error({ error, userId: user.id }, "Failed to decrypt API key in getAIConfiguration");
-    return { apiKey: null, provider: "openai", rawProvider: "openai", model: "gpt-4o" };
+    logger.error({ error, userId: user.id, apiKeyPreview: user.apiKey?.substring(0, 10) + "..." }, "Failed to decrypt API key in getAIConfiguration");
+    throw new Error("Your AI configuration is invalid (decryption failed). Please re-enter your API keys in Settings.");
   }
 
   let apiKey = decrypted;

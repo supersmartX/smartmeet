@@ -21,10 +21,11 @@ import {
   User
 } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
-import { getMeetings } from "@/actions/meeting"
-import { Meeting } from "@/types/meeting"
+import { getMeetings, getUserSettings } from "@/actions/meeting"
+import { Meeting, UserSettings } from "@/types/meeting"
 import logger from "@/lib/logger"
 import { supabase } from "@/lib/supabase"
+import { ShieldAlert } from "lucide-react"
 
 interface WorkspaceItem {
   name: string;
@@ -33,6 +34,7 @@ interface WorkspaceItem {
   href?: string;
   icon?: LucideIcon;
   upcoming?: boolean;
+  isWarning?: boolean;
 }
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
@@ -40,6 +42,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const [openFolders, setOpenFolders] = useState<string[]>(["Recordings", "Settings"])
   const [recentMeetings, setRecentMeetings] = useState<Meeting[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null)
 
   const fetchRecent = useCallback(async () => {
     try {
@@ -48,8 +51,17 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         // Get 5 most recent meetings
         setRecentMeetings(result.data.slice(0, 5))
       }
+      
+      // Also check API key status silently
+      const settingsResult = await getUserSettings()
+      if (settingsResult.success && settingsResult.data) {
+        // A user has valid keys if decryption didn't error and they have at least one key
+        const hasKeys = Object.keys(settingsResult.data.apiKeys || {}).length > 0
+        const isDecryptionError = !!(settingsResult.data as any).decryptionError
+        setIsKeyValid(hasKeys && !isDecryptionError)
+      }
     } catch (error) {
-      logger.error({ error }, "Failed to fetch sidebar meetings")
+      logger.error({ error }, "Failed to fetch sidebar data")
     } finally {
       setIsLoading(false)
     }
@@ -103,7 +115,12 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       children: [
         { name: "Account", href: "/dashboard/settings", icon: User },
         { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
-        { name: "API Keys", href: "/dashboard/settings/api", icon: Key },
+        { 
+          name: "API Keys", 
+          href: "/dashboard/settings/api", 
+          icon: isKeyValid === false ? ShieldAlert : Key,
+          isWarning: isKeyValid === false
+        },
         { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
         { name: "Team Management", href: "/dashboard/team", icon: Users },
       ]
@@ -154,17 +171,35 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           item.upcoming ? "opacity-60 cursor-not-allowed" : 
           isActive
             ? "bg-brand-via/10 text-brand-via border-r-2 border-brand-via"
-            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
+            : item.isWarning 
+              ? "text-red-500 hover:bg-red-500/5"
+              : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
         <div className="flex items-center gap-2 min-w-0">
-          {Icon && <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-brand-via" : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100"} ${Icon === Loader2 ? "animate-spin text-amber-500" : ""}`} aria-hidden="true" />}
-          <span className="truncate font-medium">{item.name}</span>
+          {Icon && (
+            <Icon 
+              className={`w-4 h-4 shrink-0 ${
+                isActive 
+                  ? "text-brand-via" 
+                  : item.isWarning
+                    ? "text-red-500 animate-pulse"
+                    : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100"
+              } ${Icon === Loader2 ? "animate-spin text-amber-500" : ""}`} 
+              aria-hidden="true" 
+            />
+          )}
+          <span className={`truncate ${isActive ? "font-bold" : "font-medium"}`}>{item.name}</span>
         </div>
         {item.upcoming && (
           <span className="text-[7px] font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">
             SOON
+          </span>
+        )}
+        {item.isWarning && (
+          <span className="text-[9px] font-black text-red-500 uppercase tracking-tighter shrink-0">
+            Action Required
           </span>
         )}
       </Link>

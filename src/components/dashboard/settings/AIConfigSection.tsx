@@ -257,9 +257,16 @@ export function AIConfigSection({
                 </p>
               )}
               {decryptionError && (
-                <p className="text-[9px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/5 border border-red-500/10">
-                  <Shield className="w-3 h-3" /> Failed to decrypt stored API key. Please re-enter your key.
-                </p>
+                <div className="flex flex-col gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 animate-pulse">
+                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <Shield className="w-5 h-5" />
+                    <p className="text-xs font-black uppercase tracking-widest">Security Action Required</p>
+                  </div>
+                  <p className="text-[11px] font-bold text-red-600/80 dark:text-red-400/80 leading-relaxed">
+                    We were unable to decrypt your stored API keys due to a security update or key rotation. 
+                    Please <span className="underline decoration-2">re-enter and save your keys</span> to restore AI functionality.
+                  </p>
+                </div>
               )}
               {currentKey && !detectProvider(currentKey) && provider !== 'custom' && (
                 <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10">

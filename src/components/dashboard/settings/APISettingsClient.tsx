@@ -231,6 +231,24 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
       </div>
 
       <div className="grid gap-8">
+        {(initialSettings as any).decryptionError && (
+          <div className="flex flex-col gap-4 p-6 rounded-[32px] bg-red-500/10 border border-red-500/20 animate-pulse">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-black uppercase tracking-widest">Security Action Required</p>
+                <p className="text-[10px] font-bold opacity-70 uppercase tracking-tight">API Key Decryption Failed</p>
+              </div>
+            </div>
+            <p className="text-xs font-bold text-red-600/80 dark:text-red-400/80 leading-relaxed pl-1">
+              We were unable to decrypt your stored API keys due to a security update or key rotation. 
+              To restore AI functionality, please <span className="underline decoration-2 font-black">re-enter and save your keys</span> below. 
+              This is a one-time security measure.
+            </p>
+          </div>
+        )}
         {/* API Provider Configuration */}
         <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
@@ -363,6 +381,18 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                 </div>
 
                 <div className="flex flex-col gap-2">
+                  {(initialSettings as any).decryptionError && (
+                    <div className="flex flex-col gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 animate-pulse">
+                      <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                        <Shield className="w-5 h-5" />
+                        <p className="text-xs font-black uppercase tracking-widest">Security Action Required</p>
+                      </div>
+                      <p className="text-[11px] font-bold text-red-600/80 dark:text-red-400/80 leading-relaxed">
+                        We were unable to decrypt your stored API keys due to a security update or key rotation. 
+                        Please <span className="underline decoration-2">re-enter and save your keys</span> to restore AI functionality.
+                      </p>
+                    </div>
+                  )}
                   {!apiKey && provider !== 'custom' && (
                     <p className="text-[9px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/5 border border-red-500/10">
                       <AlertTriangle className="w-3 h-3" /> No API key configured for {provider}. AI features will not work.
