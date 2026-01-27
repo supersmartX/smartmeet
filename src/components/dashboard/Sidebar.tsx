@@ -10,15 +10,12 @@ import {
   Video,
   Layout,
   HelpCircle,
-  Shield,
-  Zap,
-  Users,
-  Plus,
   Loader2,
   LucideIcon,
   BarChart3,
   Key,
-  User
+  User,
+  Users
 } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { getMeetings, getUserSettings } from "@/actions/meeting"
@@ -56,9 +53,10 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       const settingsResult = await getUserSettings()
       if (settingsResult.success && settingsResult.data) {
         // A user has valid keys if decryption didn't error and they have at least one key
-        const hasKeys = Object.keys(settingsResult.data.apiKeys || {}).length > 0
-        const isDecryptionError = !!(settingsResult.data as any).decryptionError
-        setIsKeyValid(hasKeys && !isDecryptionError)
+        const data = settingsResult.data as UserSettings;
+        const hasKeys = data.apiKeys && Object.keys(data.apiKeys).length > 0
+        const isDecryptionError = !!data.decryptionError
+        setIsKeyValid(!!(hasKeys && !isDecryptionError))
       }
     } catch (error) {
       logger.error({ error }, "Failed to fetch sidebar data")
@@ -83,13 +81,13 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           table: 'Meeting'
         },
         () => {
-          fetchRecent()
+          fetchRecent().catch(err => logger.error({ err }, "fetchRecent failed"));
         }
       )
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(channel).catch(err => logger.error({ err }, "removeChannel failed"));
     }
   }, [fetchRecent])
 
@@ -98,31 +96,29 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     { name: "Usage & Quotas", href: "/dashboard/usage", icon: BarChart3 },
     { 
       name: "Recordings", 
-      type: "folder",
+      type: "folder", 
       children: isLoading 
-        ? [{ name: "Loading...", icon: Loader2 } as WorkspaceItem]
+        ? [{ name: "Loading...", icon: Loader2 }] 
         : recentMeetings.length > 0
           ? recentMeetings.map(m => ({
-              name: m.title,
+              name: m.title || "Untitled Meeting",
               href: `/dashboard/recordings/${m.id}`,
-              icon: m.status === "PROCESSING" ? Loader2 : Video
+              icon: Video
             }))
-          : [{ name: "Start New Project", icon: Plus, href: "/dashboard/recordings?action=upload" } as WorkspaceItem]
+          : [{ name: "No recordings yet", icon: Video, upcoming: true }]
     },
     { 
       name: "Settings", 
       type: "folder",
       children: [
         { name: "Account", href: "/dashboard/settings", icon: User },
-        { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
         { 
           name: "API Keys", 
           href: "/dashboard/settings/api", 
           icon: isKeyValid === false ? ShieldAlert : Key,
           isWarning: isKeyValid === false
         },
-        { name: "Security & Logs", href: "/dashboard/security", icon: Shield },
-        { name: "Team Management", href: "/dashboard/team", icon: Users },
+        { name: "Team", href: "/dashboard/settings/team", icon: Users, upcoming: true },
       ]
     },
     { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },

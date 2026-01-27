@@ -231,7 +231,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
       </div>
 
       <div className="grid gap-8">
-        {(initialSettings as any).decryptionError && (
+        {initialSettings.decryptionError && (
           <div className="flex flex-col gap-4 p-6 rounded-[32px] bg-red-500/10 border border-red-500/20 animate-pulse">
             <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
               <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
@@ -381,7 +381,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {(initialSettings as any).decryptionError && (
+                  {initialSettings.decryptionError && (
                     <div className="flex flex-col gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 animate-pulse">
                       <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                         <Shield className="w-5 h-5" />
@@ -399,7 +399,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                     </p>
                   )}
                   {apiKey && !detectProvider(apiKey) && provider !== 'custom' && (
-                    <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                    <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/20 shadow-sm shadow-amber-500/5">
                       <AlertTriangle className="w-3 h-3" /> Key format doesn&apos;t match {provider} prefix.
                     </p>
                   )}
