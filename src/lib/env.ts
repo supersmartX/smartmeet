@@ -40,6 +40,14 @@ const envSchema = z.object({
 
 const isBuildTime = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
 
+// Mock values for build time to prevent library crashes (e.g. Supabase)
+const buildTimeMocks = {
+  NEXT_PUBLIC_SUPABASE_URL: "https://mock.supabase.co",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "mock-anon-key",
+  DATABASE_URL: "postgresql://mock:mock@localhost:5432/mock",
+  NEXTAUTH_SECRET: "mock-secret",
+};
+
 const _env = envSchema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
   DIRECT_URL: process.env.DIRECT_URL,
@@ -72,4 +80,9 @@ if (!_env.success) {
   }
 }
 
-export const env = _env.success ? _env.data : ({} as z.infer<typeof envSchema>);
+export const env = _env.success 
+  ? _env.data 
+  : (isBuildTime 
+      ? { ...envSchema.parse({}), ...buildTimeMocks } as z.infer<typeof envSchema>
+      : {} as z.infer<typeof envSchema>
+    );
