@@ -17,21 +17,21 @@ export interface PlanLimits {
 
 export const PLAN_CONFIGS: Record<UserPlan, PlanLimits> = {
   FREE: {
-    monthlyTokenLimit: 50000,
-    dailyMeetingLimit: 2,
-    maxFileSizeMb: 10,
+    monthlyTokenLimit: 100000,
+    dailyMeetingLimit: 20,
+    maxFileSizeMb: 500,
     features: ["transcription", "basic_summary", "ai_processing"],
   },
   PRO: {
-    monthlyTokenLimit: 500000,
-    dailyMeetingLimit: 10,
-    maxFileSizeMb: 50,
+    monthlyTokenLimit: 1000000,
+    dailyMeetingLimit: 20,
+    maxFileSizeMb: 500,
     features: ["transcription", "detailed_summary", "code_generation", "test_execution", "ai_processing"],
   },
   ENTERPRISE: {
-    monthlyTokenLimit: 5000000,
-    dailyMeetingLimit: 100,
-    maxFileSizeMb: 200,
+    monthlyTokenLimit: 10000000,
+    dailyMeetingLimit: 200,
+    maxFileSizeMb: 500,
     features: ["transcription", "detailed_summary", "code_generation", "test_execution", "custom_prompts", "rbac", "ai_processing"],
   },
 };
