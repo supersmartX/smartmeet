@@ -10,7 +10,7 @@ import { DataGovernance } from "@/lib/data-governance";
 
 const proxyRequestSchema = z.object({
   endpoint: z.string().min(1, "Endpoint is required"),
-  method: z.enum(["GET", "POST", "PUT", "DELETE"]),
+  method: z.enum(["GET", "POST", "PUT", "DELETE", "HEAD"]),
   data: z.unknown().optional(),
   apiKey: z.string().optional(),
 });
@@ -200,7 +200,9 @@ export async function POST(request: NextRequest) {
       
       requestBody = backendFormData;
     } else {
-      requestHeaders["Content-Type"] = "application/json";
+      if (data || (method !== 'GET' && method !== 'HEAD')) {
+        requestHeaders["Content-Type"] = "application/json";
+      }
       requestBody = data ? JSON.stringify(data) : undefined;
     }
     
@@ -214,7 +216,50 @@ export async function POST(request: NextRequest) {
       body: requestBody,
     });
     
-    const responseData = await response.json();
+    // Parse response body safely
+    let responseData;
+    const responseContentType = response.headers.get("content-type");
+    
+    if (responseContentType && responseContentType.includes("application/json")) {
+      try {
+        responseData = await response.json();
+      } catch (error) {
+        logger.error({ error, apiUrl }, "Failed to parse JSON response from backend");
+        responseData = { message: "Invalid JSON response from backend" };
+      }
+    } else {
+      // Handle non-JSON responses (e.g. 500 HTML pages from upstream)
+      const textBody = await response.text();
+      logger.warn({ apiUrl, status: response.status, bodyPreview: textBody.substring(0, 200) }, "Received non-JSON response from backend");
+      responseData = { message: response.ok ? textBody : `Backend returned ${response.status} ${response.statusText}` };
+    }
+    
+    // If upstream returned an error status, wrap it in createErrorResponse
+    if (!response.ok) {
+      // Try to extract error message from upstream response
+      const errorMessage = responseData?.error?.message || 
+                          responseData?.detail || 
+                          responseData?.message || 
+                          `Backend Error: ${response.statusText}`;
+                          
+      const errorCode = responseData?.error?.code || 
+                       (response.status === 429 ? ApiErrorCode.RATE_LIMIT_EXCEEDED :
+                        response.status === 401 ? ApiErrorCode.UNAUTHORIZED :
+                        response.status === 403 ? ApiErrorCode.FORBIDDEN :
+                        response.status === 404 ? ApiErrorCode.NOT_FOUND :
+                        ApiErrorCode.INTERNAL_ERROR);
+
+      return NextResponse.json(
+        createErrorResponse(
+          errorCode,
+          errorMessage,
+          responseData, // Include full details
+          "v1",
+          path
+        ),
+        { status: response.status, headers: createRateLimitHeaders(rateLimitResult) }
+      );
+    }
     
     // Return standardized success response
     return NextResponse.json(

@@ -107,7 +107,7 @@ function handleApiError<T>(error: unknown, path?: string): ApiResponse<T> {
  */
 export async function makeApiRequest<T>(
   endpoint: string,
-  method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
+  method: "GET" | "POST" | "PUT" | "DELETE" | "HEAD" = "GET",
   data?: FormData | Record<string, unknown>,
   apiKey: string = "",
   timeout: number = 300000 // Increased default to 5 minutes for AI tasks
@@ -143,7 +143,9 @@ export async function makeApiRequest<T>(
 
       // Don't set Content-Type if it's FormData, fetch will set it with boundary
       if (!(data instanceof FormData)) {
-        headers["Content-Type"] = "application/json";
+        if (data || (method !== 'GET' && method !== 'HEAD')) {
+          headers["Content-Type"] = "application/json";
+        }
       }
 
       requestOptions = {
