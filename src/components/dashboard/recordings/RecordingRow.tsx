@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import Link from "next/link";
 import { Video, Loader2, MoreHorizontal, Pencil, Trash2, Check, AlertCircle, RefreshCw, Pin, PinOff, Star } from "lucide-react";
 import { Meeting } from "@/types/meeting";
@@ -16,7 +16,7 @@ interface RecordingRowProps {
   fetchMeetings?: () => void;
 }
 
-export function RecordingRow({
+export const RecordingRow = memo(function RecordingRow({
   recording,
   searchQuery,
   onRename,
@@ -387,4 +387,4 @@ export function RecordingRow({
       )}
     </div>
   );
-}
+});

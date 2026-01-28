@@ -14,6 +14,7 @@ export default function Footer() {
                   src="/logoX.png"
                   alt="SupersmartX Logo"
                   fill
+                  sizes="32px"
                   className="object-contain"
                 />
               </div>

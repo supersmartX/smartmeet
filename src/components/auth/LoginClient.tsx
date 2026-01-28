@@ -129,13 +129,13 @@ export default function LoginClient() {
         {/* Logo and Header */}
         <div className="text-center space-y-4">
           <Link href="/" className="inline-block group">
-            <div className="w-16 h-16 bg-zinc-900 dark:bg-zinc-100 rounded-[28px] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-2xl shadow-black/20">
+            <div className="w-16 h-16 bg-zinc-900 dark:bg-zinc-100 rounded-[28px] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-2xl shadow-black/20 relative">
               <Image 
                 src="/logoX.png" 
                 alt="Logo" 
-                width={32} 
-                height={32} 
-                className="object-contain"
+                fill 
+                sizes="32px"
+                className="object-contain p-4"
                 priority
               />
             </div>

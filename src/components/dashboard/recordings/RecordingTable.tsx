@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Video } from "lucide-react";
 import { RecordingRow } from "./RecordingRow";
 import { Meeting } from "@/types/meeting";
@@ -17,7 +17,7 @@ interface RecordingTableProps {
   renderHighlightedText: (text: string, query: string) => React.ReactNode;
 }
 
-export function RecordingTable({
+export const RecordingTable = memo(function RecordingTable({
   isLoading,
   error,
   recordings,
@@ -127,4 +127,4 @@ export function RecordingTable({
         )}
       </div>
   );
-}
+});

@@ -43,8 +43,8 @@ export default function ForgotPasswordClient() {
             <Image
               src="/logoX.png"
               alt="SupersmartX AI Logo"
-              width={56}
-              height={56}
+              fill
+              sizes="56px"
               className="object-contain"
               priority
             />

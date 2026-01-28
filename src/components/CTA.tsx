@@ -44,8 +44,14 @@ export default function CTA() {
             <div className="flex items-center gap-6 pt-4">
               <div className="flex -space-x-3">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-10 h-10 rounded-full border-2 border-zinc-900 bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
-                    <Image src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" width={40} height={40} className="rounded-full" />
+                  <div key={i} className="w-10 h-10 rounded-full border-2 border-zinc-900 bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-white overflow-hidden relative">
+                    <Image 
+                      src={`https://i.pravatar.cc/100?img=${i + 10}`} 
+                      alt="User" 
+                      fill 
+                      sizes="40px"
+                      className="rounded-full object-cover" 
+                    />
                   </div>
                 ))}
                 <div className="w-10 h-10 rounded-full border-2 border-zinc-900 bg-brand-gradient flex items-center justify-center text-[10px] font-bold text-white">

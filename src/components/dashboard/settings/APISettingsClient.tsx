@@ -21,7 +21,11 @@ import {
 import { updateUserApiKey, validateApiKey } from "@/actions/meeting"
 import { UserSettings } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
-import { Toast } from "@/components/Toast"
+import dynamic from "next/dynamic"
+
+const Toast = dynamic(() => import("@/components/Toast").then(mod => mod.Toast), {
+  ssr: false
+})
 
 type APISettingsState = {
   apiKeys: Record<string, string>

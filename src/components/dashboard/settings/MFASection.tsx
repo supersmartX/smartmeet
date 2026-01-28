@@ -179,9 +179,9 @@ export function MFASection({
                     <Image 
                       src={qrCodeUrl} 
                       alt="MFA QR Code" 
-                      width={192} 
-                      height={192} 
-                      className="w-full h-full"
+                      fill
+                      sizes="192px" 
+                      className="w-full h-full object-contain"
                       unoptimized
                     />
                   </div>

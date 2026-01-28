@@ -20,8 +20,7 @@ export default function Navbar() {
             <Image
               src="/logoX.png"
               alt="SupersmartX AI - Meeting Intelligence Logo"
-              width={32}
-              height={32}
+              fill
               sizes="32px"
               className="object-contain"
               priority

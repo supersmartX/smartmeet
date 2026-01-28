@@ -8,10 +8,14 @@ import { highlightText } from "@/utils/text"
 import { Search, Plus, Video, ArrowRight, Sparkles, Zap, ShieldCheck, Calendar, HardDrive, Users } from "lucide-react"
 import { getMeetings, getDashboardStats, getActionItems, updateActionItemStatus } from "@/actions/meeting"
 import { Meeting, DashboardStat, ActionItem } from "@/types/meeting"
-import { useToast } from "@/hooks/useToast"
-import { Toast } from "@/components/Toast"
 import { useRouter } from "next/navigation"
 import { Activity, CheckCircle2, Circle } from "lucide-react"
+import { useToast } from "@/hooks/useToast"
+import dynamic from "next/dynamic"
+
+const Toast = dynamic(() => import("@/components/Toast").then(mod => mod.Toast), {
+  ssr: false
+})
 
 export default function DashboardClient() {
   const { data: session } = useSession()
@@ -270,7 +274,13 @@ export default function DashboardClient() {
                   >
                     <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-zinc-400 group-hover:text-brand-via transition-colors shrink-0 overflow-hidden relative">
                       {rec.image ? (
-                        <Image src={rec.image} alt="" fill className="object-cover" />
+                        <Image 
+                          src={rec.image} 
+                          alt="" 
+                          fill 
+                          sizes="64px"
+                          className="object-cover" 
+                        />
                       ) : (
                         <Video className="w-6 h-6" />
                       )}

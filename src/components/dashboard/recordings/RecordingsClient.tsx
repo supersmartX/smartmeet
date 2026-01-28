@@ -16,11 +16,18 @@ import {
 import { Meeting } from "@/types/meeting"
 import logger from "@/lib/logger"
 import { useToast } from "@/hooks/useToast"
-import { Toast } from "@/components/Toast"
 import { RecordingHeader } from "@/components/dashboard/recordings/RecordingHeader"
 import { RecordingTabs } from "@/components/dashboard/recordings/RecordingTabs"
 import { RecordingTable } from "@/components/dashboard/recordings/RecordingTable"
-import { UploadModal } from "@/components/dashboard/recordings/UploadModal"
+import dynamic from "next/dynamic"
+
+const UploadModal = dynamic(() => import("@/components/dashboard/recordings/UploadModal").then(mod => mod.UploadModal), {
+  loading: () => null
+})
+
+const Toast = dynamic(() => import("@/components/Toast").then(mod => mod.Toast), {
+  ssr: false
+})
 import { supabase } from "@/lib/supabase"
 
 type RecordingsState = {

@@ -82,12 +82,16 @@ export async function createSignedUploadUrl(fileName: string): Promise<ActionRes
 
     if (!supabaseAdmin) throw new Error("Storage service not configured");
 
+    const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'recordings';
     const { data, error } = await supabaseAdmin
       .storage
-      .from('recordings')
+      .from(bucketName)
       .createSignedUploadUrl(path, { upsert: true });
 
-    if (error) throw error;
+    if (error) {
+      logger.error({ error, bucket: bucketName, path }, "Supabase storage upload URL error");
+      throw new Error(`Storage error: ${error.message}. Please ensure the '${bucketName}' bucket exists in Supabase.`);
+    }
 
     return { 
       success: true, 
@@ -109,12 +113,16 @@ export async function createSignedDownloadUrl(path: string, expiresIn: number = 
   try {
     if (!supabaseAdmin) throw new Error("Storage service not configured");
 
+    const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'recordings';
     const { data, error } = await supabaseAdmin
       .storage
-      .from('recordings')
+      .from(bucketName)
       .createSignedUrl(path, expiresIn);
 
-    if (error) throw error;
+    if (error) {
+      logger.error({ error, bucket: bucketName, path }, "Supabase storage download URL error");
+      throw new Error(`Storage error: ${error.message}. Please ensure the '${bucketName}' bucket exists.`);
+    }
 
     return { success: true, data: data.signedUrl };
   } catch (error: unknown) {
