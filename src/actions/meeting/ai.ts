@@ -46,14 +46,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
     const user = meeting.user;
 
     // 2. Prepare AI Configuration
-    const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel, deepgramKey } = await getAIConfiguration(user);
-
-    if (!effectiveApiKey) {
-      throw new AppError("No API key configured. Please add your API key in Settings.", "ERR_CONFIG_MISSING");
-    }
-
-    // Transcription requires deepgramKey
-    const transcriptionKey = deepgramKey || effectiveApiKey;
+    const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel } = await getAIConfiguration(user);
 
     // 3. Check Storage Configuration
     if (!supabaseAdmin) {
@@ -112,10 +105,10 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
               return await getProviderBreaker(finalProvider).execute(async () => {
                 logger.info({ meetingId, provider: finalProvider, isDocument }, "Triggering AWS transcription");
                 const res = isDocument 
-                  ? await transcribeDocument(audioBlob, effectiveApiKey, user.defaultLanguage || undefined)
+                  ? await transcribeDocument(audioBlob, effectiveApiKey || undefined, user.defaultLanguage || undefined)
                   : await transcribeAudio(
                       new File([audioBlob], meeting.audioUrl?.split('/').pop() || 'audio.mp3', { type: audioBlob.type || 'audio/mpeg' }),
-                      transcriptionKey, 
+                      "", // Backend uses its own Deepgram key
                       user.defaultLanguage || undefined
                     );
                 
@@ -168,7 +161,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
           async () => {
             return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await summarizeText(transcription, { 
-                api_key: effectiveApiKey, 
+                api_key: effectiveApiKey || undefined, 
                 provider: normalizeProvider(finalProvider, 'upper') as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
                 summary_length: user.summaryLength || undefined,
                 summary_persona: user.summaryPersona || undefined,
@@ -198,7 +191,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
               async () => {
                 return await getProviderBreaker(finalProvider).execute(async () => {
                   const res = await generatePlan(transcription, {
-                    api_key: effectiveApiKey,
+                    api_key: effectiveApiKey || undefined,
                     provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
                     model: finalModel || undefined
                   });
@@ -229,7 +222,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
           async () => {
             return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await generateCode(transcription, { 
-                api_key: effectiveApiKey, 
+                api_key: effectiveApiKey || undefined, 
                 provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
                 model: finalModel || undefined
               });
@@ -254,7 +247,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
           async () => {
             return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await testCode(code, { 
-                api_key: effectiveApiKey, 
+                api_key: effectiveApiKey || undefined, 
                 provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : normalizeProvider(finalProvider, 'lower') as "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom"
               });
               // We don't throw error if test fails, just record it

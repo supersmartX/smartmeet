@@ -5,7 +5,6 @@ import {
   Key,
   Cpu,
   Zap,
-  Server,
   ChevronRight,
   ExternalLink,
   EyeOff,
@@ -112,11 +111,6 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
       { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B (Groq)' },
       { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Groq)' },
       { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (Groq)' },
-    ],
-    deepgram: [
-      { id: 'nova-2', name: 'Deepgram Nova-2 (Recommended)' },
-      { id: 'nova-2-meeting', name: 'Deepgram Nova-2 Meeting' },
-      { id: 'base', name: 'Deepgram Base' },
     ]
   }
 
@@ -130,11 +124,8 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
   const handleSave = async () => {
     dispatch({ type: 'SET_SAVING', payload: true })
     try {
-      // Ensure we're saving all relevant keys including deepgram
-      const updatedKeys = { ...apiKeys };
-      
       const result = await updateUserApiKey({
-        apiKeys: updatedKeys,
+        apiKeys,
         preferredProvider: provider,
         preferredModel: model,
         allowedIps,
@@ -366,8 +357,8 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
 
               <div className="flex flex-col gap-2">
                 {!apiKey && (
-                  <p className="text-[9px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/5 border border-red-500/10">
-                    <AlertTriangle className="w-3 h-3" /> No API key configured for {provider}. LLM features will not work.
+                  <p className="text-[9px] font-bold text-brand-via uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-via/5 border border-brand-via/10">
+                    <Info className="w-3 h-3" /> No personal API key configured. Using system default for {provider}.
                   </p>
                 )}
                 {apiKey && !detectProvider(apiKey) && (
@@ -471,80 +462,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
         )}
       </section>
 
-      {/* Deepgram Speech-to-Text API Section */}
-    <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-via/10 flex items-center justify-center">
-            <Server className="w-5 h-5 text-brand-via" />
-          </div>
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">🎙️ Deepgram Speech-to-Text API</h2>
-            <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight">Configure high-accuracy transcription service</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-8 space-y-8">
-        <div className="bg-zinc-50/50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-6 space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <label htmlFor="deepgram-key-input" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-                  Deepgram API Key
-                </label>
-                {!!apiKeys['deepgram'] && (
-                  <span className="flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
-                    <Check className="w-2.5 h-2.5" /> Configured
-                  </span>
-                )}
-              </div>
-              <a
-                href="https://console.deepgram.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[9px] font-black text-brand-via uppercase tracking-widest flex items-center gap-1 hover:underline"
-              >
-                Get Deepgram Key <ExternalLink className="w-2.5 h-2.5" />
-              </a>
-            </div>
-
-            <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors">
-                <Key className={`w-4 h-4 ${apiKeys['deepgram'] ? "text-brand-via" : "text-zinc-300"}`} />
-              </div>
-              <input
-                id="deepgram-key-input"
-                type={showKey ? "text" : "password"}
-                value={apiKeys['deepgram'] || ""}
-                onChange={(e) => setApiKey('deepgram', e.target.value)}
-                placeholder="Enter your Deepgram API key"
-                className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-11 pr-24 text-xs font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-via/20 transition-all shadow-sm"
-              />
-            </div>
-
-            <div className="space-y-4">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">Transcription Model</label>
-              <select
-                value={apiKeys['deepgram_model'] || 'nova-2'}
-                onChange={(e) => setApiKey('deepgram_model', e.target.value)}
-                className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 appearance-none"
-              >
-                {providerModels['deepgram'].map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <p className="text-[10px] text-zinc-400 font-medium italic">
-              Deepgram is used exclusively for converting meeting audio into high-quality text.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-        {/* API Usage Information */}
+      {/* API Usage Information */}
         <section className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 rounded-lg bg-zinc-500/10 flex items-center justify-center text-zinc-500">

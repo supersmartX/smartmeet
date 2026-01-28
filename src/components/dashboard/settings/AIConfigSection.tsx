@@ -14,7 +14,8 @@ import {
   Save,
   CheckCircle2,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Info
 } from "lucide-react";
 
 interface Model {
@@ -193,8 +194,7 @@ export function AIConfigSection({
                 href={
                   provider === 'openai' ? "https://platform.openai.com/api-keys" :
                   provider === 'google' ? "https://aistudio.google.com/app/apikey" :
-                  provider === 'groq' ? "https://console.groq.com/keys" :
-                  provider === 'deepgram' ? "https://console.deepgram.com/" : "#"
+                  provider === 'groq' ? "https://console.groq.com/keys" : "#"
                 }
                 target="_blank"
                 rel="noopener noreferrer"
@@ -216,8 +216,7 @@ export function AIConfigSection({
                 placeholder={
                   provider === 'openai' ? "sk-..." :
                   provider === 'google' ? "AIza..." :
-                  provider === 'groq' ? "gsk_..." :
-                  provider === 'deepgram' ? "Enter your Deepgram key" : "Enter your key"
+                  provider === 'groq' ? "gsk_..." : "Enter your key"
                 }
                 className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-11 pr-24 text-xs font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-via/20 transition-all shadow-sm"
               />
@@ -244,8 +243,8 @@ export function AIConfigSection({
 
             <div className="flex flex-col gap-2">
               {!currentKey && provider !== 'custom' && (
-                <p className="text-[9px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/5 border border-red-500/10">
-                  <AlertTriangle className="w-3 h-3" /> No API key configured for {provider}. AI features will not work.
+                <p className="text-[9px] font-bold text-brand-via uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-via/5 border border-brand-via/10">
+                  <Info className="w-3 h-3" /> No personal API key configured. Using system default for {provider}.
                 </p>
               )}
               {decryptionError && (
@@ -269,7 +268,6 @@ export function AIConfigSection({
                 {provider === 'openai' && "Your API key will be encrypted and used only for requests on your behalf."}
                 {provider === 'google' && "Google Gemini keys can be generated for free in the AI Studio console."}
                 {provider === 'groq' && "Groq provides lightning-fast inference for open-source models like Llama 3."}
-                {provider === 'deepgram' && "Deepgram provides world-class speech-to-text models like Nova-2."}
               </p>
             </div>
           </div>
