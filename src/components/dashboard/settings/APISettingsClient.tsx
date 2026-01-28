@@ -1,6 +1,7 @@
 "use client"
 
 import { useReducer } from "react"
+import { useRouter } from "next/navigation"
 import {
   Key,
   Cpu,
@@ -73,6 +74,7 @@ interface APISettingsClientProps {
 }
 
 export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
+  const router = useRouter()
   const { toast, showToast, hideToast } = useToast()
 
   const [state, dispatch] = useReducer(apiSettingsReducer, {
@@ -141,6 +143,11 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
 
       if (result.success) {
         showToast("API settings saved successfully!")
+        router.refresh()
+        // Force sidebar to update its internal state
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('refreshSidebar'))
+        }
       } else {
         showToast(result.error || "Failed to save API settings.", "error")
       }

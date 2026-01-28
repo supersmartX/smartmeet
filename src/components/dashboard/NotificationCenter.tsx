@@ -33,7 +33,17 @@ export function NotificationCenter() {
     fetchNotifications();
     // Refresh every minute
     const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
+    
+    // Listen for manual refresh events
+    const handleRefresh = () => {
+        fetchNotifications().catch(err => console.error("Notification refresh failed", err));
+    };
+    window.addEventListener('refreshSidebar', handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('refreshSidebar', handleRefresh);
+    }
   }, []);
 
   useEffect(() => {

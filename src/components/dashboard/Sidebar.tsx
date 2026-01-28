@@ -15,7 +15,8 @@ import {
   BarChart3,
   Key,
   User,
-  Users
+  Users,
+  Zap
 } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { getMeetings, getUserSettings } from "@/actions/meeting"
@@ -67,6 +68,12 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
   useEffect(() => {
     fetchRecent()
+
+    const handleRefresh = () => {
+      fetchRecent().catch(err => logger.error({ err }, "Manual sidebar refresh failed"));
+    }
+    window.addEventListener('refreshSidebar', handleRefresh)
+    return () => window.removeEventListener('refreshSidebar', handleRefresh)
   }, [fetchRecent])
 
   // Subscribe to real-time updates for meeting status changes
@@ -119,6 +126,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           icon: isKeyValid === false ? ShieldAlert : Key,
           isWarning: isKeyValid === false
         },
+        { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
+        { name: "Security", href: "/dashboard/security", icon: ShieldAlert },
         { name: "Team", href: "/dashboard/settings/team", icon: Users, upcoming: true },
       ]
     },
