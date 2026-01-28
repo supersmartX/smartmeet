@@ -12,10 +12,10 @@ export type { ApiResponse };
 interface AudioToCodeParams {
   file: File | Blob;
   api_key?: string;
-  summary_provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM";
-  code_provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+  summary_provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "CUSTOM";
+  code_provider?: "openai" | "claude" | "gemini" | "groq" | "custom";
   code_model?: string;
-  test_provider?: "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+  test_provider?: "local" | "openai" | "claude" | "gemini" | "groq" | "custom";
 }
 
 interface TranscriptionResponse {
@@ -367,7 +367,7 @@ export async function buildPrompt(
   options: {
     context?: string;
     api_key?: string;
-    provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+    provider?: "openai" | "claude" | "gemini" | "groq" | "custom";
     model?: string;
     language?: string;
   } = {}
@@ -389,7 +389,7 @@ export async function generatePlan(
   description: string,
   options: {
     api_key?: string;
-    provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+    provider?: "openai" | "claude" | "gemini" | "groq" | "custom";
     model?: string;
     language?: string;
   } = {}
@@ -410,7 +410,7 @@ export async function summarizeText(
   text: string,
   options: {
     api_key?: string;
-    provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM";
+    provider?: "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "CUSTOM";
     model?: string;
     summary_length?: string;
     summary_persona?: string;
@@ -435,7 +435,7 @@ export async function generateCode(
   task: string,
   options: {
     api_key?: string;
-    provider?: "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+    provider?: "openai" | "claude" | "gemini" | "groq" | "custom";
     model?: string;
   } = {}
 ): Promise<ApiResponse<CodeGenerationResponse>> {
@@ -454,7 +454,7 @@ export async function testCode(
   code: string,
   options: {
     api_key?: string;
-    provider?: "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom";
+    provider?: "local" | "openai" | "claude" | "gemini" | "groq" | "custom";
     model?: string;
   } = {}
 ): Promise<ApiResponse<TestResponse>> {
@@ -464,6 +464,20 @@ export async function testCode(
     api_key: options.api_key || null,
     model: options.model || null
   });
+}
+
+/**
+ * Get current model info
+ */
+export async function getModelInfo(): Promise<ApiResponse<Record<string, string>>> {
+  return makeApiRequest<Record<string, string>>("/model-info", "GET");
+}
+
+/**
+ * Check backend health
+ */
+export async function checkBackendHealth(): Promise<ApiResponse<{ status: string }>> {
+  return makeApiRequest<{ status: string }>("/", "GET");
 }
 
 /**

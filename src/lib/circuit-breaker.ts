@@ -107,7 +107,6 @@ export const providerBreakers: Record<string, RedisCircuitBreaker> = {
   claude: new RedisCircuitBreaker({ serviceName: "ai-claude", failureThreshold: 5, resetTimeout: 60000 }),
   gemini: new RedisCircuitBreaker({ serviceName: "ai-gemini", failureThreshold: 5, resetTimeout: 60000 }),
   groq: new RedisCircuitBreaker({ serviceName: "ai-groq", failureThreshold: 5, resetTimeout: 60000 }),
-  openrouter: new RedisCircuitBreaker({ serviceName: "ai-openrouter", failureThreshold: 5, resetTimeout: 60000 }),
 };
 
 export function getProviderBreaker(provider: string): RedisCircuitBreaker {

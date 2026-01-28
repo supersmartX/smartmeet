@@ -24,7 +24,6 @@ export function normalizeProvider(provider: string, casing: 'upper' | 'lower'): 
       'claude': 'CLAUDE',
       'gemini': 'GEMINI',
       'groq': 'GROQ',
-      'openrouter': 'OPENROUTER',
       'custom': 'CUSTOM'
     };
     return upperMap[p] || p.toUpperCase();

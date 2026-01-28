@@ -41,11 +41,10 @@ export async function getAIConfiguration(user: { id?: string; apiKey: string | n
     "google": "gemini",
     "openai": "openai",
     "groq": "groq",
-    "openrouter": "openrouter",
     "custom": "custom"
   };
 
-  const provider = providerMap[rawProvider] || rawProvider;
+  const provider = providerMap[rawProvider] || "openai";
 
   return { apiKey, provider, rawProvider, model };
 }

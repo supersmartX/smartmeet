@@ -171,13 +171,6 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
       { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Groq)' },
       { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (Groq)' },
     ],
-    openrouter: [
-      { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (via OpenRouter)' },
-      { id: 'openai/gpt-4o', name: 'GPT-4o (via OpenRouter)' },
-      { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B (via OpenRouter)' },
-      { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5 (via OpenRouter)' },
-      { id: 'deepseek/deepseek-chat', name: 'DeepSeek V2.5 (via OpenRouter)' },
-    ],
     custom: [
       { id: 'custom-model', name: 'Use Provider Default' },
     ]

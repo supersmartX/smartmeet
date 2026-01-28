@@ -11,7 +11,7 @@ SupersmartX is a high-performance meeting intelligence platform that transforms 
 - **Logging**: Pino (Structured Logging)
 - **Testing**: Jest
 - **Caching**: Redis-backed cache layer
-- **AI Infrastructure**: Multi-provider support (OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter)
+- **AI Infrastructure**: Multi-provider support (OpenAI, Anthropic Claude, Google Gemini, Groq)
 
 ## Core Architecture Patterns
 ### Layered Architecture

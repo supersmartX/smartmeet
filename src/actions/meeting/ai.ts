@@ -162,7 +162,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await summarizeText(transcription, { 
                 api_key: effectiveApiKey || undefined, 
-                provider: normalizeProvider(finalProvider, 'upper') as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+                provider: normalizeProvider(finalProvider, 'upper') as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "CUSTOM",
                 summary_length: user.summaryLength || undefined,
                 summary_persona: user.summaryPersona || undefined,
                 language: user.defaultLanguage || undefined
@@ -192,7 +192,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                 return await getProviderBreaker(finalProvider).execute(async () => {
                   const res = await generatePlan(transcription, {
                     api_key: effectiveApiKey || undefined,
-                    provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+                    provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "custom",
                     model: finalModel || undefined
                   });
                   return res.success ? res.data : null;
@@ -223,7 +223,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await generateCode(transcription, { 
                 api_key: effectiveApiKey || undefined, 
-                provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+                provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "custom",
                 model: finalModel || undefined
               });
               if (!res.success) throw new Error(res.error?.message || "Code generation failed");
@@ -248,7 +248,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             return await getProviderBreaker(finalProvider).execute(async () => {
               const res = await testCode(code, { 
                 api_key: effectiveApiKey || undefined, 
-                provider: (finalProvider === "openai" || finalProvider === "openrouter") ? "local" : normalizeProvider(finalProvider, 'lower') as "local" | "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom"
+                provider: (finalProvider === "openai") ? "local" : normalizeProvider(finalProvider, 'lower') as "local" | "openai" | "claude" | "gemini" | "groq" | "custom"
               });
               // We don't throw error if test fails, just record it
               return res.data;
@@ -443,7 +443,7 @@ export async function generateMeetingLogic(meetingId: string): Promise<ActionRes
     const result = await getProviderBreaker(finalProvider).execute(async () => {
       return await generateCode(transcription, { 
         api_key: effectiveApiKey, 
-        provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom",
+        provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "custom",
         model: finalModel || undefined
       });
     });
@@ -497,7 +497,7 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
 
     const result = await summarizeText(promptResult.data.prompt, { 
       api_key: effectiveApiKey, 
-      provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM"
+      provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "CUSTOM"
     });
 
     if (result.success && result.data) {
@@ -536,7 +536,7 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
 
     const result = await summarizeText(transcription, { 
       api_key: effectiveApiKey, 
-      provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "OPENROUTER" | "CUSTOM",
+      provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "CUSTOM",
       summary_length: meeting.user.summaryLength || undefined,
       summary_persona: meeting.user.summaryPersona || undefined,
       language: meeting.user.defaultLanguage || undefined
@@ -617,7 +617,7 @@ export async function generateMeetingPlan(meetingId: string): Promise<ActionResu
 
     const result = await generatePlan(transcription, { 
       api_key: effectiveApiKey, 
-      provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "openrouter" | "custom" 
+      provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "custom" 
     });
 
     if (result.success && result.data) {

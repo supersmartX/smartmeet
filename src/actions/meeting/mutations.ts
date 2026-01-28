@@ -231,17 +231,6 @@ export async function validateApiKey(provider: string, key: string): Promise<Act
           errorMessage = "Failed to reach Groq API.";
         }
         break;
-      case 'openrouter':
-        try {
-          const response = await fetch("https://openrouter.ai/api/v1/models", {
-            headers: { "Authorization": `Bearer ${key}` }
-          });
-          isValid = response.status === 200;
-          if (!isValid) errorMessage = "Invalid OpenRouter API key.";
-        } catch {
-          errorMessage = "Failed to reach OpenRouter API.";
-        }
-        break;
       default:
         // For custom or unknown, we just check if it's not empty
         isValid = key.length > 5;

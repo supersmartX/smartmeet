@@ -38,7 +38,9 @@ import {
   Loader2,
   ShieldCheck,
   Download,
-  AlertCircle
+  AlertCircle,
+  Maximize2,
+  Minimize2
 } from "lucide-react"
 
 /* --------------------------- COMPONENT ---------------------------- */
@@ -190,6 +192,10 @@ export default function RecordingDetailPage() {
       }
     }
   }, [isResizing])
+
+  const toggleTerminalSize = useCallback(() => {
+    setTerminalHeight(prev => prev > 300 ? 192 : 400)
+  }, [])
 
   useEffect(() => {
     window.addEventListener("mousemove", resize)
@@ -555,7 +561,7 @@ export default function RecordingDetailPage() {
       {/* Editor Header / Breadcrumbs (Local) */}
       <div className="h-auto min-h-10 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 shrink-0 gap-3">
         <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest overflow-hidden shrink-0">
+          <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest overflow-hidden shrink-0">
             <Link href="/dashboard" className="hover:text-brand-via transition-colors shrink-0 hidden xs:inline">smartmeet</Link>
             <ChevronRight className="w-3 h-3 shrink-0 hidden xs:inline" />
             <Link href="/dashboard/recordings" className="hover:text-brand-via transition-colors shrink-0">recordings</Link>
@@ -576,20 +582,20 @@ export default function RecordingDetailPage() {
                         : 'bg-zinc-300 dark:bg-zinc-700'
                 }`} />
                 <div className="flex flex-col">
-                  <span className={`text-[8px] font-black uppercase tracking-tighter leading-none ${
+                  <span className={`text-[10px] font-black uppercase tracking-tighter leading-none ${
                     step.status === 'completed' ? 'text-zinc-900 dark:text-zinc-100' : step.status === 'processing' ? 'text-brand-via' : step.status === 'failed' ? 'text-red-500' : 'text-zinc-400'
                   }`}>
                     {step.label}
                   </span>
-                  <span className="text-[7px] font-bold text-zinc-400 uppercase tracking-tighter">
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-tighter">
                     {step.status === 'completed' ? 'Verified' : step.status === 'processing' ? 'Processing...' : step.status === 'failed' ? 'Failed' : 'Pending'}
                   </span>
                 </div>
                 {i < journeySteps.length - 1 && <div className="w-6 h-[1px] bg-zinc-200 dark:bg-zinc-800 ml-2" />}
                 
                 {/* Hover Tooltip */}
-                <div className="absolute top-full left-0 mt-2 py-2 px-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[8px] font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-50 pointer-events-none shadow-2xl border border-white/10 dark:border-black/5 -translate-y-1 group-hover:translate-y-0">
-                  <p className="mb-1 uppercase tracking-widest text-[7px] opacity-50">{step.label}</p>
+                <div className="absolute top-full left-0 mt-2 py-2 px-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-50 pointer-events-none shadow-2xl border border-white/10 dark:border-black/5 -translate-y-1 group-hover:translate-y-0">
+                  <p className="mb-1 uppercase tracking-widest text-[9px] opacity-50">{step.label}</p>
                   <p className="tracking-tight">{step.description}</p>
                 </div>
               </div>
@@ -597,12 +603,15 @@ export default function RecordingDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400">
+          <div className="flex items-center gap-2 text-xs font-bold text-zinc-500">
             <Clock className="w-3 h-3" /> {meeting?.duration || "--m"}
             <Users className="w-3 h-3 ml-2" /> {meeting?.participants || "--"}
           </div>
           <div className="h-4 w-[1px] bg-zinc-200 dark:border-zinc-800" />
-          <button className="text-[10px] font-bold text-brand-via hover:underline uppercase tracking-widest flex items-center gap-1.5">
+          <button 
+            aria-label="Share recording"
+            className="text-xs font-bold text-brand-via hover:underline uppercase tracking-widest flex items-center gap-1.5"
+          >
             <Share2 className="w-3 h-3" /> Share
           </button>
         </div>
@@ -634,9 +643,9 @@ export default function RecordingDetailPage() {
       {/* Audio Player */}
       {meeting?.audioUrl && (
         <div className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 py-2 flex items-center gap-4 shrink-0 overflow-hidden">
-          <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
             <Video className="w-4 h-4 shrink-0" />
-            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Recording</span>
+            <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Recording</span>
           </div>
           <audio 
             src={meeting.audioUrl} 
@@ -654,12 +663,13 @@ export default function RecordingDetailPage() {
             <div className="px-4 sm:px-8 py-4 border-b border-zinc-100 dark:border-zinc-900 sticky top-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-10">
               <div className="relative max-w-md group">
                 <input
+                  aria-label="Search transcript"
                   placeholder="Search in transcript..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-10 pr-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-via transition-all"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-10 pr-4 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-via transition-all"
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 group-focus-within:text-brand-via" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-brand-via" />
               </div>
             </div>
           )}
@@ -1081,27 +1091,37 @@ export default function RecordingDetailPage() {
         </div>
         <div 
           style={{ height: terminalHeight }}
-          className="border-t border-zinc-200 dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-900/50 shrink-0 relative"
+          className="border-t border-zinc-200 dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-900/50 shrink-0 relative transition-[height] duration-300 ease-in-out"
         >
           {/* Terminal Tabs */}
-          <div className="flex bg-zinc-100/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 px-4 shrink-0">
-            <button 
-              onClick={() => setTerminalTab("chat")}
-              className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all relative ${
-                terminalTab === "chat" ? "text-brand-via" : "text-zinc-400"
-              }`}
+          <div className="flex bg-zinc-100/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 px-4 shrink-0 justify-between items-center">
+            <div className="flex">
+              <button 
+                onClick={() => setTerminalTab("chat")}
+                className={`px-4 py-2 text-xs font-black uppercase tracking-widest transition-all relative ${
+                  terminalTab === "chat" ? "text-brand-via" : "text-zinc-500 dark:text-zinc-400"
+                }`}
+              >
+                AI Assistant
+                {terminalTab === "chat" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-via" />}
+              </button>
+              <button 
+                onClick={() => setTerminalTab("context")}
+                className={`px-4 py-2 text-xs font-black uppercase tracking-widest transition-all relative ${
+                  terminalTab === "context" ? "text-brand-via" : "text-zinc-500 dark:text-zinc-400"
+                }`}
+              >
+                Technical Context
+                {terminalTab === "context" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-via" />}
+              </button>
+            </div>
+            
+            <button
+              onClick={toggleTerminalSize}
+              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors text-zinc-500"
+              aria-label={terminalHeight > 300 ? "Minimize terminal" : "Maximize terminal"}
             >
-              AI Assistant
-              {terminalTab === "chat" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-via" />}
-            </button>
-            <button 
-              onClick={() => setTerminalTab("context")}
-              className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all relative ${
-                terminalTab === "context" ? "text-brand-via" : "text-zinc-400"
-              }`}
-            >
-              Technical Context
-              {terminalTab === "context" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-via" />}
+              {terminalHeight > 300 ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
           </div>
 
@@ -1214,14 +1234,16 @@ export default function RecordingDetailPage() {
           <div className="p-4 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 shrink-0">
             <form onSubmit={handleAskAI} className="max-w-4xl mx-auto relative group">
               <input 
+                aria-label="Ask AI about meeting"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Ask your AI meeting assistant..."
-                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl pl-12 pr-12 py-3 text-xs focus:outline-none focus:ring-4 focus:ring-brand-via/10 focus:border-brand-via transition-all"
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl pl-12 pr-12 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-brand-via/10 focus:border-brand-via transition-all"
               />
-              <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand-via transition-colors" />
+              <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-brand-via transition-colors" />
               <button 
                 type="submit"
+                aria-label="Send message"
                 disabled={isAnswering || !prompt.trim()}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-brand-via text-white rounded-xl hover:scale-105 transition-all disabled:opacity-50 disabled:scale-100 shadow-glow"
               >
