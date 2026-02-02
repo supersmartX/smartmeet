@@ -371,49 +371,48 @@ export default function RecordingDetailPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden">
+    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-500 bg-white dark:bg-zinc-950 min-h-screen">
       <Toast {...toast} onClose={hideToast} />
-      {/* Editor Header / Breadcrumbs (Local) */}
+      
       <MeetingHeader meeting={meeting} journeySteps={journeySteps} />
 
-      {/* Editor Tab Bar */}
-      <MeetingTabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
-
-      {/* Audio Player */}
-      {meeting?.audioUrl && (
-        <div className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 py-2 flex items-center gap-4 shrink-0 overflow-hidden">
-          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-            <Video className="w-4 h-4 shrink-0" />
-            <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Recording</span>
-          </div>
-          <audio 
-            src={meeting.audioUrl} 
-            controls 
-            className="h-8 flex-1 max-w-2xl filter dark:invert opacity-80 hover:opacity-100 transition-opacity"
-          />
+      <div className="space-y-8">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-zinc-100 dark:border-zinc-900">
+           <MeetingTabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
+           
+           {meeting?.audioUrl && (
+            <div className="w-full lg:w-auto bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-4 py-2.5 rounded-xl flex items-center gap-4 shadow-sm">
+              <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
+                  <Video className="w-4 h-4 text-zinc-500" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Original Audio</span>
+              </div>
+              <audio 
+                src={meeting.audioUrl} 
+                controls 
+                className="h-8 w-full sm:w-64 lg:w-80 filter dark:invert opacity-80 hover:opacity-100 transition-opacity"
+              />
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Editor Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-950">
+        <div className="grid grid-cols-1 gap-8">
           {/* Search bar for transcript */}
           {activeTab === "transcript" && (
-            <div className="px-4 sm:px-8 py-4 border-b border-zinc-100 dark:border-zinc-900 sticky top-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-10">
-              <div className="relative max-w-md group">
-                <input
-                  aria-label="Search transcript"
-                  placeholder="Search in transcript..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-10 pr-4 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-via transition-all"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-brand-via" />
-              </div>
+            <div className="relative max-w-2xl group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand-via transition-colors" />
+              <input
+                aria-label="Search transcript"
+                placeholder="Search in transcript..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl pl-14 pr-6 py-4 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-brand-via/10 focus:border-brand-via transition-all shadow-sm placeholder:text-zinc-400"
+              />
             </div>
           )}
 
-          <div className="p-4 sm:p-8">
+          <div className="min-h-[400px]">
             {meeting?.status === 'FAILED' && (
               <div className="mb-8 p-6 bg-red-500/5 border border-red-500/20 rounded-3xl flex flex-col items-center text-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                 <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center">
@@ -437,37 +436,37 @@ export default function RecordingDetailPage() {
             )}
 
             {activeTab === "transcript" && (
-              <div className="space-y-8 max-w-3xl">
+              <div className="space-y-6 max-w-4xl">
                 {meeting?.transcripts?.length > 0 ? (
                   filteredTranscript.map((item: Transcript, i: number) => (
-                    <div key={i} className="flex gap-4 group">
-                      <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800 group-hover:border-brand-via transition-colors">
+                    <div key={i} className="flex gap-6 group p-4 rounded-3xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors border border-transparent hover:border-zinc-100 dark:hover:border-zinc-800">
+                      <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-xs font-black text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800 group-hover:border-brand-via transition-colors shadow-sm">
                         {item.speaker[0]}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{renderHighlightedText(item.speaker, searchQuery)}</span>
-                          <span className="text-[10px] text-zinc-400 font-medium">{item.time}</span>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">{renderHighlightedText(item.speaker, searchQuery)}</span>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-zinc-100 dark:bg-zinc-900 px-2 py-1 rounded-lg">{item.time}</span>
                           {item.confidence && (
-                            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20 ml-1">
-                              {Math.round(item.confidence * 100)}% Confidence
+                            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                              {Math.round(item.confidence * 100)}% Match
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                        <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
                           {renderHighlightedText(item.text, searchQuery)}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800">
-                      <MessageSquare className="w-6 h-6 text-zinc-300 dark:text-zinc-600" />
+                  <div className="flex flex-col items-center justify-center py-20 text-center gap-6 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-[32px] bg-zinc-50/50 dark:bg-zinc-900/20">
+                    <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-xl">
+                      <MessageSquare className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-1">No transcript available</h3>
-                      <p className="text-[10px] text-zinc-500 font-medium">The transcript for this meeting is currently being processed.</p>
+                      <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-2">No transcript available</h3>
+                      <p className="text-sm text-zinc-500 font-medium max-w-xs mx-auto">The transcript for this meeting is currently being processed or could not be generated.</p>
                     </div>
                   </div>
                 )}
@@ -475,23 +474,23 @@ export default function RecordingDetailPage() {
             )}
 
             {activeTab === "summary" && (
-              <div className="max-w-3xl animate-in fade-in duration-500">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-                      <Sparkles className="w-5 h-5 text-brand-via" />
+              <div className="max-w-4xl animate-in fade-in duration-500">
+                <div className="flex items-center justify-between mb-8 p-6 bg-brand-via/5 border border-brand-via/10 rounded-3xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20 shadow-lg shadow-brand-via/5">
+                      <Sparkles className="w-6 h-6 text-brand-via" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Executive Summary</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">AI-Generated Insights</p>
+                      <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Executive Summary</h2>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">AI-Generated Insights & Action Items</p>
                     </div>
                   </div>
                   <button 
                     onClick={handleGenerateSummary}
                     disabled={isGeneratingSummary}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200 dark:border-zinc-700"
+                    className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all border border-zinc-200 dark:border-zinc-800 shadow-sm"
                   >
-                    {isGeneratingSummary ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    {isGeneratingSummary ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-brand-via" />}
                     {isGeneratingSummary ? "Regenerating..." : "Regenerate"}
                   </button>
                 </div>

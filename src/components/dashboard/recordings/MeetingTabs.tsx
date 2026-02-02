@@ -18,23 +18,24 @@ interface MeetingTabsProps {
 
 export function MeetingTabs({ tabs, activeTab, onTabChange }: MeetingTabsProps) {
   return (
-    <div className="flex bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto no-scrollbar shrink-0">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-zinc-100/50 dark:bg-zinc-900/50 p-1.5 rounded-[20px] sm:rounded-[24px] border border-zinc-200/50 dark:border-zinc-800/50 w-fit shrink-0" role="tablist" aria-label="Meeting views">
       {tabs.filter(t => !t.hidden).map((tab) => {
         const isActive = activeTab === tab.id
         const Icon = tab.icon
         return (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={isActive}
             onClick={() => onTabChange(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 text-[11px] border-r border-zinc-200 dark:border-zinc-800 transition-all min-w-[120px] relative group ${
+            className={`flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[18px] text-sm font-bold transition-all duration-300 ${
               isActive 
-                ? "bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100" 
-                : "text-zinc-500 hover:bg-zinc-200/50 dark:hover:bg-zinc-900/50"
+                ? "bg-white dark:bg-zinc-800 text-brand-via shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700" 
+                : "text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/50 dark:hover:bg-zinc-800/50"
             }`}
           >
-            {isActive && <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-via" />}
-            <Icon className={`w-3.5 h-3.5 ${isActive ? "text-brand-via" : "text-zinc-400"}`} />
-            <span className="truncate font-medium">{tab.label}{tab.ext}</span>
+            <Icon className={`w-4 h-4 ${isActive ? "text-brand-via" : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"}`} />
+            <span>{tab.label}</span>
           </button>
         )
       })}
