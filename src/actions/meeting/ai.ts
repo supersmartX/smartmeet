@@ -28,6 +28,7 @@ import {
 import { getAIConfiguration, enforceRateLimit } from "./utils";
 import { normalizeProvider } from "@/lib/utils";
 import { cache } from "@/lib/cache";
+import { env } from "@/lib/env";
 
 /**
  * Internal processor that runs the full AI pipeline
@@ -81,7 +82,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
         
         const { data: audioBlob, error: downloadError } = await supabaseAdmin
           .storage
-          .from('recordings')
+          .from(env.SUPABASE_STORAGE_BUCKET)
           .download(meeting.audioUrl);
 
         if (downloadError) throw new Error(`Storage error: ${downloadError.message}`);

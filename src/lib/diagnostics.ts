@@ -69,7 +69,9 @@ export class Diagnostics {
 
       if (error) throw error;
 
-      const hasRecordingsBucket = data.some(b => b.name === 'recordings');
+      const { env } = await import("@/lib/env");
+      const bucketName = env.SUPABASE_STORAGE_BUCKET;
+      const hasRecordingsBucket = data.some(b => b.name === bucketName);
 
       return { 
         status: hasRecordingsBucket ? "HEALTHY" : "DEGRADED", 

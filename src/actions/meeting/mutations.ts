@@ -29,6 +29,7 @@ import {
   Meeting,
   MeetingUpdateData
 } from "@/types/meeting";
+import { env } from "@/lib/env";
 
 export async function updateActionItemStatus(id: string, status: "PENDING" | "COMPLETED" | "IN_PROGRESS" | "CANCELLED"): Promise<ActionResult> {
   try {
@@ -332,7 +333,7 @@ export async function deleteMeeting(id: string): Promise<ActionResult> {
       try {
         const { error: storageError } = await supabaseAdmin
           .storage
-          .from('recordings')
+          .from(env.SUPABASE_STORAGE_BUCKET)
           .remove([meeting.audioUrl]);
         
         if (storageError) {

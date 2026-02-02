@@ -28,6 +28,7 @@ const envSchema = z.object({
     { message: "Please replace 'your-supabase-anon-key' with your actual Supabase Anon Key in .env" }
   ),
   SUPABASE_SECRET_KEY: isServer ? z.string().optional() : z.string().optional(),
+  SUPABASE_STORAGE_BUCKET: z.string().default("recordings"),
   
   // Stripe
   STRIPE_SECRET_KEY: isServer ? z.string().optional() : z.string().optional(),
@@ -71,6 +72,7 @@ const _env = envSchema.safeParse({
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+  SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET,
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,

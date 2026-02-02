@@ -9,6 +9,7 @@ import { headers } from "next/headers";
 import { checkApiRateLimit, checkGeneralRateLimit } from "@/lib/rate-limit";
 import { ActionResult } from "@/types/meeting";
 import logger from "@/lib/logger";
+import { env } from "@/lib/env";
 
 /**
  * Helper to get decrypted API key and mapped provider for a user
@@ -110,7 +111,7 @@ export async function createSignedUploadUrl(fileName: string): Promise<ActionRes
 
     if (!supabaseAdmin) throw new Error("Storage service not configured");
 
-    const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'recordings';
+    const bucketName = env.SUPABASE_STORAGE_BUCKET;
     const { data, error } = await supabaseAdmin
       .storage
       .from(bucketName)
@@ -141,7 +142,7 @@ export async function createSignedDownloadUrl(path: string, expiresIn: number = 
   try {
     if (!supabaseAdmin) throw new Error("Storage service not configured");
 
-    const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'recordings';
+    const bucketName = env.SUPABASE_STORAGE_BUCKET;
     const { data, error } = await supabaseAdmin
       .storage
       .from(bucketName)
