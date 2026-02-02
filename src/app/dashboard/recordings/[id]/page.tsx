@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -8,35 +8,23 @@ import { useParams, useRouter } from "next/navigation"
 import { highlightText } from "@/utils/text"
 import { 
   getMeetingById, 
-  generateMeetingLogic, 
-  askAIAboutMeeting,
   generateMeetingSummary,
-  testMeetingCompliance,
-  generateMeetingPlan,
   processMeetingAI,
   enqueueMeetingAI
 } from "@/actions/meeting"
-import { MeetingWithRelations, Transcript, ActionItem } from "@/types/meeting"
+import { MeetingWithRelations, Transcript } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
-import { downloadFile } from "@/services/api"
-import { MeetingHeader, JourneyStep } from "@/components/dashboard/recordings/MeetingHeader"
-import { MeetingTabs, TabConfig, EditorTab } from "@/components/dashboard/recordings/MeetingTabs"
-import { MeetingTerminal } from "@/components/dashboard/recordings/MeetingTerminal"
+import { MeetingHeader } from "@/components/dashboard/recordings/MeetingHeader"
+import { MeetingTabs, EditorTab } from "@/components/dashboard/recordings/MeetingTabs"
 
 import { 
   Video,
   Search, 
   Sparkles, 
-  FileText,
   MessageSquare,
-  Code,
-  CheckCircle2,
-  ArrowRight,
-  Copy,
   Loader2,
   ShieldCheck,
-  Download,
   AlertCircle
 } from "lucide-react"
 
@@ -50,35 +38,12 @@ export default function RecordingDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<EditorTab>("transcript")
-  const [prompt, setPrompt] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [isAnswering, setIsAnswering] = useState(false)
-  const [answer, setAnswer] = useState<string | null>(null)
 
   const { toast, showToast: toastVisible, hideToast } = useToast()
-
-  // Logic Generation State
-  const [isLogicGenerated, setIsLogicGenerated] = useState(false)
-  const [isGeneratingLogic, setIsGeneratingLogic] = useState(false)
   
   // New AI States
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
-  const [isTestingCompliance, setIsTestingCompliance] = useState(false)
-  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
-  const [testResults, setTestResults] = useState<string | null>(null)
-  const [planResult, setPlanResult] = useState<string | null>(null)
-  
-  // Initialize results from meeting data
-  useEffect(() => {
-    if (meeting) {
-      if (meeting.testResults && !testResults) {
-        setTestResults(meeting.testResults)
-      }
-      if (meeting.projectDoc && !planResult) {
-        setPlanResult(meeting.projectDoc)
-      }
-    }
-  }, [meeting, testResults, planResult])
   
   // SSR Protection: Check authentication and authorization
   const { data: session, status } = useSession()
@@ -115,9 +80,6 @@ export default function RecordingDetailPage() {
           if (pollInterval) clearInterval(pollInterval)
         } else {
           setMeeting(result.data)
-          if (result.data?.code) {
-            setIsLogicGenerated(true)
-          }
           
           // Stop polling if completed or failed
           if ((result.data.status === 'COMPLETED' || result.data.status === 'FAILED') && pollInterval) {
@@ -171,72 +133,10 @@ export default function RecordingDetailPage() {
     }
   }, [params.id, isAuthorized, session?.user?.id, meeting?.status])
 
-  // Check if meeting is technical (calculated on backend)
-  const isTechnicalMeeting = meeting?.isTechnical || false
-
-  // Terminal Resize Logic
-  const [terminalHeight, setTerminalHeight] = useState(192) // 48 * 4
-  const [isResizing, setIsResizing] = useState(false)
-
-  const startResizing = useCallback(() => {
-    setIsResizing(true)
-  }, [])
-
-  const stopResizing = useCallback(() => {
-    setIsResizing(false)
-  }, [])
-
-  const resize = useCallback((e: MouseEvent) => {
-    if (isResizing) {
-      const newHeight = window.innerHeight - e.clientY
-      if (newHeight > 30 && newHeight < 800) {
-        setTerminalHeight(newHeight)
-      }
-    }
-  }, [isResizing])
-
-  const toggleTerminalSize = useCallback(() => {
-    setTerminalHeight(prev => prev > 50 ? 40 : 300)
-  }, [])
-
-  useEffect(() => {
-    window.addEventListener("mousemove", resize)
-    window.addEventListener("mouseup", stopResizing)
-    return () => {
-      window.removeEventListener("mousemove", resize)
-      window.removeEventListener("mouseup", stopResizing)
-    }
-  }, [resize, stopResizing])
-
   const tabs = useMemo(() => [
     { id: "transcript", label: "Transcript", icon: MessageSquare, ext: "" },
     { id: "summary", label: "AI Summary", icon: Sparkles, ext: "" },
-    { id: "code", label: "Meeting Logic", icon: Code, ext: "", hidden: !isLogicGenerated && !meeting?.code && meeting?.status !== 'PROCESSING' },
-    { id: "tests", label: "Compliance", icon: CheckCircle2, ext: "", hidden: !isLogicGenerated && !testResults && !meeting?.testResults && meeting?.status !== 'PROCESSING' },
-    { id: "docs", label: "Documentation", icon: FileText, ext: "", hidden: !isLogicGenerated && !planResult && !meeting?.projectDoc && meeting?.status !== 'PROCESSING' },
-  ], [isLogicGenerated, meeting?.code, meeting?.testResults, meeting?.projectDoc, testResults, planResult, meeting?.status]) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
-
-  const handleGenerateLogic = async () => {
-    setIsGeneratingLogic(true)
-    
-    try {
-      const result = await generateMeetingLogic(params.id as string)
-      if (result.success && result.data) {
-        setMeeting((prev: MeetingWithRelations | null) => prev ? { ...prev, code: result.data! } : null)
-        setIsLogicGenerated(true)
-        setIsGeneratingLogic(false)
-        setActiveTab("code")
-        toastVisible("Business logic generated successfully", "success")
-      } else {
-        toastVisible(result.error || "Failed to generate logic", "error")
-        setIsGeneratingLogic(false)
-      }
-    } catch (error) {
-      console.error("Failed to generate logic:", error)
-      toastVisible("An unexpected error occurred while generating logic", "error")
-      setIsGeneratingLogic(false)
-    }
-  }
+  ], []) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
 
   const handleGenerateSummary = async () => {
     setIsGeneratingSummary(true)
@@ -255,69 +155,6 @@ export default function RecordingDetailPage() {
       toastVisible("An unexpected error occurred while generating summary", "error")
     } finally {
       setIsGeneratingSummary(false)
-    }
-  }
-
-  const handleTestCompliance = async () => {
-    setIsTestingCompliance(true)
-    try {
-      const result = await testMeetingCompliance(params.id as string)
-      if (result.success && result.data) {
-        setTestResults(result.data)
-        setMeeting((prev: MeetingWithRelations | null) => 
-          prev ? { ...prev, testResults: result.data! } : null
-        )
-        toastVisible("Compliance tests completed", "success")
-      } else {
-        toastVisible(result.error || "Failed to run compliance tests", "error")
-      }
-    } catch (error) {
-      console.error("Failed to run compliance tests:", error)
-      toastVisible("An unexpected error occurred during compliance testing", "error")
-    } finally {
-      setIsTestingCompliance(false)
-    }
-  }
-
-  const handleGeneratePlan = async () => {
-    setIsGeneratingPlan(true)
-    try {
-      const result = await generateMeetingPlan(params.id as string)
-      if (result.success && result.data) {
-        setPlanResult(result.data)
-        setMeeting((prev: MeetingWithRelations | null) => 
-          prev ? { ...prev, projectDoc: result.data! } : null
-        )
-        toastVisible("Development plan generated", "success")
-      } else {
-        toastVisible(result.error || "Failed to generate plan", "error")
-      }
-    } catch (error) {
-      console.error("Failed to generate plan:", error)
-      toastVisible("An unexpected error occurred while generating plan", "error")
-    } finally {
-      setIsGeneratingPlan(false)
-    }
-  }
-
-  const handleDownloadDoc = async () => {
-    const docData = planResult || meeting?.projectDoc;
-    if (!docData || !docData.includes("Document saved at:")) {
-      toastVisible("No downloadable document available", "error");
-      return;
-    }
-    
-    try {
-      const path = docData.split(": ")[1].trim();
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://api.supersmartx.com:8000";
-      const downloadUrl = `${baseUrl}/${path}`;
-      const filename = path.split('/').pop() || "project_doc.docx";
-      
-      await downloadFile(downloadUrl, filename);
-      toastVisible("Document download started", "success");
-    } catch (error) {
-      console.error("Download failed:", error);
-      toastVisible("Failed to download document", "error");
     }
   }
 
@@ -357,36 +194,6 @@ export default function RecordingDetailPage() {
     )
   }
 
-  const handleAskAI = async (e?: React.FormEvent, overridePrompt?: string) => {
-    if (e) e.preventDefault()
-    
-    const textToAsk = overridePrompt || prompt
-    if (!textToAsk.trim()) return
-    
-    setIsAnswering(true)
-    setAnswer(null)
-    
-    try {
-      const result = await askAIAboutMeeting(params.id as string, textToAsk)
-      if (result.success && result.data) {
-        setAnswer(result.data)
-        // Only clear prompt if we didn't use an override (i.e., it was a manual typed submission)
-        // Or should we always clear it? If user clicked suggestion, maybe we want to keep it or clear it.
-        // Usually clearing is better.
-        setPrompt("")
-      } else {
-        setAnswer(`Error: ${result.error || "Failed to get an answer from AI."}`)
-      }
-    } catch (error) {
-      console.error("Ask AI error:", error)
-      setAnswer("An unexpected error occurred. Please try again.")
-    } finally {
-      setIsAnswering(false)
-    }
-  }
-
-  const suggestions: string[] = []
-
   const journeySteps = [
     { 
       label: "Captured", 
@@ -402,20 +209,8 @@ export default function RecordingDetailPage() {
       label: "AI Summary", 
       status: meeting?.summary ? "completed" as const : meeting?.processingStep === 'SUMMARIZATION' ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
       description: meeting?.processingStep === 'SUMMARIZATION' ? "Synthesizing themes..." : "Extracting key discussions and themes."
-    },
-    { 
-      label: "Logic", 
-      status: (isLogicGenerated || meeting?.code) ? "completed" as const : meeting?.processingStep === 'CODE_GENERATION' ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
-      description: meeting?.processingStep === 'CODE_GENERATION' ? "Synthesizing logic..." : "Translating talk into executable code."
-    },
-    { 
-      label: "Documentation", 
-      status: (planResult || meeting?.projectDoc) ? "completed" as const : (meeting?.processingStep === 'TESTING' || meeting?.processingStep === 'DOCUMENTATION') ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
-      description: (meeting?.processingStep === 'TESTING' || meeting?.processingStep === 'DOCUMENTATION') ? "Drafting roadmap..." : "Generating final roadmap and tests."
-    },
+    }
   ]
-
-  const [copyStatus, setCopyStatus] = useState("Copy Code")
 
   const handleRetry = async () => {
     const meetingId = (meeting?.id || params.id) as string;
@@ -439,14 +234,6 @@ export default function RecordingDetailPage() {
       setIsLoading(false);
     }
   };
-
-  const handleCopyCode = () => {
-    if (meeting?.code) {
-      navigator.clipboard.writeText(meeting.code)
-      setCopyStatus("Copied!")
-      setTimeout(() => setCopyStatus("Copy Code"), 2000)
-    }
-  }
 
   if (isLoading) {
     return (
@@ -584,7 +371,7 @@ export default function RecordingDetailPage() {
   }
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden ${isResizing ? 'cursor-row-resize select-none' : ''}`}>
+    <div className="flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden">
       <Toast {...toast} onClose={hideToast} />
       {/* Editor Header / Breadcrumbs (Local) */}
       <MeetingHeader meeting={meeting} journeySteps={journeySteps} />
@@ -800,27 +587,6 @@ export default function RecordingDetailPage() {
                           </div>
                         </div>
                       </div>
-
-                      {isTechnicalMeeting && !isLogicGenerated && (
-                        <div className="bg-zinc-900 dark:bg-white border border-zinc-800 dark:border-zinc-200 rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl shadow-brand-via/20">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-brand-via/20 flex items-center justify-center shrink-0">
-                              <Code className="w-5 h-5 sm:w-6 sm:h-6 text-brand-via" />
-                            </div>
-                            <div>
-                              <h4 className="text-xs sm:text-sm font-black text-white dark:text-zinc-900 uppercase tracking-tight">Technical Context Detected</h4>
-                              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-widest mt-1 text-center sm:text-left">Generate logic & compliance reports</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={handleGenerateLogic}
-                            disabled={isGeneratingLogic}
-                            className="w-full sm:w-auto px-6 py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
-                          >
-                            {isGeneratingLogic ? "Generating..." : "Generate Logic"}
-                          </button>
-                        </div>
-                      )}
                     </div>
                   ) : (
                     <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
@@ -836,260 +602,8 @@ export default function RecordingDetailPage() {
                 </div>
               </div>
             )}
-
-            {activeTab === "code" && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-                      <Code className="w-5 h-5 text-brand-via" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Meeting Logic</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Extracted Pseudo-code</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleCopyCode}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    {copyStatus}
-                  </button>
-                </div>
-
-                <div className="relative">
-                  {isLogicGenerated && meeting?.code && (
-                    <div className="absolute -top-3 -right-3 px-3 py-1 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg z-10 animate-bounce">
-                      Verified Logic
-                    </div>
-                  )}
-                  <div className="bg-zinc-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-zinc-800 shadow-2xl overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-via/5 rounded-full -mr-32 -mt-32 blur-[100px]" />
-                    <pre className="text-[10px] sm:text-xs md:text-sm font-mono text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar relative z-10">
-                      <code>
-                        {meeting?.code || "// No logic code was generated for this meeting context."}
-                      </code>
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "tests" && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-                      <CheckCircle2 className="w-5 h-5 text-brand-via" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Compliance & Testing</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Automated Validation</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleTestCompliance}
-                    disabled={isTestingCompliance || !isLogicGenerated}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    {isTestingCompliance ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                    {isTestingCompliance ? "Running Tests..." : "Run Compliance"}
-                  </button>
-                </div>
-
-                {testResults ? (
-                  <div className="space-y-6">
-                    <div className="bg-zinc-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-zinc-800 shadow-2xl overflow-hidden relative group">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-32 -mt-32 blur-[100px]" />
-                      <div className="flex items-center gap-2 mb-4 border-b border-zinc-800 pb-4">
-                        <div className="flex gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/40" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20 border border-amber-500/40" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20 border border-emerald-500/40" />
-                        </div>
-                        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest ml-2">Test Execution Output</span>
-                      </div>
-                      <pre className="text-[10px] sm:text-xs md:text-sm font-mono text-emerald-400/90 leading-relaxed overflow-x-auto custom-scrollbar relative z-10">
-                        <code>{testResults}</code>
-                      </pre>
-                    </div>
-
-                    {/* Logic for showing success/failure badge based on test output */}
-                    <div className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-                        testResults.toLowerCase().includes("fail") || testResults.toLowerCase().includes("error")
-                        ? "bg-red-500/10 border-red-500/20 text-red-500"
-                        : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                      }`}>
-                        {testResults.toLowerCase().includes("fail") || testResults.toLowerCase().includes("error") 
-                        ? <ShieldCheck className="w-5 h-5 rotate-180" /> 
-                        : <CheckCircle2 className="w-5 h-5" />}
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Validation Status</p>
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                          {testResults.toLowerCase().includes("fail") || testResults.toLowerCase().includes("error")
-                          ? "Compliance Issues Detected"
-                          : "All Validation Checks Passed"}
-                        </h4>
-                      </div>
-                    </div>
-                  </div>
-                ) : meeting?.actionItems?.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {meeting.actionItems.map((test: ActionItem, i: number) => (
-                      <div key={i} className="bg-white dark:bg-zinc-900 p-6 rounded-[24px] border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 transition-all group relative overflow-hidden">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            </div>
-                            <span className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Action Item {i + 1}</span>
-                          </div>
-                          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">Identified</span>
-                        </div>
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-2">{test.title}</h4>
-                        <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">Assigned/Status: {test.status || 'Pending'}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
-                    <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                      <ShieldCheck className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
-                    </div>
-                    <div className="max-w-xs">
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">No Action Items</h3>
-                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">No specific action items or compliance tasks were identified in this meeting.</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            {activeTab === "docs" && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-                      <FileText className="w-5 h-5 text-brand-via" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Project Documentation</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Implementation Roadmap</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {(planResult?.includes("Document saved at:") || meeting?.projectDoc?.includes("Document saved at:")) && (
-                      <button 
-                        onClick={handleDownloadDoc}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-emerald-500/20"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        Download .docx
-                      </button>
-                    )}
-                    <button 
-                      onClick={handleGeneratePlan}
-                      disabled={isGeneratingPlan}
-                      className="flex items-center gap-2 px-4 py-2 bg-brand-via text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-brand-via/20 disabled:opacity-50"
-                    >
-                      {isGeneratingPlan ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                      {isGeneratingPlan ? "Building Plan..." : "Generate Plan"}
-                    </button>
-                  </div>
-                </div>
-
-                {planResult || meeting?.projectDoc ? (
-                  <div className="bg-white dark:bg-zinc-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-zinc-200 dark:border-zinc-800 shadow-xl relative overflow-hidden">
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">
-                        {planResult || meeting?.projectDoc}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
-                    <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                      <FileText className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
-                    </div>
-                    <div className="max-w-xs">
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">No Plan Generated</h3>
-                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">Click the button above to generate a detailed implementation plan based on the meeting discussions.</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Next Steps Guidance */}
-            {meeting?.status === 'COMPLETED' && (
-              <div className="mt-12 pt-8 border-t border-zinc-100 dark:border-zinc-900 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="w-1.5 h-4 bg-brand-via rounded-full" />
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Recommended Next Steps</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <button 
-                    onClick={() => setActiveTab("summary")}
-                    className="flex flex-col gap-3 p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:bg-white dark:hover:bg-zinc-900 transition-all group text-left"
-                  >
-                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 group-hover:text-brand-via transition-colors">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">Review Summary</h4>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-tight">Verify the key takeaways and discussion points.</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-zinc-300 group-hover:text-brand-via group-hover:translate-x-1 transition-all mt-auto" />
-                  </button>
-
-                  <button 
-                    onClick={() => setActiveTab("tests")}
-                    className="flex flex-col gap-3 p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:bg-white dark:hover:bg-zinc-900 transition-all group text-left"
-                  >
-                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 group-hover:text-brand-via transition-colors">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">Track Actions</h4>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-tight">Follow up on assigned tasks and compliance items.</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-zinc-300 group-hover:text-brand-via group-hover:translate-x-1 transition-all mt-auto" />
-                  </button>
-
-                  <button 
-                    onClick={() => setActiveTab("code")}
-                    className="flex flex-col gap-3 p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 hover:bg-white dark:hover:bg-zinc-900 transition-all group text-left"
-                  >
-                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 group-hover:text-brand-via transition-colors">
-                      <Code className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">Implement Logic</h4>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-tight">Integrate the generated code into your project.</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-zinc-300 group-hover:text-brand-via group-hover:translate-x-1 transition-all mt-auto" />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
-        <MeetingTerminal 
-          terminalHeight={terminalHeight}
-          toggleTerminalSize={toggleTerminalSize}
-          startResizing={startResizing}
-          answer={answer}
-          prompt={prompt}
-          setPrompt={setPrompt}
-          handleAskAI={handleAskAI}
-          isAnswering={isAnswering}
-          meeting={meeting}
-          suggestions={suggestions}
-          sessionName={session?.user?.name}
-        />
       </div>
     </div>
   )

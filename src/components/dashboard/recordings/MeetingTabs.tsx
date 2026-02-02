@@ -1,6 +1,6 @@
 import React from "react"
 
-export type EditorTab = "transcript" | "summary" | "code" | "tests" | "docs"
+export type EditorTab = "transcript" | "summary"
 
 export interface TabConfig {
   id: EditorTab
