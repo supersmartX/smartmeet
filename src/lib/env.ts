@@ -53,7 +53,13 @@ const buildTimeMocks = {
   WORKER_SECRET: "mock-worker-secret",
 };
 
-const _env = envSchema.safeParse({
+const _env = envSchema.safeParse(isBuildTime ? {
+  ...buildTimeMocks,
+  // Add any other required mock values that match schema types
+  NEXTAUTH_URL: "http://localhost:3000",
+  NEXT_PUBLIC_API_BASE_URL: "http://api.supersmartx.com:8000",
+  NODE_ENV: "production"
+} : {
   DATABASE_URL: process.env.DATABASE_URL,
   DIRECT_URL: process.env.DIRECT_URL,
   NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
@@ -94,6 +100,6 @@ if (!_env.success) {
 export const env = _env.success 
   ? _env.data 
   : (isBuildTime 
-      ? { ...envSchema.parse({}), ...buildTimeMocks } as z.infer<typeof envSchema>
+      ? { ...buildTimeMocks, NEXTAUTH_URL: "http://localhost:3000", NEXT_PUBLIC_API_BASE_URL: "http://api.supersmartx.com:8000", NODE_ENV: "production" } as z.infer<typeof envSchema>
       : {} as z.infer<typeof envSchema>
     );
