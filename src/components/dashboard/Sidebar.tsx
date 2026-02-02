@@ -14,9 +14,7 @@ import {
   LucideIcon,
   BarChart3,
   Key,
-  User,
-  Users,
-  Zap
+  User
 } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { getMeetings, getUserSettings } from "@/actions/meeting"

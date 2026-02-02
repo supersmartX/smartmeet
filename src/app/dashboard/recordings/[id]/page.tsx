@@ -93,6 +93,8 @@ export default function RecordingDetailPage() {
     return true // Continue polling
   }, [isAuthorized, params.id, session?.user?.id])
 
+  const meetingStatus = meeting?.status
+
   useEffect(() => {
     if (!isAuthorized || !params.id) return
     
@@ -102,7 +104,7 @@ export default function RecordingDetailPage() {
     fetchMeeting()
 
     // Start polling if pending or processing
-    if (!meeting || (meeting.status !== 'COMPLETED' && meeting.status !== 'FAILED')) {
+    if (!meetingStatus || (meetingStatus !== 'COMPLETED' && meetingStatus !== 'FAILED')) {
       pollInterval = setInterval(async () => {
         const shouldContinue = await fetchMeeting(true)
         if (!shouldContinue && pollInterval) {
@@ -115,14 +117,14 @@ export default function RecordingDetailPage() {
     let eventSource: EventSource | null = null
 
     // Use SSE for real-time status updates if meeting is processing
-    if (meeting?.status === 'PROCESSING' || meeting?.status === 'PENDING') {
+    if (meetingStatus === 'PROCESSING' || meetingStatus === 'PENDING') {
       const statusUrl = `/api/v1/meetings/${params.id}/status`
       eventSource = new EventSource(statusUrl)
 
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          if (data.status && data.status !== meeting?.status) {
+          if (data.status && data.status !== meetingStatus) {
             fetchMeeting(true)
           }
         } catch (error) {
@@ -140,7 +142,7 @@ export default function RecordingDetailPage() {
       if (pollInterval) clearInterval(pollInterval)
       if (eventSource) eventSource.close()
     }
-  }, [params.id, isAuthorized, meeting?.status, fetchMeeting])
+  }, [params.id, isAuthorized, meetingStatus, fetchMeeting])
 
   const tabs = useMemo(() => [
     { id: "transcript", label: "Transcript", icon: MessageSquare, ext: "" },

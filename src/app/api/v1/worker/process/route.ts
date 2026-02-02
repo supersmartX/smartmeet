@@ -64,7 +64,6 @@ async function handleWorker(request: NextRequest) {
 
         const result = await Promise.race([processPromise, timeoutPromise]);
         
-        // @ts-ignore - result is inferred correctly but TS might complain about race return types
         results.push({ taskId: task.id, success: true, result });
       } else {
         results.push({ taskId: task.id, success: false, error: "Unknown task type" });

@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { ProcessingStep } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
@@ -45,12 +44,11 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
     const user = meeting.user;
 
     // 2. Prepare AI Configuration
-    let effectiveApiKey, finalProvider, finalModel;
+    let effectiveApiKey, finalProvider;
     try {
       const config = await getAIConfiguration(user);
       effectiveApiKey = config.apiKey;
       finalProvider = config.provider;
-      finalModel = config.model;
     } catch (configError) {
       logger.error({ configError, userId: user.id }, "AI Configuration failed");
       throw new AppError(
@@ -158,8 +156,6 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             confidence: 1.0
           }
         });
-
-        const isTechnical = /api|cache|latency|database|testing|backend|frontend|pipeline|logic|code|deploy/i.test(transcription);
 
         // Step 2: SUMMARIZATION
         await prisma.meeting.update({
