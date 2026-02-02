@@ -145,18 +145,18 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
           throw new ServiceError("No content detected in file", "ERR_EMPTY_TRANSCRIPTION");
         }
 
-        // Step 1.5: Save transcription to database for TXT/Documents
-        if (isDocument) {
-          await prisma.transcript.create({
-            data: {
-              meetingId: meeting.id,
-              text: transcription,
-              speaker: "Document Content",
-              time: "0:00",
-              confidence: 1.0
-            }
-          });
-        }
+        // Step 1.5: Save transcription to database immediately
+        // This ensures we have the transcript even if summarization fails later
+        await prisma.transcript.deleteMany({ where: { meetingId: meeting.id } });
+        await prisma.transcript.create({
+          data: {
+            meetingId: meeting.id,
+            text: transcription,
+            speaker: isDocument ? "Document Content" : "Audio Transcript",
+            time: "0:00",
+            confidence: 1.0
+          }
+        });
 
         const isTechnical = /api|cache|latency|database|testing|backend|frontend|pipeline|logic|code|deploy/i.test(transcription);
 
