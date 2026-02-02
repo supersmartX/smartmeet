@@ -294,7 +294,16 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
       await triggerWorker(meeting.id);
     } catch (enqueueError) {
       logger.error({ enqueueError, meetingId: meeting.id }, "Failed to enqueue meeting processing");
-      // We don't fail the meeting creation here, as the record is already saved
+      
+      // Update meeting to FAILED so user knows processing didn't start
+      await prisma.meeting.update({
+        where: { id: meeting.id },
+        data: { 
+          status: "FAILED", 
+          processingStep: "FAILED",
+          testResults: enqueueError instanceof Error ? enqueueError.message : "Failed to start processing queue"
+        }
+      });
     }
     
     return { success: true, data: meeting as Meeting };

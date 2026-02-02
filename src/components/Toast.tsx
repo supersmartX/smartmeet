@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Check, AlertCircle, X } from "lucide-react";
+import { Check, AlertCircle, Info, X } from "lucide-react";
 
 interface ToastProps {
   show: boolean;
   message: string;
-  type: "success" | "error";
+  type: "success" | "error" | "info";
   onClose?: () => void;
 }
 
@@ -28,6 +28,33 @@ export function Toast({ show, message, type, onClose }: ToastProps) {
 
   if (!isRendered) return null;
 
+  const styles = {
+    success: {
+      bg: "bg-zinc-900 border-emerald-500/20 shadow-emerald-500/5",
+      iconBg: "bg-emerald-500/10 text-emerald-500",
+      titleColor: "text-emerald-500",
+      title: "Success",
+      Icon: Check
+    },
+    error: {
+      bg: "bg-red-950 border-red-500/20 shadow-red-500/5",
+      iconBg: "bg-red-500/10 text-red-500",
+      titleColor: "text-red-400",
+      title: "Error Occurred",
+      Icon: AlertCircle
+    },
+    info: {
+      bg: "bg-zinc-900 border-blue-500/20 shadow-blue-500/5",
+      iconBg: "bg-blue-500/10 text-blue-500",
+      titleColor: "text-blue-500",
+      title: "Information",
+      Icon: Info
+    }
+  };
+
+  const currentStyle = styles[type] || styles.success;
+  const Icon = currentStyle.Icon;
+
   return (
     <div 
       className={`
@@ -37,23 +64,15 @@ export function Toast({ show, message, type, onClose }: ToastProps) {
       role="alert" 
       aria-live={type === "error" ? "assertive" : "polite"}
     >
-      <div className={`${
-        type === "success" 
-          ? "bg-zinc-900 border-emerald-500/20 shadow-emerald-500/5" 
-          : "bg-red-950 border-red-500/20 shadow-red-500/5"
-      } backdrop-blur-xl border px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[340px] max-w-md group`}>
+      <div className={`${currentStyle.bg} backdrop-blur-xl border px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[340px] max-w-md group`}>
         
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-          type === "success" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
-        }`}>
-          {type === "success" ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${currentStyle.iconBg}`}>
+          <Icon className="w-5 h-5" />
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className={`text-[11px] font-black uppercase tracking-widest mb-0.5 ${
-            type === "success" ? "text-emerald-500" : "text-red-400"
-          }`}>
-            {type === "success" ? "Success" : "Error Occurred"}
+          <p className={`text-[11px] font-black uppercase tracking-widest mb-0.5 ${currentStyle.titleColor}`}>
+            {currentStyle.title}
           </p>
           <p className="text-sm font-medium text-zinc-200 leading-tight">
             {message}

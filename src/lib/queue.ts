@@ -1,5 +1,6 @@
 import { getRedisClient } from "@/lib/redis";
 import logger from "@/lib/logger";
+import { ServiceError } from "@/lib/errors";
 
 const QUEUE_NAME = "smartmeet_ai_queue";
 const DLQ_NAME = "smartmeet_ai_dlq";
@@ -21,7 +22,7 @@ export interface Task {
 export async function enqueueTask(task: Omit<Task, "createdAt">): Promise<boolean> {
   const redis = await getRedisClient();
   if (!redis) {
-    throw new Error("Redis not configured. AI processing queue is unavailable.");
+    throw new ServiceError("Redis not configured. AI processing queue is unavailable.", "ERR_REDIS_CONFIG");
   }
 
   const fullTask: Task = {

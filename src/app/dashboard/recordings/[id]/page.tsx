@@ -13,7 +13,8 @@ import {
   generateMeetingSummary,
   testMeetingCompliance,
   generateMeetingPlan,
-  processMeetingAI
+  processMeetingAI,
+  enqueueMeetingAI
 } from "@/actions/meeting"
 import { MeetingWithRelations, Transcript, ActionItem } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
@@ -412,6 +413,29 @@ export default function RecordingDetailPage() {
 
   const [copyStatus, setCopyStatus] = useState("Copy Code")
 
+  const handleRetry = async () => {
+    const meetingId = (meeting?.id || params.id) as string;
+    if (!meetingId) return;
+
+    setIsLoading(true);
+    try {
+      toastVisible("Queuing for reprocessing...", "info");
+      const result = await enqueueMeetingAI(meetingId);
+      
+      if (result.success) {
+        toastVisible("Reprocessing started.", "success");
+        window.location.reload();
+      } else {
+        toastVisible(result.error || "Failed to restart processing", "error");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Retry error:", err);
+      toastVisible("Failed to restart processing", "error");
+      setIsLoading(false);
+    }
+  };
+
   const handleCopyCode = () => {
     if (meeting?.code) {
       navigator.clipboard.writeText(meeting.code)
@@ -481,7 +505,7 @@ export default function RecordingDetailPage() {
           <div className="flex flex-col gap-3 w-full">
             {error && (
               <button 
-                onClick={() => window.location.reload()}
+                onClick={handleRetry}
                 className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-black/10"
               >
                 Try Re-analyzing

@@ -232,8 +232,16 @@ export async function makeApiRequest<T>(
         if (errorData.error?.message) errorMessage = errorData.error.message;
         if (errorData.error?.details) details = errorData.error.details;
         if (errorData.error?.code) errorCode = errorData.error.code;
+        
+        // Enhance 500 errors with more context if generic
+        if (response.status === 500 && errorMessage === `API Error: ${response.statusText}`) {
+          errorMessage = "AI Service Provider Error (500). The external AI service failed to process the request.";
+        }
       } catch {
         // Fallback to status text if JSON parsing fails
+        if (response.status === 500) {
+           errorMessage = "AI Service Connection Failed (500). Please check if the AI backend is running.";
+        }
       }
 
       return {
@@ -335,7 +343,7 @@ export async function transcribeAudio(
 
   if (language) formData.append("language", language);
 
-  return makeApiRequest<TranscriptionResponse>("/api/AI/audio/transcribe", "POST", formData, apiKey);
+  return makeApiRequest<TranscriptionResponse>("/transcribe-upload", "POST", formData, apiKey);
 }
 
 /**
@@ -358,7 +366,7 @@ export async function transcribeDocument(
 
   // We use the document-specific transcription endpoint if available, 
   // or fallback to the general one which might handle multiple formats.
-  return makeApiRequest<TranscriptionResponse>("/api/AI/document/transcribe", "POST", formData, apiKey);
+  return makeApiRequest<TranscriptionResponse>("/transcribe-upload", "POST", formData, apiKey);
 }
 
 /**
@@ -460,7 +468,7 @@ export async function testCode(
     model?: string;
   } = {}
 ): Promise<ApiResponse<TestResponse>> {
-  return makeApiRequest<TestResponse>("/api/AI/code/test-code", "POST", {
+  return makeApiRequest<TestResponse>("/test-code", "POST", {
     code,
     provider: options.provider || "local",
     api_key: options.api_key || null,

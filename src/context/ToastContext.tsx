@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
 import { Toast } from "@/components/Toast";
 
-export type ToastType = "success" | "error";
+export type ToastType = "success" | "error" | "info";
 
 interface ToastState {
   show: boolean;

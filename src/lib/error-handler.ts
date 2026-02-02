@@ -24,9 +24,13 @@ export function handleActionError(error: unknown, context?: Record<string, unkno
   // Generic fallback for unknown errors
   logger.error({ error, ...context }, "Unhandled error in Server Action");
   
+  // In development, return the actual error message for debugging
+  const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+  const isDev = process.env.NODE_ENV === "development";
+
   return {
     success: false,
-    error: error instanceof Error ? error.message : "An unexpected error occurred",
+    error: isDev ? `Internal Error: ${errorMessage}` : "An unexpected error occurred. Please try again.",
     code: ApiErrorCode.INTERNAL_ERROR,
   };
 }

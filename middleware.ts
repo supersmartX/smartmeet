@@ -88,6 +88,7 @@ export default withAuth(
           "/api/auth",
           "/api/v1/webhooks/stripe",
           "/api/v1/health",
+          "/api/v1/worker/process",
         ];
 
         // Allow access to public routes or if there is a valid token

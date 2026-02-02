@@ -16,8 +16,11 @@ import logger from "@/lib/logger";
 export async function getAIConfiguration(user: { id?: string; apiKey: string | null; preferredProvider: string | null; preferredModel?: string | null }) {
   if (!user.apiKey) return { apiKey: null, provider: "openai", rawProvider: "openai", model: "gpt-4o" };
 
-  const rawProvider = user.preferredProvider?.toLowerCase() || "openai";
-  const model = user.preferredModel || (rawProvider === "openai" ? "gpt-4o" : undefined);
+  const preferredProvider = user.preferredProvider?.toLowerCase() || "openai";
+  let rawProvider = preferredProvider;
+  const preferredModel = user.preferredModel || (rawProvider === "openai" ? "gpt-4o" : undefined);
+  let model = preferredModel;
+
   let decrypted: string;
   try {
     decrypted = decrypt(user.apiKey);
@@ -30,10 +33,36 @@ export async function getAIConfiguration(user: { id?: string; apiKey: string | n
 
   try {
     const keys = JSON.parse(decrypted);
-    // Extract the preferred LLM key
-    apiKey = keys[rawProvider] || keys["openai"] || Object.values(keys)[0] as string;
-  } catch {
-    // Legacy single key format
+    
+    // Logic to ensure API key matches the provider
+    if (keys[rawProvider]) {
+      apiKey = keys[rawProvider];
+    } else if (keys["openai"]) {
+      // Fallback to OpenAI if preferred provider key is missing
+      apiKey = keys["openai"];
+      rawProvider = "openai";
+      model = "gpt-4o"; // Reset model for OpenAI
+    } else {
+      // Fallback to the first available key
+      const firstProvider = Object.keys(keys)[0];
+      if (firstProvider) {
+        apiKey = keys[firstProvider];
+        rawProvider = firstProvider;
+        model = undefined; // Let default logic handle model
+      } else {
+         // No keys found in the JSON object
+         logger.warn({ userId: user.id }, "No API keys found in decrypted configuration");
+         throw new Error("No API keys found. Please add an API key in Settings.");
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("No API keys found")) {
+        throw error;
+    }
+    // Legacy single key format - assume it matches the preferred provider or default
+    // If it's a legacy key, we can't really know which provider it is for sure, 
+    // but usually it was OpenAI. 
+    // We'll leave rawProvider as is, assuming the user knows what they are doing.
   }
 
   const providerMap: Record<string, string> = {

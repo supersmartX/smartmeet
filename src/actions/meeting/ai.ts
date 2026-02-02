@@ -46,7 +46,19 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
     const user = meeting.user;
 
     // 2. Prepare AI Configuration
-    const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel } = await getAIConfiguration(user);
+    let effectiveApiKey, finalProvider, finalModel;
+    try {
+      const config = await getAIConfiguration(user);
+      effectiveApiKey = config.apiKey;
+      finalProvider = config.provider;
+      finalModel = config.model;
+    } catch (configError) {
+      logger.error({ configError, userId: user.id }, "AI Configuration failed");
+      throw new AppError(
+        configError instanceof Error ? configError.message : "Invalid AI Configuration", 
+        "ERR_CONFIG_INVALID"
+      );
+    }
 
     // 3. Check Storage Configuration
     if (!supabaseAdmin) {
@@ -309,14 +321,18 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
 
       } catch (error: unknown) {
         const errorDetail = error instanceof Error ? error.message : "AI Pipeline failed";
-        const errorCode = (error && typeof error === 'object' && 'code' in error) 
-          ? String((error as Record<string, unknown>).code) 
-          : "AI_PIPELINE_ERROR";
         
         logger.error({ error, meetingId, userId: user.id }, "Pipeline failure details");
         
         const breakerState = await getProviderBreaker(finalProvider).getState();
         const isBreakerOpen = breakerState === "OPEN";
+
+        // Get the last successful step to identify where it failed
+        const currentMeeting = await prisma.meeting.findUnique({ 
+            where: { id: meetingId },
+            select: { processingStep: true } 
+        });
+        const failedStep = currentMeeting?.processingStep || "UNKNOWN";
 
         await prisma.meeting.update({
           where: { id: meetingId },
@@ -325,7 +341,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
             processingStep: "FAILED",
             testResults: isBreakerOpen 
               ? "Service temporarily unavailable due to multiple previous failures. Please try again in a minute."
-              : `System Error [${errorCode}]: ${errorDetail}`
+              : `Pipeline Failed at ${failedStep}: ${errorDetail}`
           }
         });
 
@@ -349,6 +365,22 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
       }
   } catch (error: unknown) {
     logger.error({ error, meetingId }, "Internal process AI fatal error");
+    
+    // Attempt to update meeting status to FAILED so user knows what happened
+    try {
+      const errorDetail = error instanceof Error ? error.message : "Critical system error during initialization";
+      await prisma.meeting.update({
+        where: { id: meetingId },
+        data: { 
+          status: "FAILED", 
+          processingStep: "FAILED",
+          testResults: `System Error: ${errorDetail}`
+        }
+      });
+    } catch (dbError) {
+      logger.error({ dbError, meetingId }, "Failed to update meeting status during fatal error recovery");
+    }
+
     return handleActionError(error, { meetingId });
   }
 }
