@@ -26,6 +26,7 @@ import { getAIConfiguration, enforceRateLimit } from "./utils";
 import { normalizeProvider } from "@/lib/utils";
 import { cache } from "@/lib/cache";
 import { env } from "@/lib/env";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Internal processor that runs the full AI pipeline
@@ -459,5 +460,53 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
   } catch (error: unknown) {
     logger.error({ error, meetingId, userId: session?.user?.id }, "Generate meeting summary error");
     return { success: false, error: "Failed to generate summary" };
+  }
+}
+
+export async function retryStuckMeeting(meetingId: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.id) throw new AuthError();
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      select: { userId: true, status: true, updatedAt: true }
+    });
+
+    if (!meeting || meeting.userId !== session.user.id) {
+      throw new AppError("Meeting not found", "ERR_NOT_FOUND");
+    }
+
+    // Allow retry if it's FAILED or if it's PROCESSING but updated > 2 mins ago
+    // 2 minutes is safe because our worker now timeouts at 50s.
+    const isStuck = meeting.status === "PROCESSING" && (Date.now() - meeting.updatedAt.getTime() > 2 * 60 * 1000);
+    
+    if (meeting.status !== "FAILED" && !isStuck) {
+       return { success: false, error: "Meeting is currently processing. Please wait." };
+    }
+
+    // Reset to PENDING first to clear any locks
+    await prisma.meeting.update({
+      where: { id: meetingId },
+      data: { status: "PENDING", processingStep: "IDLE", updatedAt: new Date() }
+    });
+
+    // Enqueue it again
+    await enqueueTask({
+        id: uuidv4(),
+        type: "PROCESS_MEETING_AI",
+        data: { meetingId }
+    });
+    
+    // Trigger worker
+    const { triggerWorker } = await import("./utils");
+    await triggerWorker(meetingId);
+    
+    await cache.invalidateUserCache(session.user.id);
+    revalidatePath(`/dashboard/recordings/${meetingId}`);
+
+    return { success: true };
+  } catch (error: unknown) {
+     return handleActionError(error, { meetingId });
   }
 }

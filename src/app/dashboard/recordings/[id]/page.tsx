@@ -10,7 +10,8 @@ import {
   getMeetingById, 
   generateMeetingSummary,
   processMeetingAI,
-  enqueueMeetingAI
+  enqueueMeetingAI,
+  retryStuckMeeting
 } from "@/actions/meeting"
 import { MeetingWithRelations, Transcript } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
@@ -245,6 +246,32 @@ export default function RecordingDetailPage() {
     } catch (err) {
       console.error("Retry error:", err);
       toastVisible("Failed to restart processing", "error");
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetryStuck = async () => {
+    const meetingId = (meeting?.id || params.id) as string;
+    if (!meetingId) return;
+
+    setIsLoading(true);
+    try {
+      toastVisible("Attempting to force retry...", "info");
+      const result = await retryStuckMeeting(meetingId);
+      
+      if (result.success) {
+        toastVisible("Retry initiated successfully.", "success");
+        // Wait a bit then reload to show new status
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        toastVisible(result.error || "Failed to force retry", "error");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Force Retry error:", err);
+      toastVisible("Failed to force retry", "error");
       setIsLoading(false);
     }
   };
@@ -486,12 +513,23 @@ export default function RecordingDetailPage() {
                           : "The transcript for this meeting is currently being processed or could not be generated."}
                       </p>
                       {meeting?.status === 'PROCESSING' && (
-                         <button 
-                           onClick={handleRefresh}
-                           className="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
-                         >
-                           Check Status
-                         </button>
+                         <div className="flex flex-col gap-2 items-center w-full">
+                           <button 
+                             onClick={handleRefresh}
+                             className="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
+                           >
+                             Check Status
+                           </button>
+                           {/* Show retry if updated > 2 mins ago */}
+                           {meeting.updatedAt && (new Date().getTime() - new Date(meeting.updatedAt).getTime() > 2 * 60 * 1000) && (
+                             <button 
+                               onClick={handleRetryStuck}
+                               className="px-6 py-2 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
+                             >
+                               Force Retry
+                             </button>
+                           )}
+                         </div>
                       )}
                     </div>
                   </div>

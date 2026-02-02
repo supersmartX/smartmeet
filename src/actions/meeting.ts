@@ -28,6 +28,7 @@ import {
   internalProcessMeetingAI,
   processMeetingAI,
   enqueueMeetingAI,
+  retryStuckMeeting,
   askAIAboutMeeting,
   generateMeetingSummary
 } from "./meeting/ai";
@@ -61,6 +62,7 @@ export {
   internalProcessMeetingAI,
   processMeetingAI,
   enqueueMeetingAI,
+  retryStuckMeeting,
   askAIAboutMeeting,
   generateMeetingSummary,
   getAIConfiguration,

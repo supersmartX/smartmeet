@@ -24,9 +24,11 @@ async function handleWorker(request: NextRequest) {
 
   const results = [];
   let tasksProcessed = 0;
-  const MAX_TASKS = 5; 
+  // Reduce to 1 task per invocation to prevent timeout cascades and ensure reliability
+  const MAX_TASKS = 1; 
   const START_TIME = Date.now();
-  const MAX_DURATION = 50000; // 50 seconds (standard Vercel timeout is 60s)
+  // Set safety timeout to 50s (assuming 60s function limit) to allow cleanup/logging
+  const MAX_DURATION = 50000; 
   const MAX_RETRIES = 3;
 
   while (tasksProcessed < MAX_TASKS) {
@@ -48,7 +50,21 @@ async function handleWorker(request: NextRequest) {
         // We need to dynamically import to avoid circular dependencies
         const { internalProcessMeetingAI } = await import("@/actions/meeting/ai");
         
-        const result = await internalProcessMeetingAI(meetingId);
+        // Wrap processing in a race with a timeout
+        // This ensures we catch the timeout before the platform kills the function
+        const processPromise = internalProcessMeetingAI(meetingId);
+        
+        // Calculate remaining time for this task
+        const timeElapsed = Date.now() - START_TIME;
+        const remainingTime = Math.max(5000, MAX_DURATION - timeElapsed - 2000); // Reserve 2s for cleanup
+        
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("Task processing timed out")), remainingTime);
+        });
+
+        const result = await Promise.race([processPromise, timeoutPromise]);
+        
+        // @ts-ignore - result is inferred correctly but TS might complain about race return types
         results.push({ taskId: task.id, success: true, result });
       } else {
         results.push({ taskId: task.id, success: false, error: "Unknown task type" });
