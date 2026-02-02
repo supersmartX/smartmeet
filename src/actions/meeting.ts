@@ -28,11 +28,8 @@ import {
   internalProcessMeetingAI,
   processMeetingAI,
   enqueueMeetingAI,
-  generateMeetingLogic,
   askAIAboutMeeting,
-  generateMeetingSummary,
-  testMeetingCompliance,
-  generateMeetingPlan
+  generateMeetingSummary
 } from "./meeting/ai";
 
 import {
@@ -64,11 +61,8 @@ export {
   internalProcessMeetingAI,
   processMeetingAI,
   enqueueMeetingAI,
-  generateMeetingLogic,
   askAIAboutMeeting,
   generateMeetingSummary,
-  testMeetingCompliance,
-  generateMeetingPlan,
   getAIConfiguration,
   enforceRateLimit,
   createSignedUploadUrl,
