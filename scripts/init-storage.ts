@@ -14,8 +14,10 @@ if (!supabaseUrl || !supabaseSecretKey) {
 
 const supabase = createClient(supabaseUrl, supabaseSecretKey);
 
+const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'smart-recordings';
+
 async function createBucket() {
-  console.log('Checking for recordings bucket...');
+  console.log(`Checking for ${bucketName} bucket...`);
   const { data: buckets, error: listError } = await supabase.storage.listBuckets();
   
   if (listError) {
@@ -23,15 +25,15 @@ async function createBucket() {
     return;
   }
 
-  const bucketExists = buckets.some(b => b.name === 'recordings');
+  const bucketExists = buckets.some(b => b.name === bucketName);
 
   if (bucketExists) {
-    console.log('Bucket "recordings" already exists.');
-    const bucket = buckets.find(b => b.name === 'recordings');
+    console.log(`Bucket "${bucketName}" already exists.`);
+    const bucket = buckets.find(b => b.name === bucketName);
     console.log('Current bucket settings:', bucket);
     
     // Update public access just in case
-    const { error: updateError } = await supabase.storage.updateBucket('recordings', {
+    const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
       public: false,
       fileSizeLimit: null, // Use project default
       allowedMimeTypes: ['audio/*', 'video/*', 'application/pdf', 'text/plain']
@@ -43,8 +45,8 @@ async function createBucket() {
       console.log('Bucket settings updated.');
     }
   } else {
-    console.log('Creating "recordings" bucket...');
-    const { data, error } = await supabase.storage.createBucket('recordings', {
+    console.log(`Creating "${bucketName}" bucket...`);
+    const { data, error } = await supabase.storage.createBucket(bucketName, {
       public: false,
       fileSizeLimit: null, // Use project default
       allowedMimeTypes: ['audio/*', 'video/*', 'application/pdf', 'text/plain']
