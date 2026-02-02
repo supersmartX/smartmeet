@@ -14,12 +14,9 @@ import { handleActionError } from "@/lib/error-handler";
 import logger from "@/lib/logger";
 import { Performance } from "@/lib/performance";
 import { 
-  generateCode, 
   summarizeText, 
-  testCode,
   transcribeAudio,
-  transcribeDocument,
-  generatePlan
+  transcribeDocument
 } from "@/services/api";
 import {
   ActionResult,
@@ -202,7 +199,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                 transcripts: {
                   deleteMany: {},
                   create: [{
-                    speaker: "AI Assistant",
+                    speaker: isDocument ? "Document Content" : "Audio Transcript",
                     time: "0:00",
                     text: transcription,
                     confidence: 1.0
@@ -362,56 +359,6 @@ export async function enqueueMeetingAI(meetingId: string): Promise<ActionResult>
   } catch (error: unknown) {
     logger.error({ error, meetingId }, "Enqueue meeting AI error");
     return handleActionError(error, { meetingId });
-  }
-}
-
-export async function generateMeetingLogic(meetingId: string): Promise<ActionResult<string>> {
-  let session;
-  try {
-    session = await getServerSession(enhancedAuthOptions);
-    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
-
-    const meeting = await prisma.meeting.findUnique({
-      where: { id: meetingId },
-      include: { 
-        transcripts: true,
-        user: true 
-      }
-    });
-
-    if (!meeting || meeting.userId !== session.user.id) {
-      return { success: false, error: "Meeting not found" };
-    }
-
-    const transcription = meeting.transcripts.map(t => t.text).join("\n");
-    if (!transcription) return { success: false, error: "No transcription available" };
-
-    const { getProviderBreaker } = await import("@/lib/circuit-breaker");
-    const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel } = await getAIConfiguration(meeting.user);
-
-    if (!effectiveApiKey) return { success: false, error: "No API key configured" };
-
-    const result = await getProviderBreaker(finalProvider).execute(async () => {
-      return await generateCode(transcription, { 
-        api_key: effectiveApiKey, 
-        provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "custom",
-        model: finalModel || undefined
-      });
-    });
-
-    if (result.success && result.data) {
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { code: result.data.code }
-      });
-      revalidatePath(`/dashboard/recordings/${meetingId}`);
-      return { success: true, data: result.data.code };
-    }
-
-    return { success: false, error: result.error?.message || "Failed to generate logic" };
-  } catch (error: unknown) {
-    logger.error({ error, meetingId, userId: session?.user?.id }, "Generate meeting logic error");
-    return { success: false, error: error instanceof Error ? error.message : "Failed to generate logic" };
   }
 }
 
