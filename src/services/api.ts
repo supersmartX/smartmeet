@@ -427,7 +427,7 @@ export async function summarizeText(
     language?: string;
   } = {}
 ): Promise<ApiResponse<SummaryResponse>> {
-  return makeApiRequest<SummaryResponse>("/api/AI/audio/summarize", "POST", {
+  return makeApiRequest<SummaryResponse>("/summarize", "POST", {
     transcript: text,
     api_key: options.api_key || null,
     provider: options.provider || "OPENAI",
@@ -449,7 +449,7 @@ export async function generateCode(
     model?: string;
   } = {}
 ): Promise<ApiResponse<CodeGenerationResponse>> {
-  return makeApiRequest<CodeGenerationResponse>("/api/AI/code/generate-code", "POST", {
+  return makeApiRequest<CodeGenerationResponse>("/generate-code", "POST", {
     task,
     provider: options.provider || "openai",
     api_key: options.api_key || null,
