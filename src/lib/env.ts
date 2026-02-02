@@ -28,7 +28,7 @@ const envSchema = z.object({
     { message: "Please replace 'your-supabase-anon-key' with your actual Supabase Anon Key in .env" }
   ),
   SUPABASE_SECRET_KEY: isServer ? z.string().optional() : z.string().optional(),
-  SUPABASE_STORAGE_BUCKET: z.string().default("recordings"),
+  SUPABASE_STORAGE_BUCKET: z.string().default("smart-recordings"),
   
   // Stripe
   STRIPE_SECRET_KEY: isServer ? z.string().optional() : z.string().optional(),

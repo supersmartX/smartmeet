@@ -27,8 +27,8 @@ async function handleWorker(request: NextRequest) {
   // Reduce to 1 task per invocation to prevent timeout cascades and ensure reliability
   const MAX_TASKS = 1; 
   const START_TIME = Date.now();
-  // Set safety timeout to 50s (assuming 60s function limit) to allow cleanup/logging
-  const MAX_DURATION = 50000; 
+  // Set safety timeout to 5 minutes (300s) to match API timeout. Adjust if using Vercel Hobby (10s) or Pro (60s).
+  const MAX_DURATION = 300000; 
   const MAX_RETRIES = 3;
 
   while (tasksProcessed < MAX_TASKS) {
