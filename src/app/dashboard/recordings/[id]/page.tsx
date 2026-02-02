@@ -20,33 +20,27 @@ import { MeetingWithRelations, Transcript, ActionItem } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
 import { downloadFile } from "@/services/api"
+import { MeetingHeader, JourneyStep } from "@/components/dashboard/recordings/MeetingHeader"
+import { MeetingTabs, TabConfig, EditorTab } from "@/components/dashboard/recordings/MeetingTabs"
+import { MeetingTerminal } from "@/components/dashboard/recordings/MeetingTerminal"
 
 import { 
-  Clock, 
-  Users, 
   Video,
-  Share2, 
   Search, 
   Sparkles, 
-  Send,
   FileText,
   MessageSquare,
   Code,
   CheckCircle2,
-  ChevronRight,
   ArrowRight,
   Copy,
   Loader2,
   ShieldCheck,
   Download,
-  AlertCircle,
-  Maximize2,
-  Minimize2
+  AlertCircle
 } from "lucide-react"
 
 /* --------------------------- COMPONENT ---------------------------- */
-
-type EditorTab = "transcript" | "summary" | "code" | "tests" | "docs"
 
 export default function RecordingDetailPage() {
   const params = useParams()
@@ -590,86 +584,10 @@ export default function RecordingDetailPage() {
     <div className={`flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden ${isResizing ? 'cursor-row-resize select-none' : ''}`}>
       <Toast {...toast} onClose={hideToast} />
       {/* Editor Header / Breadcrumbs (Local) */}
-      <div className="h-auto min-h-10 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 shrink-0 gap-3">
-        <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
-          <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest overflow-hidden shrink-0">
-            <Link href="/dashboard" className="hover:text-brand-via transition-colors shrink-0 hidden xs:inline">smartmeet</Link>
-            <ChevronRight className="w-3 h-3 shrink-0 hidden xs:inline" />
-            <Link href="/dashboard/recordings" className="hover:text-brand-via transition-colors shrink-0">recordings</Link>
-            <ChevronRight className="w-3 h-3 shrink-0" />
-            <span className="text-zinc-900 dark:text-zinc-100 truncate max-w-[100px] xs:max-w-none">{meeting?.title || "Analysis"}</span>
-          </div>
-          
-          <div className="hidden xl:flex items-center gap-6 ml-6 pl-6 border-l border-zinc-200 dark:border-zinc-800">
-            {journeySteps.map((step, i) => (
-              <div key={i} className="flex items-center gap-2 group relative">
-                <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                  step.status === 'completed' 
-                    ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' 
-                    : step.status === 'processing'
-                      ? 'bg-brand-via animate-pulse shadow-[0_0_8px_rgba(var(--brand-via-rgb),0.5)]'
-                      : step.status === 'failed'
-                        ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
-                        : 'bg-zinc-300 dark:bg-zinc-700'
-                }`} />
-                <div className="flex flex-col">
-                  <span className={`text-[10px] font-black uppercase tracking-tighter leading-none ${
-                    step.status === 'completed' ? 'text-zinc-900 dark:text-zinc-100' : step.status === 'processing' ? 'text-brand-via' : step.status === 'failed' ? 'text-red-500' : 'text-zinc-400'
-                  }`}>
-                    {step.label}
-                  </span>
-                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-tighter">
-                    {step.status === 'completed' ? 'Verified' : step.status === 'processing' ? 'Processing...' : step.status === 'failed' ? 'Failed' : 'Pending'}
-                  </span>
-                </div>
-                {i < journeySteps.length - 1 && <div className="w-6 h-[1px] bg-zinc-200 dark:bg-zinc-800 ml-2" />}
-                
-                {/* Hover Tooltip */}
-                <div className="absolute top-full left-0 mt-2 py-2 px-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-50 pointer-events-none shadow-2xl border border-white/10 dark:border-black/5 -translate-y-1 group-hover:translate-y-0">
-                  <p className="mb-1 uppercase tracking-widest text-[9px] opacity-50">{step.label}</p>
-                  <p className="tracking-tight">{step.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-zinc-500">
-            <Clock className="w-3 h-3" /> {meeting?.duration || "--m"}
-            <Users className="w-3 h-3 ml-2" /> {meeting?.participants || "--"}
-          </div>
-          <div className="h-4 w-[1px] bg-zinc-200 dark:border-zinc-800" />
-          <button 
-            aria-label="Share recording"
-            className="text-xs font-bold text-brand-via hover:underline uppercase tracking-widest flex items-center gap-1.5"
-          >
-            <Share2 className="w-3 h-3" /> Share
-          </button>
-        </div>
-      </div>
+      <MeetingHeader meeting={meeting} journeySteps={journeySteps} />
 
       {/* Editor Tab Bar */}
-      <div className="flex bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto no-scrollbar shrink-0">
-        {tabs.filter(t => !t.hidden).map((tab) => {
-          const isActive = activeTab === tab.id
-          const Icon = tab.icon
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-[11px] border-r border-zinc-200 dark:border-zinc-800 transition-all min-w-[120px] relative group ${
-                isActive 
-                  ? "bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100" 
-                  : "text-zinc-500 hover:bg-zinc-200/50 dark:hover:bg-zinc-900/50"
-              }`}
-            >
-              {isActive && <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-via" />}
-              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-brand-via" : "text-zinc-400"}`} />
-              <span className="truncate font-medium">{tab.label}{tab.ext}</span>
-            </button>
-          )
-        })}
-      </div>
+      <MeetingTabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Audio Player */}
       {meeting?.audioUrl && (
@@ -1120,169 +1038,21 @@ export default function RecordingDetailPage() {
             )}
           </div>
         </div>
-        <div 
-          style={{ height: terminalHeight }}
-          className="border-t border-zinc-200 dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-900/50 shrink-0 relative transition-[height] duration-300 ease-in-out"
-        >
-          {/* Terminal Tabs */}
-          <div className="flex bg-zinc-100/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 px-4 shrink-0 justify-between items-center">
-            <div className="flex">
-              <button 
-                onClick={() => setTerminalTab("chat")}
-                className={`px-4 py-2 text-xs font-black uppercase tracking-widest transition-all relative ${
-                  terminalTab === "chat" ? "text-brand-via" : "text-zinc-500 dark:text-zinc-400"
-                }`}
-              >
-                AI Assistant
-                {terminalTab === "chat" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-via" />}
-              </button>
-              <button 
-                onClick={() => setTerminalTab("context")}
-                className={`px-4 py-2 text-xs font-black uppercase tracking-widest transition-all relative ${
-                  terminalTab === "context" ? "text-brand-via" : "text-zinc-500 dark:text-zinc-400"
-                }`}
-              >
-                Technical Context
-                {terminalTab === "context" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-via" />}
-              </button>
-            </div>
-            
-            <button
-              onClick={toggleTerminalSize}
-              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors text-zinc-500"
-              aria-label={terminalHeight > 300 ? "Minimize terminal" : "Maximize terminal"}
-            >
-              {terminalHeight > 300 ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
-          </div>
-
-          {/* Resize Handle */}
-          <div 
-            onMouseDown={startResizing}
-            className="absolute -top-1 left-0 right-0 h-2 cursor-row-resize z-30 group"
-          >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-full group-hover:bg-brand-via transition-colors" />
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-            {terminalTab === "chat" ? (
-              <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="w-8 h-8 rounded-lg bg-brand-via/10 flex items-center justify-center shrink-0 border border-brand-via/20">
-                    <Sparkles className="w-4 h-4 text-brand-via" />
-                  </div>
-                  <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                      Hello {session?.user?.name}! {meeting?.transcripts?.length > 0 ? "I've analyzed the transcript. You can ask me anything about the meeting discussions, blockers, or next steps." : "The transcript is still being processed. Once it's ready, I can help you analyze the meeting content."}
-                    </p>
-                  </div>
-                </div>
-
-                {answer && (
-                  <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    <div className="w-8 h-8 rounded-lg bg-brand-via/10 flex items-center justify-center shrink-0 border border-brand-via/20">
-                      <Sparkles className="w-4 h-4 text-brand-via" />
-                    </div>
-                    <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                      <p className="text-xs text-zinc-900 dark:text-zinc-100 leading-relaxed font-medium italic">
-                        &quot;{prompt}&quot;
-                      </p>
-                      <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-3" />
-                      <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                        {answer}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {!answer && !isAnswering && suggestions.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                    {suggestions.map((s, i) => (
-                      <button 
-                        key={i}
-                        onClick={() => {
-                          setPrompt(s)
-                          const mockEvent = { preventDefault: () => {} } as React.FormEvent
-                          handleAskAI(mockEvent)
-                        }}
-                        className="p-3 text-left bg-zinc-100/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl transition-all group"
-                      >
-                        <p className="text-[10px] font-bold text-zinc-500 group-hover:text-brand-via transition-colors">{s}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-500">
-                <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Metadata</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase">Latency Avg</span>
-                      <span className="text-[10px] font-black text-zinc-400">--ms</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase">Sentiment</span>
-                      <span className="text-[10px] font-black text-zinc-400">Analysis Pending</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase">Keywords</span>
-                      <span className="text-[10px] font-black text-zinc-400">0 Detected</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Pipeline Status</h4>
-                  <div className="space-y-2">
-                    {['Transcription', 'Diarization', 'Context Extraction', 'Logic Generation'].map((step, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${meeting?.transcripts?.length > 0 ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
-                        <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{step}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Top Participants</h4>
-                  <div className="space-y-3">
-                    {meeting?.transcripts?.length > 0 ? (
-                      meeting.transcripts.slice(0, 3).map((item: Transcript, i: number) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{item.speaker}</span>
-                          <span className="text-[10px] font-bold text-zinc-400">Analyzing...</span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-[10px] text-zinc-500 font-medium">No participant data available yet.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 shrink-0">
-            <form onSubmit={handleAskAI} className="max-w-4xl mx-auto relative group">
-              <input 
-                aria-label="Ask AI about meeting"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ask your AI meeting assistant..."
-                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl pl-12 pr-12 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-brand-via/10 focus:border-brand-via transition-all"
-              />
-              <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-brand-via transition-colors" />
-              <button 
-                type="submit"
-                aria-label="Send message"
-                disabled={isAnswering || !prompt.trim()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-brand-via text-white rounded-xl hover:scale-105 transition-all disabled:opacity-50 disabled:scale-100 shadow-glow"
-              >
-                {isAnswering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              </button>
-            </form>
-          </div>
-        </div>
+        <MeetingTerminal 
+          terminalHeight={terminalHeight}
+          terminalTab={terminalTab}
+          setTerminalTab={setTerminalTab}
+          toggleTerminalSize={toggleTerminalSize}
+          startResizing={startResizing}
+          answer={answer}
+          prompt={prompt}
+          setPrompt={setPrompt}
+          handleAskAI={handleAskAI}
+          isAnswering={isAnswering}
+          meeting={meeting}
+          suggestions={suggestions}
+          sessionName={session?.user?.name}
+        />
       </div>
     </div>
   )
