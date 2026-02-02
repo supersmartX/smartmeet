@@ -126,9 +126,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           icon: isKeyValid === false ? ShieldAlert : Key,
           isWarning: isKeyValid === false
         },
-        { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
+        // { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
         { name: "Security", href: "/dashboard/security", icon: ShieldAlert },
-        { name: "Team", href: "/dashboard/settings/team", icon: Users, upcoming: true },
+        // { name: "Team", href: "/dashboard/settings/team", icon: Users, upcoming: true },
       ]
     },
     { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
