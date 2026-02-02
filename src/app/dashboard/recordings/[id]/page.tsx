@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -61,46 +61,54 @@ export default function RecordingDetailPage() {
     }
   }, [status, session, router])
   
+  const fetchMeeting = useCallback(async (isPolling = false) => {
+    if (!isAuthorized || !params.id) return false // Return false if precondition fails
+
+    try {
+      if (!isPolling) setIsLoading(true)
+      setError(null)
+      
+      const result = await getMeetingById(params.id as string)
+      if (!result.success || !result.data) {
+        setError(result.error || "Meeting not found.")
+        return false // Return false to signal stop polling
+      } else if (result.data.userId !== session?.user?.id) {
+        setError("You don't have permission to view this meeting.")
+        return false // Return false to signal stop polling
+      } else {
+        setMeeting(result.data)
+        
+        // Stop polling if completed or failed
+        if ((result.data.status === 'COMPLETED' || result.data.status === 'FAILED')) {
+          return false // Return false to signal stop polling
+        }
+      }
+    } catch (err) {
+      console.error("Fetch meeting error:", err)
+      if (!isPolling) setError("Failed to load meeting details. Please try again.")
+    } finally {
+      if (!isPolling) setIsLoading(false)
+    }
+    return true // Continue polling
+  }, [isAuthorized, params.id, session?.user?.id])
+
   useEffect(() => {
     if (!isAuthorized || !params.id) return
     
     let pollInterval: NodeJS.Timeout | null = null
 
-    const fetchMeeting = async (isPolling = false) => {
-      try {
-        if (!isPolling) setIsLoading(true)
-        setError(null)
-        
-        const result = await getMeetingById(params.id as string)
-        if (!result.success || !result.data) {
-          setError(result.error || "Meeting not found.")
-          if (pollInterval) clearInterval(pollInterval)
-        } else if (result.data.userId !== session?.user?.id) {
-          setError("You don't have permission to view this meeting.")
-          if (pollInterval) clearInterval(pollInterval)
-        } else {
-          setMeeting(result.data)
-          
-          // Stop polling if completed or failed
-          if ((result.data.status === 'COMPLETED' || result.data.status === 'FAILED') && pollInterval) {
-            clearInterval(pollInterval)
-            pollInterval = null
-          }
-        }
-      } catch (err) {
-        console.error("Fetch meeting error:", err)
-        if (!isPolling) setError("Failed to load meeting details. Please try again.")
-      } finally {
-        if (!isPolling) setIsLoading(false)
-      }
-    }
-
+    // Initial fetch
     fetchMeeting()
 
     // Start polling if pending or processing
-    // We check the current local state or assume we need to poll if we don't have a final state
     if (!meeting || (meeting.status !== 'COMPLETED' && meeting.status !== 'FAILED')) {
-      pollInterval = setInterval(() => fetchMeeting(true), 5000)
+      pollInterval = setInterval(async () => {
+        const shouldContinue = await fetchMeeting(true)
+        if (!shouldContinue && pollInterval) {
+          clearInterval(pollInterval)
+          pollInterval = null
+        }
+      }, 5000)
     }
 
     let eventSource: EventSource | null = null
@@ -131,7 +139,7 @@ export default function RecordingDetailPage() {
       if (pollInterval) clearInterval(pollInterval)
       if (eventSource) eventSource.close()
     }
-  }, [params.id, isAuthorized, session?.user?.id, meeting?.status])
+  }, [params.id, isAuthorized, meeting?.status, fetchMeeting])
 
   const tabs = useMemo(() => [
     { id: "transcript", label: "Transcript", icon: MessageSquare, ext: "" },
@@ -211,6 +219,12 @@ export default function RecordingDetailPage() {
       description: meeting?.processingStep === 'SUMMARIZATION' ? "Synthesizing themes..." : "Extracting key discussions and themes."
     }
   ]
+
+  const handleRefresh = async () => {
+    setIsLoading(true)
+    await fetchMeeting()
+    toastVisible("Refreshed meeting data", "success")
+  }
 
   const handleRetry = async () => {
     const meetingId = (meeting?.id || params.id) as string;
@@ -374,7 +388,7 @@ export default function RecordingDetailPage() {
     <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-500 bg-white dark:bg-zinc-950 min-h-screen">
       <Toast {...toast} onClose={hideToast} />
       
-      <MeetingHeader meeting={meeting} journeySteps={journeySteps} />
+      <MeetingHeader meeting={meeting} journeySteps={journeySteps} onRefresh={handleRefresh} />
 
       <div className="space-y-8">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-zinc-100 dark:border-zinc-900">
@@ -466,7 +480,19 @@ export default function RecordingDetailPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-2">No transcript available</h3>
-                      <p className="text-sm text-zinc-500 font-medium max-w-xs mx-auto">The transcript for this meeting is currently being processed or could not be generated.</p>
+                      <p className="text-sm text-zinc-500 font-medium max-w-xs mx-auto mb-4">
+                        {meeting?.status === 'PROCESSING' 
+                          ? `Processing: ${meeting.processingStep?.replace('_', ' ') || 'Initializing'}...` 
+                          : "The transcript for this meeting is currently being processed or could not be generated."}
+                      </p>
+                      {meeting?.status === 'PROCESSING' && (
+                         <button 
+                           onClick={handleRefresh}
+                           className="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
+                         >
+                           Check Status
+                         </button>
+                      )}
                     </div>
                   </div>
                 )}
