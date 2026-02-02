@@ -189,14 +189,14 @@ export default function RecordingDetailPage() {
   const resize = useCallback((e: MouseEvent) => {
     if (isResizing) {
       const newHeight = window.innerHeight - e.clientY
-      if (newHeight > 100 && newHeight < 600) {
+      if (newHeight > 30 && newHeight < 800) {
         setTerminalHeight(newHeight)
       }
     }
   }, [isResizing])
 
   const toggleTerminalSize = useCallback(() => {
-    setTerminalHeight(prev => prev > 300 ? 192 : 400)
+    setTerminalHeight(prev => prev > 50 ? 40 : 300)
   }, [])
 
   useEffect(() => {
@@ -215,8 +215,6 @@ export default function RecordingDetailPage() {
     { id: "tests", label: "Compliance", icon: CheckCircle2, ext: "", hidden: !isLogicGenerated && !testResults && !meeting?.testResults && meeting?.status !== 'PROCESSING' },
     { id: "docs", label: "Documentation", icon: FileText, ext: "", hidden: !isLogicGenerated && !planResult && !meeting?.projectDoc && meeting?.status !== 'PROCESSING' },
   ], [isLogicGenerated, meeting?.code, meeting?.testResults, meeting?.projectDoc, testResults, planResult, meeting?.status]) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
-
-  const [terminalTab, setTerminalTab] = useState<"chat" | "context">("chat")
 
   const handleGenerateLogic = async () => {
     setIsGeneratingLogic(true)
@@ -767,6 +765,42 @@ export default function RecordingDetailPage() {
                       )}
                       </div>
 
+                      {/* Relocated Metrics from Terminal */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                        <div>
+                           <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Metadata</h4>
+                           <div className="space-y-3">
+                             <div className="flex justify-between">
+                               <span className="text-[10px] font-bold text-zinc-500 uppercase">Latency Avg</span>
+                               <span className="text-[10px] font-black text-zinc-400">--ms</span>
+                             </div>
+                             <div className="flex justify-between">
+                               <span className="text-[10px] font-bold text-zinc-500 uppercase">Sentiment</span>
+                               <span className="text-[10px] font-black text-zinc-400">Analysis Pending</span>
+                             </div>
+                             <div className="flex justify-between">
+                               <span className="text-[10px] font-bold text-zinc-500 uppercase">Keywords</span>
+                               <span className="text-[10px] font-black text-zinc-400">0 Detected</span>
+                             </div>
+                           </div>
+                        </div>
+                        <div>
+                          <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Participants</h4>
+                          <div className="space-y-3">
+                            {meeting?.transcripts && meeting.transcripts.length > 0 ? (
+                              Array.from(new Set(meeting.transcripts.map(t => t.speaker))).slice(0, 3).map((speaker, i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{speaker}</span>
+                                  <span className="text-[10px] font-bold text-zinc-400">Active</span>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-[10px] text-zinc-500 font-medium">No participant data available yet.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
                       {isTechnicalMeeting && !isLogicGenerated && (
                         <div className="bg-zinc-900 dark:bg-white border border-zinc-800 dark:border-zinc-200 rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl shadow-brand-via/20">
                           <div className="flex items-center gap-4">
@@ -1045,8 +1079,6 @@ export default function RecordingDetailPage() {
         </div>
         <MeetingTerminal 
           terminalHeight={terminalHeight}
-          terminalTab={terminalTab}
-          setTerminalTab={setTerminalTab}
           toggleTerminalSize={toggleTerminalSize}
           startResizing={startResizing}
           answer={answer}

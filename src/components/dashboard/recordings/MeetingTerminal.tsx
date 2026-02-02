@@ -1,11 +1,9 @@
 import { Minimize2, Maximize2, Sparkles, Send, Loader2 } from "lucide-react"
-import { MeetingWithRelations, Transcript } from "@/types/meeting"
+import { MeetingWithRelations } from "@/types/meeting"
 import { FormEvent } from "react"
 
 interface MeetingTerminalProps {
   terminalHeight: number
-  terminalTab: "chat" | "context"
-  setTerminalTab: (tab: "chat" | "context") => void
   toggleTerminalSize: () => void
   startResizing: () => void
   answer: string | null
@@ -20,8 +18,6 @@ interface MeetingTerminalProps {
 
 export function MeetingTerminal({
   terminalHeight,
-  terminalTab,
-  setTerminalTab,
   toggleTerminalSize,
   startResizing,
   answer,
@@ -38,35 +34,19 @@ export function MeetingTerminal({
       style={{ height: terminalHeight }}
       className="border-t border-zinc-200 dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-900/50 shrink-0 relative transition-[height] duration-300 ease-in-out"
     >
-      {/* Terminal Tabs */}
-      <div className="flex bg-zinc-100/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 px-4 shrink-0 justify-between items-center">
-        <div className="flex">
-          <button 
-            onClick={() => setTerminalTab("chat")}
-            className={`px-4 py-2 text-xs font-black uppercase tracking-widest transition-all relative ${
-              terminalTab === "chat" ? "text-brand-via" : "text-zinc-500 dark:text-zinc-400"
-            }`}
-          >
-            AI Assistant
-            {terminalTab === "chat" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-via" />}
-          </button>
-          <button 
-            onClick={() => setTerminalTab("context")}
-            className={`px-4 py-2 text-xs font-black uppercase tracking-widest transition-all relative ${
-              terminalTab === "context" ? "text-brand-via" : "text-zinc-500 dark:text-zinc-400"
-            }`}
-          >
-            Technical Context
-            {terminalTab === "context" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-via" />}
-          </button>
+      {/* Terminal Header */}
+      <div className="flex bg-zinc-100/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 px-4 shrink-0 justify-between items-center h-10">
+        <div className="flex items-center gap-2">
+             <Sparkles className="w-3.5 h-3.5 text-brand-via" />
+             <span className="text-xs font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">AI Assistant</span>
         </div>
         
         <button
           onClick={toggleTerminalSize}
           className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors text-zinc-500"
-          aria-label={terminalHeight > 300 ? "Minimize terminal" : "Maximize terminal"}
+          aria-label={terminalHeight > 50 ? "Minimize terminal" : "Maximize terminal"}
         >
-          {terminalHeight > 300 ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          {terminalHeight > 50 ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
       </div>
 
@@ -79,7 +59,6 @@ export function MeetingTerminal({
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-        {terminalTab === "chat" ? (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="w-8 h-8 rounded-lg bg-brand-via/10 flex items-center justify-center shrink-0 border border-brand-via/20">
@@ -126,53 +105,6 @@ export function MeetingTerminal({
               </div>
             )}
           </div>
-        ) : (
-          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-500">
-            <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Metadata</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase">Latency Avg</span>
-                  <span className="text-[10px] font-black text-zinc-400">--ms</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase">Sentiment</span>
-                  <span className="text-[10px] font-black text-zinc-400">Analysis Pending</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase">Keywords</span>
-                  <span className="text-[10px] font-black text-zinc-400">0 Detected</span>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Pipeline Status</h4>
-              <div className="space-y-2">
-                {['Transcription', 'Diarization', 'Context Extraction', 'Logic Generation'].map((step, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${meeting?.transcripts && meeting.transcripts.length > 0 ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
-                    <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{step}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Top Participants</h4>
-              <div className="space-y-3">
-                {meeting?.transcripts && meeting.transcripts.length > 0 ? (
-                  meeting.transcripts.slice(0, 3).map((item: Transcript, i: number) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{item.speaker}</span>
-                      <span className="text-[10px] font-bold text-zinc-400">Analyzing...</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-[10px] text-zinc-500 font-medium">No participant data available yet.</p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="p-4 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 shrink-0">
