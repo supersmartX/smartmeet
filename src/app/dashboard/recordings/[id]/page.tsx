@@ -126,7 +126,7 @@ export default function RecordingDetailPage() {
           }
           
           // Stop polling if completed or failed
-          if (result.data.status !== 'PROCESSING' && pollInterval) {
+          if ((result.data.status === 'COMPLETED' || result.data.status === 'FAILED') && pollInterval) {
             clearInterval(pollInterval)
             pollInterval = null
           }
@@ -140,6 +140,12 @@ export default function RecordingDetailPage() {
     }
 
     fetchMeeting()
+
+    // Start polling if pending or processing
+    // We check the current local state or assume we need to poll if we don't have a final state
+    if (!meeting || (meeting.status !== 'COMPLETED' && meeting.status !== 'FAILED')) {
+      pollInterval = setInterval(() => fetchMeeting(true), 5000)
+    }
 
     let eventSource: EventSource | null = null
 
@@ -166,6 +172,7 @@ export default function RecordingDetailPage() {
     }
 
     return () => {
+      if (pollInterval) clearInterval(pollInterval)
       if (eventSource) eventSource.close()
     }
   }, [params.id, isAuthorized, session?.user?.id, meeting?.status])
