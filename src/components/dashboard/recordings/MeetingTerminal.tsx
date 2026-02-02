@@ -11,7 +11,7 @@ interface MeetingTerminalProps {
   answer: string | null
   prompt: string
   setPrompt: (prompt: string) => void
-  handleAskAI: (e: FormEvent) => void
+  handleAskAI: (e?: FormEvent, overridePrompt?: string) => void
   isAnswering: boolean
   meeting: MeetingWithRelations | null
   suggestions: string[]
@@ -116,63 +116,7 @@ export function MeetingTerminal({
                     key={i}
                     onClick={() => {
                       setPrompt(s)
-                      // Create a synthetic event or just call a modified handler. 
-                      // Since we can't easily create a synthetic event here without more boilerplate,
-                      // we rely on the parent to handle this if needed, but the current prop expects a FormEvent.
-                      // Ideally, handleAskAI should accept (e?: FormEvent, promptText?: string).
-                      // For now, we'll assume the parent might need to change to support direct calls or we simulate:
-                      // But wait, the parent `handleAskAI` uses `prompt` state.
-                      // So we just setPrompt(s) and then we need to trigger the submission.
-                      // The issue is `handleAskAI` preventsDefault.
-                      // Let's just set the prompt and let the user click send, OR change the interface.
-                      // The original code was:
-                      /*
-                        onClick={() => {
-                          setPrompt(s)
-                          const mockEvent = { preventDefault: () => {} } as React.FormEvent
-                          handleAskAI(mockEvent)
-                        }}
-                      */
-                      // We can't do that easily inside the onClick because `setPrompt` is async-ish (state update).
-                      // Actually, React state updates are batched.
-                      // But `handleAskAI` uses the `prompt` state variable, which won't be updated yet in the same closure!
-                      // The original code had a bug if `handleAskAI` used `prompt` state directly.
-                      // Let's check `page.tsx`:
-                      /*
-                        const handleAskAI = async (e: React.FormEvent) => {
-                          e.preventDefault()
-                          if (!prompt.trim()) return // uses prompt state
-                          ...
-                        }
-                      */
-                      // So `setPrompt(s)` then `handleAskAI` immediately won't work because `prompt` is stale.
-                      // The original code in page.tsx was:
-                      /*
-                        onClick={() => {
-                          setPrompt(s)
-                          const mockEvent = { preventDefault: () => {} } as React.FormEvent
-                          handleAskAI(mockEvent)
-                        }}
-                      */
-                      // This indeed looks buggy if `handleAskAI` reads `prompt`.
-                      // Wait, maybe I misread `page.tsx` or `handleAskAI` takes an argument?
-                      // Line 368: `const handleAskAI = async (e: React.FormEvent) => {`
-                      // Line 370: `if (!prompt.trim()) return`
-                      // Yes, it uses state. So the original code was likely broken for that specific click action, 
-                      // unless `setPrompt` triggers a re-render and the user has to click send?
-                      // OR, maybe the original code was just setting prompt and NOT calling handleAskAI?
-                      // Let's check line 1206 in `page.tsx`.
-                      // `handleAskAI(mockEvent)`
-                      // Yeah, that seems wrong if it relies on state.
-                      // I will fix this in the component by modifying `handleAskAI` signature or passing the prompt explicitly.
-                      // But I can't change `handleAskAI` easily without changing `page.tsx`.
-                      // I will just leave it as `setPrompt(s)` and let the user click send, 
-                      // OR I will assume the parent will handle it.
-                      // Actually, looking at the UI, it's better if it auto-submits.
-                      // I'll leave the button as just setting prompt for now to be safe, or I can try to fix it.
-                      // "Check this before chesing something we already have" - maybe I should stick to exact copy?
-                      // I'll just set prompt.
-                      setPrompt(s)
+                      handleAskAI(undefined, s)
                     }}
                     className="p-3 text-left bg-zinc-100/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl transition-all group"
                   >

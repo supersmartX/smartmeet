@@ -359,17 +359,22 @@ export default function RecordingDetailPage() {
     )
   }
 
-  const handleAskAI = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!prompt.trim()) return
+  const handleAskAI = async (e?: React.FormEvent, overridePrompt?: string) => {
+    if (e) e.preventDefault()
+    
+    const textToAsk = overridePrompt || prompt
+    if (!textToAsk.trim()) return
     
     setIsAnswering(true)
     setAnswer(null)
     
     try {
-      const result = await askAIAboutMeeting(params.id as string, prompt)
+      const result = await askAIAboutMeeting(params.id as string, textToAsk)
       if (result.success && result.data) {
         setAnswer(result.data)
+        // Only clear prompt if we didn't use an override (i.e., it was a manual typed submission)
+        // Or should we always clear it? If user clicked suggestion, maybe we want to keep it or clear it.
+        // Usually clearing is better.
         setPrompt("")
       } else {
         setAnswer(`Error: ${result.error || "Failed to get an answer from AI."}`)

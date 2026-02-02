@@ -521,14 +521,12 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
     if (!effectiveApiKey) return { success: false, error: "No API key configured" };
 
     // Custom implementation or use service
-    const { buildPrompt, summarizeText } = await import("@/services/api");
-    const promptResult = await buildPrompt(question, { context: transcription });
+    const { summarizeText } = await import("@/services/api");
     
-    if (!promptResult.success || !promptResult.data) {
-      return { success: false, error: promptResult.error?.message || "Failed to build prompt" };
-    }
+    // Build prompt locally to avoid 404 from missing /api/AI/prompt/build endpoint
+    const prompt = `Context:\n${transcription}\n\nQuestion: ${question}\n\nAnswer the question based on the context provided.`;
 
-    const result = await summarizeText(promptResult.data.prompt, { 
+    const result = await summarizeText(prompt, { 
       api_key: effectiveApiKey, 
       provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "CUSTOM"
     });
