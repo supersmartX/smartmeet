@@ -342,8 +342,8 @@ export default function RecordingDetailPage() {
     
     try {
       const path = docData.split(": ")[1].trim();
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://api.supersmartx.com:8000";
-      const downloadUrl = `${baseUrl}/${path}`;
+      // Use the download proxy to avoid Mixed Content errors
+      const downloadUrl = `/api/v1/download?path=${encodeURIComponent(path)}`;
       const filename = path.split('/').pop() || "project_doc.docx";
       
       await downloadFile(downloadUrl, filename);
