@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -8,16 +8,24 @@ import { useParams, useRouter } from "next/navigation"
 import { highlightText } from "@/utils/text"
 import { 
   getMeetingById, 
+<<<<<<< HEAD
   askAIAboutMeeting,
   enqueueMeetingAI,
   saveMeetingSummary,
   saveMeetingCode,
   saveMeetingTestResults,
   saveMeetingPlan
+=======
+  generateMeetingSummary,
+  processMeetingAI,
+  enqueueMeetingAI,
+  retryStuckMeeting
+>>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
 } from "@/actions/meeting"
-import { MeetingWithRelations, Transcript, ActionItem } from "@/types/meeting"
+import { MeetingWithRelations, Transcript } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
+<<<<<<< HEAD
 import { 
   downloadFile, 
   summarizeText, 
@@ -25,35 +33,24 @@ import {
   testCode, 
   generatePlan
 } from "@/services/api"
+=======
+import { MeetingHeader } from "@/components/dashboard/recordings/MeetingHeader"
+import { MeetingTabs, EditorTab } from "@/components/dashboard/recordings/MeetingTabs"
+>>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
 
 import { 
-  Clock, 
-  Users, 
   Video,
-  Share2, 
   Search, 
   Sparkles, 
-  Send,
-  FileText,
   MessageSquare,
-  Code,
-  CheckCircle2,
-  ChevronRight,
-  ArrowRight,
-  Copy,
   Loader2,
   ShieldCheck,
-  Download,
-  AlertCircle,
-  Maximize2,
-  Minimize2
+  AlertCircle
 } from "lucide-react"
 
 import { CodeEditor } from "@/components/dashboard/recordings/CodeEditor"
 
 /* --------------------------- COMPONENT ---------------------------- */
-
-type EditorTab = "transcript" | "summary" | "code" | "tests" | "docs"
 
 export default function RecordingDetailPage() {
   const params = useParams()
@@ -63,35 +60,12 @@ export default function RecordingDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<EditorTab>("transcript")
-  const [prompt, setPrompt] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [isAnswering, setIsAnswering] = useState(false)
-  const [answer, setAnswer] = useState<string | null>(null)
 
   const { toast, showToast: toastVisible, hideToast } = useToast()
-
-  // Logic Generation State
-  const [isLogicGenerated, setIsLogicGenerated] = useState(false)
-  const [isGeneratingLogic, setIsGeneratingLogic] = useState(false)
   
   // New AI States
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
-  const [isTestingCompliance, setIsTestingCompliance] = useState(false)
-  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
-  const [testResults, setTestResults] = useState<string | null>(null)
-  const [planResult, setPlanResult] = useState<string | null>(null)
-  
-  // Initialize results from meeting data
-  useEffect(() => {
-    if (meeting) {
-      if (meeting.testResults && !testResults) {
-        setTestResults(meeting.testResults)
-      }
-      if (meeting.projectDoc && !planResult) {
-        setPlanResult(meeting.projectDoc)
-      }
-    }
-  }, [meeting, testResults, planResult])
   
   // SSR Protection: Check authentication and authorization
   const { data: session, status } = useSession()
@@ -109,56 +83,69 @@ export default function RecordingDetailPage() {
     }
   }, [status, session, router])
   
+  const fetchMeeting = useCallback(async (isPolling = false) => {
+    if (!isAuthorized || !params.id) return false // Return false if precondition fails
+
+    try {
+      if (!isPolling) setIsLoading(true)
+      setError(null)
+      
+      const result = await getMeetingById(params.id as string)
+      if (!result.success || !result.data) {
+        setError(result.error || "Meeting not found.")
+        return false // Return false to signal stop polling
+      } else if (result.data.userId !== session?.user?.id) {
+        setError("You don't have permission to view this meeting.")
+        return false // Return false to signal stop polling
+      } else {
+        setMeeting(result.data)
+        
+        // Stop polling if completed or failed
+        if ((result.data.status === 'COMPLETED' || result.data.status === 'FAILED')) {
+          return false // Return false to signal stop polling
+        }
+      }
+    } catch (err) {
+      console.error("Fetch meeting error:", err)
+      if (!isPolling) setError("Failed to load meeting details. Please try again.")
+    } finally {
+      if (!isPolling) setIsLoading(false)
+    }
+    return true // Continue polling
+  }, [isAuthorized, params.id, session?.user?.id])
+
+  const meetingStatus = meeting?.status
+
   useEffect(() => {
     if (!isAuthorized || !params.id) return
     
     let pollInterval: NodeJS.Timeout | null = null
 
-    const fetchMeeting = async (isPolling = false) => {
-      try {
-        if (!isPolling) setIsLoading(true)
-        setError(null)
-        
-        const result = await getMeetingById(params.id as string)
-        if (!result.success || !result.data) {
-          setError(result.error || "Meeting not found.")
-          if (pollInterval) clearInterval(pollInterval)
-        } else if (result.data.userId !== session?.user?.id) {
-          setError("You don't have permission to view this meeting.")
-          if (pollInterval) clearInterval(pollInterval)
-        } else {
-          setMeeting(result.data)
-          if (result.data?.code) {
-            setIsLogicGenerated(true)
-          }
-          
-          // Stop polling if completed or failed
-          if (result.data.status !== 'PROCESSING' && pollInterval) {
-            clearInterval(pollInterval)
-            pollInterval = null
-          }
-        }
-      } catch (err) {
-        console.error("Fetch meeting error:", err)
-        if (!isPolling) setError("Failed to load meeting details. Please try again.")
-      } finally {
-        if (!isPolling) setIsLoading(false)
-      }
-    }
-
+    // Initial fetch
     fetchMeeting()
+
+    // Start polling if pending or processing
+    if (!meetingStatus || (meetingStatus !== 'COMPLETED' && meetingStatus !== 'FAILED')) {
+      pollInterval = setInterval(async () => {
+        const shouldContinue = await fetchMeeting(true)
+        if (!shouldContinue && pollInterval) {
+          clearInterval(pollInterval)
+          pollInterval = null
+        }
+      }, 5000)
+    }
 
     let eventSource: EventSource | null = null
 
     // Use SSE for real-time status updates if meeting is processing
-    if (meeting?.status === 'PROCESSING' || meeting?.status === 'PENDING') {
+    if (meetingStatus === 'PROCESSING' || meetingStatus === 'PENDING') {
       const statusUrl = `/api/v1/meetings/${params.id}/status`
       eventSource = new EventSource(statusUrl)
 
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          if (data.status && data.status !== meeting?.status) {
+          if (data.status && data.status !== meetingStatus) {
             fetchMeeting(true)
           }
         } catch (error) {
@@ -173,50 +160,15 @@ export default function RecordingDetailPage() {
     }
 
     return () => {
+      if (pollInterval) clearInterval(pollInterval)
       if (eventSource) eventSource.close()
     }
-  }, [params.id, isAuthorized, session?.user?.id, meeting?.status])
-
-  // Check if meeting is technical (calculated on backend)
-  const isTechnicalMeeting = meeting?.isTechnical || false
-
-  // Terminal Resize Logic
-  const [terminalHeight, setTerminalHeight] = useState(192) // 48 * 4
-  const [isResizing, setIsResizing] = useState(false)
-
-  const startResizing = useCallback(() => {
-    setIsResizing(true)
-  }, [])
-
-  const stopResizing = useCallback(() => {
-    setIsResizing(false)
-  }, [])
-
-  const resize = useCallback((e: MouseEvent) => {
-    if (isResizing) {
-      const newHeight = window.innerHeight - e.clientY
-      if (newHeight > 100 && newHeight < 600) {
-        setTerminalHeight(newHeight)
-      }
-    }
-  }, [isResizing])
-
-  const toggleTerminalSize = useCallback(() => {
-    setTerminalHeight(prev => prev > 300 ? 192 : 400)
-  }, [])
-
-  useEffect(() => {
-    window.addEventListener("mousemove", resize)
-    window.addEventListener("mouseup", stopResizing)
-    return () => {
-      window.removeEventListener("mousemove", resize)
-      window.removeEventListener("mouseup", stopResizing)
-    }
-  }, [resize, stopResizing])
+  }, [params.id, isAuthorized, meetingStatus, fetchMeeting])
 
   const tabs = useMemo(() => [
     { id: "transcript", label: "Transcript", icon: MessageSquare, ext: "" },
     { id: "summary", label: "AI Summary", icon: Sparkles, ext: "" },
+<<<<<<< HEAD
     { id: "code", label: "Meeting Logic", icon: Code, ext: "", hidden: !isLogicGenerated && !meeting?.code && meeting?.status !== 'PROCESSING' },
     { id: "tests", label: "Compliance", icon: CheckCircle2, ext: "", hidden: !isLogicGenerated && !testResults && !meeting?.testResults && meeting?.status !== 'PROCESSING' },
     { id: "docs", label: "Documentation", icon: FileText, ext: "", hidden: !isLogicGenerated && !planResult && !meeting?.projectDoc && meeting?.status !== 'PROCESSING' },
@@ -263,6 +215,9 @@ export default function RecordingDetailPage() {
       setIsGeneratingLogic(false)
     }
   }
+=======
+  ], []) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
+>>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
 
   const handleGenerateSummary = async () => {
     setIsGeneratingSummary(true)
@@ -295,6 +250,7 @@ export default function RecordingDetailPage() {
     }
   }
 
+<<<<<<< HEAD
   const handleTestCompliance = async () => {
     setIsTestingCompliance(true)
     try {
@@ -382,6 +338,8 @@ export default function RecordingDetailPage() {
     }
   }
 
+=======
+>>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
   useEffect(() => {
     // Persist active tab in session storage (client-side only)
     if (typeof window !== 'undefined') {
@@ -418,31 +376,6 @@ export default function RecordingDetailPage() {
     )
   }
 
-  const handleAskAI = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!prompt.trim()) return
-    
-    setIsAnswering(true)
-    setAnswer(null)
-    
-    try {
-      const result = await askAIAboutMeeting(params.id as string, prompt)
-      if (result.success && result.data) {
-        setAnswer(result.data)
-        setPrompt("")
-      } else {
-        setAnswer(`Error: ${result.error || "Failed to get an answer from AI."}`)
-      }
-    } catch (error) {
-      console.error("Ask AI error:", error)
-      setAnswer("An unexpected error occurred. Please try again.")
-    } finally {
-      setIsAnswering(false)
-    }
-  }
-
-  const suggestions: string[] = []
-
   const journeySteps = [
     { 
       label: "Captured", 
@@ -458,20 +391,14 @@ export default function RecordingDetailPage() {
       label: "AI Summary", 
       status: meeting?.summary ? "completed" as const : meeting?.processingStep === 'SUMMARIZATION' ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
       description: meeting?.processingStep === 'SUMMARIZATION' ? "Synthesizing themes..." : "Extracting key discussions and themes."
-    },
-    { 
-      label: "Logic", 
-      status: (isLogicGenerated || meeting?.code) ? "completed" as const : meeting?.processingStep === 'CODE_GENERATION' ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
-      description: meeting?.processingStep === 'CODE_GENERATION' ? "Synthesizing logic..." : "Translating talk into executable code."
-    },
-    { 
-      label: "Documentation", 
-      status: (planResult || meeting?.projectDoc) ? "completed" as const : (meeting?.processingStep === 'TESTING' || meeting?.processingStep === 'DOCUMENTATION') ? 'processing' as const : meeting?.status === 'FAILED' ? 'failed' as const : "pending" as const,
-      description: (meeting?.processingStep === 'TESTING' || meeting?.processingStep === 'DOCUMENTATION') ? "Drafting roadmap..." : "Generating final roadmap and tests."
-    },
+    }
   ]
 
-  const [copyStatus, setCopyStatus] = useState("Copy Code")
+  const handleRefresh = async () => {
+    setIsLoading(true)
+    await fetchMeeting()
+    toastVisible("Refreshed meeting data", "success")
+  }
 
   const handleRetry = async () => {
     const meetingId = (meeting?.id || params.id) as string;
@@ -496,13 +423,31 @@ export default function RecordingDetailPage() {
     }
   };
 
-  const handleCopyCode = () => {
-    if (meeting?.code) {
-      navigator.clipboard.writeText(meeting.code)
-      setCopyStatus("Copied!")
-      setTimeout(() => setCopyStatus("Copy Code"), 2000)
+  const handleRetryStuck = async () => {
+    const meetingId = (meeting?.id || params.id) as string;
+    if (!meetingId) return;
+
+    setIsLoading(true);
+    try {
+      toastVisible("Attempting to force retry...", "info");
+      const result = await retryStuckMeeting(meetingId);
+      
+      if (result.success) {
+        toastVisible("Retry initiated successfully.", "success");
+        // Wait a bit then reload to show new status
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        toastVisible(result.error || "Failed to force retry", "error");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Force Retry error:", err);
+      toastVisible("Failed to force retry", "error");
+      setIsLoading(false);
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -640,125 +585,48 @@ export default function RecordingDetailPage() {
   }
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden ${isResizing ? 'cursor-row-resize select-none' : ''}`}>
+    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-500 bg-white dark:bg-zinc-950 min-h-screen">
       <Toast {...toast} onClose={hideToast} />
-      {/* Editor Header / Breadcrumbs (Local) */}
-      <div className="h-auto min-h-10 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 shrink-0 gap-3">
-        <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
-          <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest overflow-hidden shrink-0">
-            <Link href="/dashboard" className="hover:text-brand-via transition-colors shrink-0 hidden xs:inline">smartmeet</Link>
-            <ChevronRight className="w-3 h-3 shrink-0 hidden xs:inline" />
-            <Link href="/dashboard/recordings" className="hover:text-brand-via transition-colors shrink-0">recordings</Link>
-            <ChevronRight className="w-3 h-3 shrink-0" />
-            <span className="text-zinc-900 dark:text-zinc-100 truncate max-w-[100px] xs:max-w-none">{meeting?.title || "Analysis"}</span>
-          </div>
-          
-          <div className="hidden xl:flex items-center gap-6 ml-6 pl-6 border-l border-zinc-200 dark:border-zinc-800">
-            {journeySteps.map((step, i) => (
-              <div key={i} className="flex items-center gap-2 group relative">
-                <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                  step.status === 'completed' 
-                    ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' 
-                    : step.status === 'processing'
-                      ? 'bg-brand-via animate-pulse shadow-[0_0_8px_rgba(var(--brand-via-rgb),0.5)]'
-                      : step.status === 'failed'
-                        ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
-                        : 'bg-zinc-300 dark:bg-zinc-700'
-                }`} />
-                <div className="flex flex-col">
-                  <span className={`text-[10px] font-black uppercase tracking-tighter leading-none ${
-                    step.status === 'completed' ? 'text-zinc-900 dark:text-zinc-100' : step.status === 'processing' ? 'text-brand-via' : step.status === 'failed' ? 'text-red-500' : 'text-zinc-400'
-                  }`}>
-                    {step.label}
-                  </span>
-                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-tighter">
-                    {step.status === 'completed' ? 'Verified' : step.status === 'processing' ? 'Processing...' : step.status === 'failed' ? 'Failed' : 'Pending'}
-                  </span>
+      
+      <MeetingHeader meeting={meeting} journeySteps={journeySteps} onRefresh={handleRefresh} />
+
+      <div className="space-y-8">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-zinc-100 dark:border-zinc-900">
+           <MeetingTabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
+           
+           {meeting?.audioUrl && (
+            <div className="w-full lg:w-auto bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-4 py-2.5 rounded-xl flex items-center gap-4 shadow-sm">
+              <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
+                  <Video className="w-4 h-4 text-zinc-500" />
                 </div>
-                {i < journeySteps.length - 1 && <div className="w-6 h-[1px] bg-zinc-200 dark:bg-zinc-800 ml-2" />}
-                
-                {/* Hover Tooltip */}
-                <div className="absolute top-full left-0 mt-2 py-2 px-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-50 pointer-events-none shadow-2xl border border-white/10 dark:border-black/5 -translate-y-1 group-hover:translate-y-0">
-                  <p className="mb-1 uppercase tracking-widest text-[9px] opacity-50">{step.label}</p>
-                  <p className="tracking-tight">{step.description}</p>
-                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Original Audio</span>
               </div>
-            ))}
-          </div>
+              <audio 
+                src={meeting.audioUrl} 
+                controls 
+                className="h-8 w-full sm:w-64 lg:w-80 filter dark:invert opacity-80 hover:opacity-100 transition-opacity"
+              />
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-zinc-500">
-            <Clock className="w-3 h-3" /> {meeting?.duration || "--m"}
-            <Users className="w-3 h-3 ml-2" /> {meeting?.participants || "--"}
-          </div>
-          <div className="h-4 w-[1px] bg-zinc-200 dark:border-zinc-800" />
-          <button 
-            aria-label="Share recording"
-            className="text-xs font-bold text-brand-via hover:underline uppercase tracking-widest flex items-center gap-1.5"
-          >
-            <Share2 className="w-3 h-3" /> Share
-          </button>
-        </div>
-      </div>
 
-      {/* Editor Tab Bar */}
-      <div className="flex bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto no-scrollbar shrink-0">
-        {tabs.filter(t => !t.hidden).map((tab) => {
-          const isActive = activeTab === tab.id
-          const Icon = tab.icon
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-[11px] border-r border-zinc-200 dark:border-zinc-800 transition-all min-w-[120px] relative group ${
-                isActive 
-                  ? "bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100" 
-                  : "text-zinc-500 hover:bg-zinc-200/50 dark:hover:bg-zinc-900/50"
-              }`}
-            >
-              {isActive && <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-via" />}
-              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-brand-via" : "text-zinc-400"}`} />
-              <span className="truncate font-medium">{tab.label}{tab.ext}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Audio Player */}
-      {meeting?.audioUrl && (
-        <div className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 py-2 flex items-center gap-4 shrink-0 overflow-hidden">
-          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-            <Video className="w-4 h-4 shrink-0" />
-            <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Recording</span>
-          </div>
-          <audio 
-            src={meeting.audioUrl} 
-            controls 
-            className="h-8 flex-1 max-w-2xl filter dark:invert opacity-80 hover:opacity-100 transition-opacity"
-          />
-        </div>
-      )}
-
-      {/* Editor Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-950">
+        <div className="grid grid-cols-1 gap-8">
           {/* Search bar for transcript */}
           {activeTab === "transcript" && (
-            <div className="px-4 sm:px-8 py-4 border-b border-zinc-100 dark:border-zinc-900 sticky top-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-10">
-              <div className="relative max-w-md group">
-                <input
-                  aria-label="Search transcript"
-                  placeholder="Search in transcript..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-10 pr-4 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-via transition-all"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-brand-via" />
-              </div>
+            <div className="relative max-w-2xl group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand-via transition-colors" />
+              <input
+                aria-label="Search transcript"
+                placeholder="Search in transcript..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl pl-14 pr-6 py-4 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-brand-via/10 focus:border-brand-via transition-all shadow-sm placeholder:text-zinc-400"
+              />
             </div>
           )}
 
-          <div className="p-4 sm:p-8">
+          <div className="min-h-[400px]">
             {meeting?.status === 'FAILED' && (
               <div className="mb-8 p-6 bg-red-500/5 border border-red-500/20 rounded-3xl flex flex-col items-center text-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                 <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center">
@@ -782,37 +650,60 @@ export default function RecordingDetailPage() {
             )}
 
             {activeTab === "transcript" && (
-              <div className="space-y-8 max-w-3xl">
+              <div className="space-y-6 max-w-4xl">
                 {meeting?.transcripts?.length > 0 ? (
                   filteredTranscript.map((item: Transcript, i: number) => (
-                    <div key={i} className="flex gap-4 group">
-                      <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800 group-hover:border-brand-via transition-colors">
+                    <div key={i} className="flex gap-6 group p-4 rounded-3xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors border border-transparent hover:border-zinc-100 dark:hover:border-zinc-800">
+                      <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-xs font-black text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800 group-hover:border-brand-via transition-colors shadow-sm">
                         {item.speaker[0]}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{renderHighlightedText(item.speaker, searchQuery)}</span>
-                          <span className="text-[10px] text-zinc-400 font-medium">{item.time}</span>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">{renderHighlightedText(item.speaker, searchQuery)}</span>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-zinc-100 dark:bg-zinc-900 px-2 py-1 rounded-lg">{item.time}</span>
                           {item.confidence && (
-                            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20 ml-1">
-                              {Math.round(item.confidence * 100)}% Confidence
+                            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                              {Math.round(item.confidence * 100)}% Match
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                        <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
                           {renderHighlightedText(item.text, searchQuery)}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800">
-                      <MessageSquare className="w-6 h-6 text-zinc-300 dark:text-zinc-600" />
+                  <div className="flex flex-col items-center justify-center py-20 text-center gap-6 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-[32px] bg-zinc-50/50 dark:bg-zinc-900/20">
+                    <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-xl">
+                      <MessageSquare className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-1">No transcript available</h3>
-                      <p className="text-[10px] text-zinc-500 font-medium">The transcript for this meeting is currently being processed.</p>
+                      <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-2">No transcript available</h3>
+                      <p className="text-sm text-zinc-500 font-medium max-w-xs mx-auto mb-4">
+                        {meeting?.status === 'PROCESSING' 
+                          ? `Processing: ${meeting.processingStep?.replace('_', ' ') || 'Initializing'}...` 
+                          : "The transcript for this meeting is currently being processed or could not be generated."}
+                      </p>
+                      {meeting?.status === 'PROCESSING' && (
+                         <div className="flex flex-col gap-2 items-center w-full">
+                           <button 
+                             onClick={handleRefresh}
+                             className="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
+                           >
+                             Check Status
+                           </button>
+                           {/* Show retry if updated > 2 mins ago */}
+                           {meeting.updatedAt && (new Date().getTime() - new Date(meeting.updatedAt).getTime() > 2 * 60 * 1000) && (
+                             <button 
+                               onClick={handleRetryStuck}
+                               className="px-6 py-2 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
+                             >
+                               Force Retry
+                             </button>
+                           )}
+                         </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -820,23 +711,23 @@ export default function RecordingDetailPage() {
             )}
 
             {activeTab === "summary" && (
-              <div className="max-w-3xl animate-in fade-in duration-500">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-                      <Sparkles className="w-5 h-5 text-brand-via" />
+              <div className="max-w-4xl animate-in fade-in duration-500">
+                <div className="flex items-center justify-between mb-8 p-6 bg-brand-via/5 border border-brand-via/10 rounded-3xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20 shadow-lg shadow-brand-via/5">
+                      <Sparkles className="w-6 h-6 text-brand-via" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Executive Summary</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">AI-Generated Insights</p>
+                      <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Executive Summary</h2>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">AI-Generated Insights & Action Items</p>
                     </div>
                   </div>
                   <button 
                     onClick={handleGenerateSummary}
                     disabled={isGeneratingSummary}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200 dark:border-zinc-700"
+                    className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all border border-zinc-200 dark:border-zinc-800 shadow-sm"
                   >
-                    {isGeneratingSummary ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    {isGeneratingSummary ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-brand-via" />}
                     {isGeneratingSummary ? "Regenerating..." : "Regenerate"}
                   </button>
                 </div>
@@ -897,26 +788,41 @@ export default function RecordingDetailPage() {
                       )}
                       </div>
 
-                      {isTechnicalMeeting && !isLogicGenerated && (
-                        <div className="bg-zinc-900 dark:bg-white border border-zinc-800 dark:border-zinc-200 rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl shadow-brand-via/20">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-brand-via/20 flex items-center justify-center shrink-0">
-                              <Code className="w-5 h-5 sm:w-6 sm:h-6 text-brand-via" />
-                            </div>
-                            <div>
-                              <h4 className="text-xs sm:text-sm font-black text-white dark:text-zinc-900 uppercase tracking-tight">Technical Context Detected</h4>
-                              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-widest mt-1 text-center sm:text-left">Generate logic & compliance reports</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={handleGenerateLogic}
-                            disabled={isGeneratingLogic}
-                            className="w-full sm:w-auto px-6 py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
-                          >
-                            {isGeneratingLogic ? "Generating..." : "Generate Logic"}
-                          </button>
+                      {/* Relocated Metrics from Terminal */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                        <div>
+                           <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Metadata</h4>
+                           <div className="space-y-3">
+                             <div className="flex justify-between">
+                               <span className="text-[10px] font-bold text-zinc-500 uppercase">Latency Avg</span>
+                               <span className="text-[10px] font-black text-zinc-400">--ms</span>
+                             </div>
+                             <div className="flex justify-between">
+                               <span className="text-[10px] font-bold text-zinc-500 uppercase">Sentiment</span>
+                               <span className="text-[10px] font-black text-zinc-400">Analysis Pending</span>
+                             </div>
+                             <div className="flex justify-between">
+                               <span className="text-[10px] font-bold text-zinc-500 uppercase">Keywords</span>
+                               <span className="text-[10px] font-black text-zinc-400">0 Detected</span>
+                             </div>
+                           </div>
                         </div>
-                      )}
+                        <div>
+                          <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Participants</h4>
+                          <div className="space-y-3">
+                            {meeting?.transcripts && meeting.transcripts.length > 0 ? (
+                              Array.from(new Set(meeting.transcripts.map(t => t.speaker))).slice(0, 3).map((speaker, i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{speaker}</span>
+                                  <span className="text-[10px] font-bold text-zinc-400">Active</span>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-[10px] text-zinc-500 font-medium">No participant data available yet.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
@@ -932,6 +838,7 @@ export default function RecordingDetailPage() {
                 </div>
               </div>
             )}
+<<<<<<< HEAD
 
             {activeTab === "code" && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1341,6 +1248,8 @@ export default function RecordingDetailPage() {
                 {isAnswering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
             </form>
+=======
+>>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
           </div>
         </div>
       </div>

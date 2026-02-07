@@ -14,9 +14,7 @@ import {
   LucideIcon,
   BarChart3,
   Key,
-  User,
-  Users,
-  Zap
+  User
 } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { getMeetings, getUserSettings } from "@/actions/meeting"
@@ -126,9 +124,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           icon: isKeyValid === false ? ShieldAlert : Key,
           isWarning: isKeyValid === false
         },
-        { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
+        // { name: "Integrations", href: "/dashboard/integrations", icon: Zap },
         { name: "Security", href: "/dashboard/security", icon: ShieldAlert },
-        { name: "Team", href: "/dashboard/settings/team", icon: Users, upcoming: true },
+        // { name: "Team", href: "/dashboard/settings/team", icon: Users, upcoming: true },
       ]
     },
     { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },

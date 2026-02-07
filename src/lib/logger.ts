@@ -21,26 +21,22 @@ const createLogger = () => {
 
   // Server: Environment-specific configuration
   if (process.env.NODE_ENV === 'development') {
-    try {
-      /**
-       * In development server-side, we try to use pino-pretty as a stream.
-       * We use eval('require') to hide this from Webpack's static analysis
-       * so it doesn't try to bundle it (and its node-only dependencies like worker_threads)
-       * for the client-side bundle.
-       */
-      const pretty = eval('require')('pino-pretty');
-      return pino({
-        level: process.env.LOG_LEVEL || 'info',
-      }, pretty({
-        colorize: true,
-        ignore: 'pid,hostname',
-        translateTime: 'HH:MM:ss Z',
-        singleLine: true,
-      }));
-    } catch {
-      // Fallback if pino-pretty is not available or if require fails
-      return pino({ level: 'info' });
-    }
+    // In development server-side, we try to use pino-pretty if available.
+    // However, we avoid dynamic require/eval to be compatible with Edge Runtime.
+    // If pino-pretty is needed, it should be configured via the transport option or standard import
+    // but standard pino output is safer for edge compatibility.
+    return pino({
+      level: process.env.LOG_LEVEL || 'info',
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          ignore: 'pid,hostname',
+          translateTime: 'HH:MM:ss Z',
+          singleLine: true,
+        },
+      },
+    });
   }
 
   // Production Server: Standard JSON logging for better observability

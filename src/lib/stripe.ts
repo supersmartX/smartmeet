@@ -7,7 +7,7 @@ export const stripe = new Proxy({} as Stripe, {
     if (!stripeInstance) {
       const stripeKey = process.env.STRIPE_SECRET_KEY || "";
       stripeInstance = new Stripe(stripeKey, {
-        apiVersion: "2025-12-15.clover",
+        apiVersion: "2026-01-28.clover",
         typescript: true,
       });
     }

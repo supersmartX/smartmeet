@@ -9,7 +9,6 @@ export const postMessage = (message) => {
   }
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const onMessage = (callback) => {
   if (parentPort) {
     parentPort.on('message', callback);

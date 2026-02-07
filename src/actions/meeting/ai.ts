@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { ProcessingStep } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { enhancedAuthOptions } from "@/lib/enhanced-auth";
 import { revalidatePath } from "next/cache";
@@ -14,12 +13,9 @@ import { handleActionError } from "@/lib/error-handler";
 import logger from "@/lib/logger";
 import { Performance } from "@/lib/performance";
 import { 
-  generateCode, 
   summarizeText, 
-  testCode,
   transcribeAudio,
-  transcribeDocument,
-  generatePlan
+  transcribeDocument
 } from "@/services/api";
 import {
   ActionResult,
@@ -29,6 +25,7 @@ import { getAIConfiguration, enforceRateLimit } from "./utils";
 import { normalizeProvider } from "@/lib/utils";
 import { cache } from "@/lib/cache";
 import { env } from "@/lib/env";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Internal processor that runs the full AI pipeline
@@ -47,12 +44,11 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
     const user = meeting.user;
 
     // 2. Prepare AI Configuration
-    let effectiveApiKey, finalProvider, finalModel;
+    let effectiveApiKey, finalProvider;
     try {
       const config = await getAIConfiguration(user);
       effectiveApiKey = config.apiKey;
       finalProvider = config.provider;
-      finalModel = config.model;
     } catch (configError) {
       logger.error({ configError, userId: user.id }, "AI Configuration failed");
       throw new AppError(
@@ -148,20 +144,18 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
           throw new ServiceError("No content detected in file", "ERR_EMPTY_TRANSCRIPTION");
         }
 
-        // Step 1.5: Save transcription to database for TXT/Documents
-        if (isDocument) {
-          await prisma.transcript.create({
-            data: {
-              meetingId: meeting.id,
-              text: transcription,
-              speaker: "Document Content",
-              time: "0:00",
-              confidence: 1.0
-            }
-          });
-        }
-
-        const isTechnical = /api|cache|latency|database|testing|backend|frontend|pipeline|logic|code|deploy/i.test(transcription);
+        // Step 1.5: Save transcription to database immediately
+        // This ensures we have the transcript even if summarization fails later
+        await prisma.transcript.deleteMany({ where: { meetingId: meeting.id } });
+        await prisma.transcript.create({
+          data: {
+            meetingId: meeting.id,
+            text: transcription,
+            speaker: isDocument ? "Document Content" : "Audio Transcript",
+            time: "0:00",
+            confidence: 1.0
+          }
+        });
 
         // Step 2: SUMMARIZATION
         await prisma.meeting.update({
@@ -189,88 +183,8 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
 
         if (!summaryResult) throw new Error("Summarization failed");
         const { summary, project_doc } = summaryResult;
-        let finalProjectDoc = project_doc;
 
-        // Step 2.5: PLAN_GENERATION (Optional for technical meetings)
-        if (isTechnical) {
-          try {
-            await prisma.meeting.update({
-              where: { id: meetingId },
-              data: { processingStep: "PLANNING" as ProcessingStep }
-            });
-
-            const planResult = await Performance.measure(
-              "AI_PLAN_GEN",
-              async () => {
-                return await getProviderBreaker(finalProvider).execute(async () => {
-                  const res = await generatePlan(transcription, {
-                    api_key: effectiveApiKey || undefined,
-                    provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "custom",
-                    model: finalModel || undefined
-                  });
-                  return res.success ? res.data : null;
-                });
-              },
-              { meetingId, userId: user.id }
-            );
-
-            if (planResult?.plan) {
-              // Append plan to project documentation
-              finalProjectDoc = `${finalProjectDoc}\n\n## Implementation Plan\n\n${planResult.plan}`;
-            }
-          } catch (planError) {
-            logger.warn({ planError, meetingId }, "Plan generation skipped or failed");
-            // Don't fail the whole pipeline if planning fails
-          }
-        }
-
-        // Step 3: CODE_GENERATION
-        await prisma.meeting.update({
-          where: { id: meetingId },
-          data: { processingStep: "CODE_GENERATION" }
-        });
-
-        const codeResult = await Performance.measure(
-          "AI_CODE_GEN",
-          async () => {
-            return await getProviderBreaker(finalProvider).execute(async () => {
-              const res = await generateCode(transcription, { 
-                api_key: effectiveApiKey || undefined, 
-                provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "custom",
-                model: finalModel || undefined
-              });
-              if (!res.success) throw new Error(res.error?.message || "Code generation failed");
-              return res.data;
-            });
-          },
-          { meetingId, userId: user.id }
-        );
-
-        if (!codeResult) throw new Error("Code generation failed");
-        const { code, file_path } = codeResult;
-
-        // Step 4: TESTING
-        await prisma.meeting.update({
-          where: { id: meetingId },
-          data: { processingStep: "TESTING" }
-        });
-
-        const testResult = await Performance.measure(
-          "AI_TESTING",
-          async () => {
-            return await getProviderBreaker(finalProvider).execute(async () => {
-              const res = await testCode(code, { 
-                api_key: effectiveApiKey || undefined, 
-                provider: (finalProvider === "openai") ? "local" : normalizeProvider(finalProvider, 'lower') as "local" | "openai" | "claude" | "gemini" | "groq" | "custom"
-              });
-              // We don't throw error if test fails, just record it
-              return res.data;
-            });
-          },
-          { meetingId, userId: user.id }
-        );
-
-        // Final Save
+        // Step 3: Final Save
         await Performance.measure(
           "DB_FINAL_SAVE",
           async () => {
@@ -282,7 +196,7 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                 transcripts: {
                   deleteMany: {},
                   create: [{
-                    speaker: "AI Assistant",
+                    speaker: isDocument ? "Document Content" : "Audio Transcript",
                     time: "0:00",
                     text: transcription,
                     confidence: 1.0
@@ -291,10 +205,8 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
                 summary: {
                   create: { content: summary }
                 },
-                isTechnical: isTechnical,
-                code: code,
-                projectDoc: finalProjectDoc,
-                testResults: testResult?.output || testResult?.error || (file_path ? `File generated at: ${file_path}` : "No test results")
+                isTechnical: false, // Force non-technical as we removed technical processing
+                projectDoc: project_doc // Keep basic project doc if generated by summary
               }
             });
           },
@@ -447,56 +359,6 @@ export async function enqueueMeetingAI(meetingId: string): Promise<ActionResult>
   }
 }
 
-export async function generateMeetingLogic(meetingId: string): Promise<ActionResult<string>> {
-  let session;
-  try {
-    session = await getServerSession(enhancedAuthOptions);
-    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
-
-    const meeting = await prisma.meeting.findUnique({
-      where: { id: meetingId },
-      include: { 
-        transcripts: true,
-        user: true 
-      }
-    });
-
-    if (!meeting || meeting.userId !== session.user.id) {
-      return { success: false, error: "Meeting not found" };
-    }
-
-    const transcription = meeting.transcripts.map(t => t.text).join("\n");
-    if (!transcription) return { success: false, error: "No transcription available" };
-
-    const { getProviderBreaker } = await import("@/lib/circuit-breaker");
-    const { apiKey: effectiveApiKey, provider: finalProvider, model: finalModel } = await getAIConfiguration(meeting.user);
-
-    if (!effectiveApiKey) return { success: false, error: "No API key configured" };
-
-    const result = await getProviderBreaker(finalProvider).execute(async () => {
-      return await generateCode(transcription, { 
-        api_key: effectiveApiKey, 
-        provider: normalizeProvider(finalProvider, 'lower') as "openai" | "claude" | "gemini" | "groq" | "custom",
-        model: finalModel || undefined
-      });
-    });
-
-    if (result.success && result.data) {
-      await prisma.meeting.update({
-        where: { id: meetingId },
-        data: { code: result.data.code }
-      });
-      revalidatePath(`/dashboard/recordings/${meetingId}`);
-      return { success: true, data: result.data.code };
-    }
-
-    return { success: false, error: result.error?.message || "Failed to generate logic" };
-  } catch (error: unknown) {
-    logger.error({ error, meetingId, userId: session?.user?.id }, "Generate meeting logic error");
-    return { success: false, error: error instanceof Error ? error.message : "Failed to generate logic" };
-  }
-}
-
 export async function askAIAboutMeeting(meetingId: string, question: string): Promise<ActionResult<string>> {
   let session;
   try {
@@ -521,14 +383,12 @@ export async function askAIAboutMeeting(meetingId: string, question: string): Pr
     if (!effectiveApiKey) return { success: false, error: "No API key configured" };
 
     // Custom implementation or use service
-    const { buildPrompt, summarizeText } = await import("@/services/api");
-    const promptResult = await buildPrompt(question, { context: transcription });
+    const { summarizeText } = await import("@/services/api");
     
-    if (!promptResult.success || !promptResult.data) {
-      return { success: false, error: promptResult.error?.message || "Failed to build prompt" };
-    }
+    // Build prompt locally to avoid 404 from missing /api/AI/prompt/build endpoint
+    const prompt = `Context:\n${transcription}\n\nQuestion: ${question}\n\nAnswer the question based on the context provided.`;
 
-    const result = await summarizeText(promptResult.data.prompt, { 
+    const result = await summarizeText(prompt, { 
       api_key: effectiveApiKey, 
       provider: finalProvider.toUpperCase() as "OPENAI" | "CLAUDE" | "GEMINI" | "GROQ" | "CUSTOM"
     });
@@ -599,68 +459,50 @@ export async function generateMeetingSummary(meetingId: string): Promise<ActionR
   }
 }
 
-export async function testMeetingCompliance(meetingId: string): Promise<ActionResult<string>> {
-  let session;
+export async function retryStuckMeeting(meetingId: string): Promise<ActionResult> {
   try {
-    session = await getServerSession(enhancedAuthOptions);
-    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.id) throw new AuthError();
 
     const meeting = await prisma.meeting.findUnique({
       where: { id: meetingId },
-      include: { user: true }
+      select: { userId: true, status: true, updatedAt: true }
     });
 
     if (!meeting || meeting.userId !== session.user.id) {
-      return { success: false, error: "Meeting not found" };
+      throw new AppError("Meeting not found", "ERR_NOT_FOUND");
     }
 
-    const { apiKey: effectiveApiKey } = await getAIConfiguration(meeting.user);
-    if (!effectiveApiKey) return { success: false, error: "No API key configured" };
+    // Allow retry if it's FAILED or if it's PROCESSING but updated > 2 mins ago
+    // 2 minutes is safe because our worker now timeouts at 50s.
+    const isStuck = meeting.status === "PROCESSING" && (Date.now() - meeting.updatedAt.getTime() > 2 * 60 * 1000);
+    
+    if (meeting.status !== "FAILED" && !isStuck) {
+       return { success: false, error: "Meeting is currently processing. Please wait." };
+    }
 
-    // Implementation...
-    return { success: true, data: "Compliance check completed. No issues found." };
-  } catch (error: unknown) {
-    logger.error({ error, meetingId, userId: session?.user?.id }, "Test meeting compliance error");
-    return { success: false, error: "Failed to test compliance" };
-  }
-}
-
-export async function generateMeetingPlan(meetingId: string): Promise<ActionResult<string>> {
-  let session;
-  try {
-    session = await getServerSession(enhancedAuthOptions);
-    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
-
-    const meeting = await prisma.meeting.findUnique({
+    // Reset to PENDING first to clear any locks
+    await prisma.meeting.update({
       where: { id: meetingId },
-      include: { 
-        transcripts: true,
-        user: true 
-      }
+      data: { status: "PENDING", processingStep: "IDLE", updatedAt: new Date() }
     });
 
-    if (!meeting || meeting.userId !== session.user.id) {
-      return { success: false, error: "Meeting not found" };
-    }
-
-    const transcription = meeting.transcripts.map(t => t.text).join("\n");
-    const { apiKey: effectiveApiKey, provider: finalProvider } = await getAIConfiguration(meeting.user);
-
-    if (!effectiveApiKey) return { success: false, error: "No API key configured" };
-
-    const result = await generatePlan(transcription, { 
-      api_key: effectiveApiKey, 
-      provider: finalProvider as "openai" | "claude" | "gemini" | "groq" | "custom" 
+    // Enqueue it again
+    await enqueueTask({
+        id: uuidv4(),
+        type: "PROCESS_MEETING_AI",
+        data: { meetingId }
     });
+    
+    // Trigger worker
+    const { triggerWorker } = await import("./utils");
+    await triggerWorker(meetingId);
+    
+    await cache.invalidateUserCache(session.user.id);
+    revalidatePath(`/dashboard/recordings/${meetingId}`);
 
-    if (result.success && result.data) {
-      await cache.invalidateUserCache(session.user.id);
-      return { success: true, data: result.data.plan };
-    }
-
-    return { success: false, error: result.error?.message || "Failed to generate plan" };
+    return { success: true };
   } catch (error: unknown) {
-    logger.error({ error, meetingId, userId: session?.user?.id }, "Generate meeting plan error");
-    return { success: false, error: "Failed to generate plan" };
+     return handleActionError(error, { meetingId });
   }
 }
