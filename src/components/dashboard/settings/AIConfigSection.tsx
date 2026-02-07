@@ -101,9 +101,9 @@ export function AIConfigSection({
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-via/10 flex items-center justify-center">
-            <Key className="w-5 h-5 text-brand-via" />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-brand-via/10 flex items-center justify-center">
+            <Key className="w-6 h-6 text-brand-via" />
           </div>
           <div>
             <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">AI Configuration</h2>
@@ -112,8 +112,8 @@ export function AIConfigSection({
         </div>
         <div className="flex items-center gap-2">
           {lastUsedAt && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-tight">Last active: {lastUsedAt}</span>
             </div>
           )}
@@ -130,7 +130,7 @@ export function AIConfigSection({
               <span className="text-[9px] font-black text-brand-via uppercase tracking-widest">{provider}</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {[
               { id: 'openai', name: 'OpenAI', icon: Cpu },
               { id: 'google', name: 'Gemini', icon: Zap },
@@ -151,7 +151,7 @@ export function AIConfigSection({
                       setIsCustomModel(true)
                     }
                   }}
-                  className={`p-3 rounded-xl border text-center transition-all group relative overflow-hidden ${
+                  className={`p-4 rounded-xl border text-center transition-all group relative overflow-hidden ${
                     isActive
                       ? "border-brand-via bg-brand-via/5 ring-1 ring-brand-via shadow-sm shadow-brand-via/10"
                       : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50"
@@ -185,7 +185,7 @@ export function AIConfigSection({
                   {provider === 'custom' ? 'Proxy URL / API Key' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} API Key`}
                 </label>
                 {testSuccess === true && (
-                  <span className="flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                  <span className="flex items-center gap-2 text-[8px] font-black text-emerald-500 uppercase bg-emerald-500/10 px-2 py-2 rounded-md border border-emerald-500/20">
                     <Check className="w-2.5 h-2.5" /> Verified
                   </span>
                 )}
@@ -198,7 +198,7 @@ export function AIConfigSection({
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[9px] font-black text-brand-via uppercase tracking-widest flex items-center gap-1 hover:underline"
+                className="text-[9px] font-black text-brand-via uppercase tracking-widest flex items-center gap-2 hover:underline"
               >
                 Get {provider} Key <ExternalLink className="w-2.5 h-2.5" />
               </a>
@@ -220,14 +220,14 @@ export function AIConfigSection({
                 }
                 className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-11 pr-24 text-xs font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-via/20 transition-all shadow-sm"
               />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <button
                   onClick={() => setShowKey(!showKey)}
                   className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
                   title={showKey ? "Hide key" : "Show key"}
                   aria-label={showKey ? "Hide key" : "Show key"}
                 >
-                  {showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={() => handleCopy(currentKey)}
@@ -236,19 +236,19 @@ export function AIConfigSection({
                   title="Copy key"
                   aria-label="Copy key"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               {!currentKey && provider !== 'custom' && (
-                <p className="text-[9px] font-bold text-brand-via uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-via/5 border border-brand-via/10">
+                <p className="text-[9px] font-bold text-brand-via uppercase tracking-tight flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-via/5 border border-brand-via/10">
                   <Info className="w-3 h-3" /> No personal API key configured. Using system default for {provider}.
                 </p>
               )}
               {decryptionError && (
-                <div className="flex flex-col gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 animate-pulse">
+                <div className="flex flex-col gap-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 animate-pulse">
                   <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                     <Shield className="w-5 h-5" />
                     <p className="text-xs font-black uppercase tracking-widest">Security Action Required</p>
@@ -260,7 +260,7 @@ export function AIConfigSection({
                 </div>
               )}
               {currentKey && !detectProvider(currentKey) && provider !== 'custom' && (
-                <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
                   <AlertTriangle className="w-3 h-3" /> Key format doesn&apos;t match {provider} prefix.
                 </p>
               )}
@@ -276,8 +276,8 @@ export function AIConfigSection({
           <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-brand-via/10 flex items-center justify-center">
-                  <RefreshCcw className={`w-3.5 h-3.5 text-brand-via ${isTesting ? "animate-spin" : ""}`} />
+                <div className="w-8 h-8 rounded-lg bg-brand-via/10 flex items-center justify-center">
+                  <RefreshCcw className={`w-4 h-4 text-brand-via ${isTesting ? "animate-spin" : ""}`} />
                 </div>
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Connection Test</h3>
               </div>
@@ -297,7 +297,7 @@ export function AIConfigSection({
                   ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
                   : "bg-red-500/5 border-red-500/20 text-red-600 dark:text-red-400"
               }`}>
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-4">
                   {testSuccess ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />}
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest mb-1">

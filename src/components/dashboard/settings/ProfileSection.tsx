@@ -10,9 +10,9 @@ export function ProfileSection({ name, email }: ProfileSectionProps) {
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-via/10 flex items-center justify-center">
-            <UserIcon className="w-5 h-5 text-brand-via" />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-brand-via/10 flex items-center justify-center">
+            <UserIcon className="w-6 h-6 text-brand-via" />
           </div>
           <div>
             <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Personal Profile</h2>

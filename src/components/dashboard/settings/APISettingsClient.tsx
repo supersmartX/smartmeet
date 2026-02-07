@@ -216,7 +216,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 lg:p-10 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-[720px] mx-auto p-6 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <Toast {...toast} onClose={hideToast} />
       <div className="space-y-2">
         <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">API Settings</h1>
@@ -226,9 +226,9 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
       <div className="grid gap-8">
         {initialSettings.decryptionError && (
           <div className="flex flex-col gap-4 p-6 rounded-[32px] bg-red-500/10 border border-red-500/20 animate-pulse">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-                <Shield className="w-5 h-5" />
+            <div className="flex items-center gap-4 text-red-600 dark:text-red-400">
+              <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <Shield className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm font-black uppercase tracking-widest">Security Action Required</p>
@@ -245,9 +245,9 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
       {/* LLM Provider Configuration */}
       <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-via/10 flex items-center justify-center">
-              <Cpu className="w-5 h-5 text-brand-via" />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-brand-via/10 flex items-center justify-center">
+              <Cpu className="w-6 h-6 text-brand-via" />
             </div>
             <div>
               <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">LLM Provider Configuration</h2>
@@ -266,7 +266,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                 <span className="text-[9px] font-black text-brand-via uppercase tracking-widest">{provider}</span>
               </div>
             </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { id: 'openai', name: 'OpenAI', icon: Cpu },
               { id: 'google', name: 'Gemini', icon: Zap },
@@ -278,7 +278,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                 <button
                   key={p.id}
                   onClick={() => dispatch({ type: 'SET_PROVIDER', payload: p.id })}
-                  className={`p-3 rounded-xl border text-center transition-all group relative overflow-hidden ${
+                  className={`p-4 rounded-xl border text-center transition-all group relative overflow-hidden ${
                     isActive
                       ? "border-brand-via bg-brand-via/5 ring-1 ring-brand-via shadow-sm shadow-brand-via/10"
                       : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50"
@@ -312,7 +312,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                     {provider.charAt(0).toUpperCase() + provider.slice(1)} API Key
                   </label>
                   {testSuccess === true && (
-                    <span className="flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                    <span className="flex items-center gap-2 text-[8px] font-black text-emerald-500 uppercase bg-emerald-500/10 px-2 py-2 rounded-md border border-emerald-500/20">
                       <Check className="w-2.5 h-2.5" /> Verified
                     </span>
                   )}
@@ -325,7 +325,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[9px] font-black text-brand-via uppercase tracking-widest flex items-center gap-1 hover:underline"
+                  className="text-[9px] font-black text-brand-via uppercase tracking-widest flex items-center gap-2 hover:underline"
                 >
                   Get {provider} Key <ExternalLink className="w-2.5 h-2.5" />
                 </a>
@@ -347,7 +347,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                   }
                   className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-11 pr-24 text-xs font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-via/20 transition-all shadow-sm"
                 />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   <button
                     onClick={() => dispatch({ type: 'SET_SHOW_KEY', payload: !showKey })}
                     className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
@@ -368,12 +368,12 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
 
               <div className="flex flex-col gap-2">
                 {!apiKey && (
-                  <p className="text-[9px] font-bold text-brand-via uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-via/5 border border-brand-via/10">
+                  <p className="text-[9px] font-bold text-brand-via uppercase tracking-tight flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-via/5 border border-brand-via/10">
                     <Info className="w-3 h-3" /> No personal API key configured. Using system default for {provider}.
                   </p>
                 )}
                 {apiKey && !detectProvider(apiKey) && (
-                  <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/20 shadow-sm shadow-amber-500/5">
+                  <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20 shadow-sm shadow-amber-500/5">
                     <AlertTriangle className="w-3 h-3" /> Key format doesn&apos;t match {provider} prefix.
                   </p>
                 )}
@@ -396,7 +396,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                 id="model-select"
                 value={model}
                 onChange={(e) => dispatch({ type: 'SET_MODEL', payload: e.target.value })}
-                className="w-full h-11 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 appearance-none shadow-sm transition-all group-hover:border-zinc-300 dark:group-hover:border-zinc-700"
+                className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 appearance-none shadow-sm transition-all group-hover:border-zinc-300 dark:group-hover:border-zinc-700"
               >
                 {providerModels[provider]?.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -419,7 +419,7 @@ export function APISettingsClient({ initialSettings }: APISettingsClientProps) {
                 value={allowedIps}
                 onChange={(e) => dispatch({ type: 'SET_ALLOWED_IPS', payload: e.target.value })}
                 placeholder="e.g. 192.168.1.1, 10.0.0.1"
-                className="w-full h-11 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 shadow-sm transition-all group-hover:border-zinc-300 dark:group-hover:border-zinc-700"
+                className="w-full h-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-via/20 shadow-sm transition-all group-hover:border-zinc-300 dark:group-hover:border-zinc-700"
               />
             </div>
           </div>

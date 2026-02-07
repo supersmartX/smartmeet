@@ -115,7 +115,7 @@ export default function SecurityClient() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 lg:p-10 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-[1200px] mx-auto p-6 lg:p-12 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <Toast {...toast} onClose={hideToast} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
@@ -173,18 +173,18 @@ export default function SecurityClient() {
                         <p className="text-xs font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
                           {session.userAgent?.split('(')[0] || 'Unknown Browser'}
                         </p>
-                        <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded-full">
+                        <span className="text-[9px] font-black uppercase px-2 py-2 bg-emerald-500/10 text-emerald-500 rounded-full">
                           Active
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="flex items-center gap-2">
                           <Globe className="w-3 h-3 text-zinc-400" />
                           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                             {session.ipAddress || 'Unknown IP'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <Clock className="w-3 h-3 text-zinc-400" />
                           <span className="text-[10px] font-medium text-zinc-400">
                             Expires {session.expires ? format(new Date(session.expires), 'MMM d, yyyy') : 'Never'}

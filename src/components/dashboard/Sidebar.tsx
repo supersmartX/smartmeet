@@ -191,7 +191,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               ? "text-red-500 hover:bg-red-500/5"
               : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
         }`}
-        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         <div className="flex items-center gap-2 min-w-0">
           {Icon && (
@@ -225,9 +225,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <aside className="w-full bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col h-full z-20 transition-colors duration-300" aria-label="Dashboard Sidebar">
       {/* Workspace Header */}
-      <div className="h-12 px-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/50 dark:bg-zinc-950/50" role="presentation">
+      <div className="h-12 px-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/50 dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer group" role="presentation">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 relative">
+          <div className="w-8 h-8 relative group-hover:scale-105 transition-transform">
             <Image 
               src="/logoX.png" 
               alt="SupersmartX AI Dashboard Logo" 
@@ -238,7 +238,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               priority 
             />
           </div>
-          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Workspace</span>
+          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">Workspace</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" aria-hidden="true" />
@@ -252,8 +252,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
       {/* Pro Badge or Help Section at bottom */}
       <div className="mt-auto border-t border-zinc-200 dark:border-zinc-800 p-4">
-        <div className="bg-brand-via/5 border border-brand-via/10 rounded-lg p-3">
-          <p className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-1">Free Plan</p>
+        <div className="bg-brand-via/5 border border-brand-via/10 rounded-lg p-3 hover:bg-brand-via/10 hover:border-brand-via/20 transition-all cursor-pointer group">
+          <p className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-1 group-hover:text-brand-via transition-colors">Free Plan</p>
           <p className="text-[9px] text-zinc-500 mb-2 italic">Using 0/3 projects this month</p>
           <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
             <div className="bg-brand-via w-0 h-full" />

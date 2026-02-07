@@ -68,17 +68,17 @@ export default function IntegrationsClient() {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Integrations</h1>
-            <span className="px-2 py-0.5 bg-brand-via/10 text-brand-via text-[10px] font-black uppercase tracking-widest rounded-md">V1.2</span>
+            <span className="px-2 py-2 bg-brand-via/10 text-brand-via text-[10px] font-black uppercase tracking-widest rounded-md">V1.2</span>
           </div>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">
             Extend SupersmartX capabilities with your existing tools.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-100 transition-colors border border-zinc-200 dark:border-zinc-800">
+          <button className="h-10 px-4 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-100 transition-colors border border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
             Request App
           </button>
-          <button className="bg-brand-gradient text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-brand-via/20">
+          <button className="h-10 bg-brand-gradient text-white px-6 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-brand-via/20 justify-center">
             <Plus className="w-4 h-4" /> BROWSE MARKETPLACE
           </button>
         </div>
@@ -107,7 +107,7 @@ export default function IntegrationsClient() {
         {filteredIntegrations.map((app, i) => (
           <div key={i} className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group hover:border-brand-via/20 transition-all">
             <div className="absolute top-4 right-4">
-              <span className={`text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${
+              <span className={`text-[8px] font-black px-2 py-2 rounded-md uppercase tracking-widest ${
                 app.status === 'New' || app.status === 'Beta' 
                 ? 'bg-emerald-500/10 text-emerald-500' 
                 : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'

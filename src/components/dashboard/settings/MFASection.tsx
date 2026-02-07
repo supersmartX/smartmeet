@@ -62,9 +62,9 @@ export function MFASection({
   return (
     <section className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-via/10 flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5 text-brand-via" />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-brand-via/10 flex items-center justify-center">
+            <ShieldCheck className="w-6 h-6 text-brand-via" />
           </div>
           <div>
             <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Security</h2>
@@ -72,7 +72,7 @@ export function MFASection({
           </div>
         </div>
         {mfaEnabled && (
-          <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
+          <span className="px-4 py-2 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
             MFA Protected
           </span>
         )}
@@ -92,7 +92,7 @@ export function MFASection({
               onClick={handleSetupMFA}
               disabled={isSettingUpMFA}
               aria-label="Setup Two-Factor Authentication"
-              className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center gap-2 shadow-xl shadow-black/5"
+              className="px-6 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center gap-2 shadow-xl shadow-black/5"
             >
               {isSettingUpMFA ? <RefreshCcw className="w-3 h-3 animate-spin" /> : <Smartphone className="w-3 h-3" />}
               Setup 2FA
@@ -103,7 +103,7 @@ export function MFASection({
             <button
               onClick={() => setShowDisableConfirm(true)}
               aria-label="Disable Two-Factor Authentication"
-              className="px-6 py-3 border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+              className="px-6 py-4 border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
             >
               Disable 2FA
             </button>
@@ -144,7 +144,7 @@ export function MFASection({
                   />
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   <button
                     onClick={handleDisableMFA}
                     disabled={isDisablingMFA || !mfaToken}
@@ -190,7 +190,7 @@ export function MFASection({
                     <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/10 dark:bg-black/20 backdrop-blur-sm transition-all">
                       <button
                         onClick={toggleSecret}
-                        className="p-3 bg-white dark:bg-zinc-900 rounded-full shadow-2xl hover:scale-110 transition-transform text-zinc-900 dark:text-white"
+                        className="p-4 bg-white dark:bg-zinc-900 rounded-full shadow-2xl hover:scale-110 transition-transform text-zinc-900 dark:text-white"
                         title="Reveal QR Code"
                       >
                         <Eye size={24} />
@@ -207,7 +207,7 @@ export function MFASection({
                     </code>
                     <button 
                       onClick={toggleSecret}
-                      className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500"
+                      className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500"
                       title={showSecret ? "Hide secret" : "Show secret"}
                     >
                       {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -236,7 +236,7 @@ export function MFASection({
                       className="w-full h-12 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-12 pr-4 text-sm font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-brand-via/20"
                     />
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex gap-4">
                     <button
                       onClick={handleVerifyMFA}
                       disabled={isVerifyingMFA || mfaToken.length !== 6}
@@ -281,7 +281,7 @@ export function MFASection({
                 </p>
               </div>
 
-              <div className="flex flex-col w-full gap-3">
+              <div className="flex flex-col w-full gap-4">
                 <button
                   onClick={() => {
                     setShowSecret(true);

@@ -49,9 +49,9 @@ export function PreferenceSection({
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800 overflow-hidden">
       <div className="p-8">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center text-brand-via">
-            <Globe className="w-5 h-5" />
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center text-brand-via">
+            <Globe className="w-6 h-6" />
           </div>
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100">User Preferences</h2>
@@ -68,7 +68,7 @@ export function PreferenceSection({
                 <button
                   key={lang.id}
                   onClick={() => setDefaultLanguage(lang.id)}
-                  className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between ${
+                  className={`px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between ${
                     defaultLanguage === lang.id
                       ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg"
                       : "bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -92,7 +92,7 @@ export function PreferenceSection({
                   <button
                     key={len.id}
                     onClick={() => setSummaryLength(len.id)}
-                    className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between ${
+                    className={`px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between ${
                       summaryLength === len.id
                         ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg"
                         : "bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -115,7 +115,7 @@ export function PreferenceSection({
                   <button
                     key={persona.id}
                     onClick={() => setSummaryPersona(persona.id)}
-                    className={`px-4 py-3 rounded-2xl transition-all text-left flex flex-col gap-1 ${
+                    className={`px-4 py-4 rounded-2xl transition-all text-left flex flex-col gap-2 ${
                       summaryPersona === persona.id
                         ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg"
                         : "bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -136,7 +136,7 @@ export function PreferenceSection({
             {/* Auto Process Toggle */}
             <div className="space-y-4 p-6 bg-zinc-50 dark:bg-zinc-950/50 rounded-3xl border border-zinc-100 dark:border-zinc-800/50">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${autoProcess ? 'bg-brand-via/20 text-brand-via' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400'}`}>
                     <Zap className="w-4 h-4" />
                   </div>

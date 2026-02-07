@@ -453,7 +453,7 @@ export default function RecordingDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-500">
+      <div className="max-w-[1440px] mx-auto p-6 space-y-8 animate-in fade-in duration-500">
         <Toast {...toast} onClose={hideToast} />
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3">
@@ -582,7 +582,7 @@ export default function RecordingDetailPage() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-500 bg-white dark:bg-zinc-950 min-h-screen">
+    <div className="max-w-[1440px] mx-auto p-6 space-y-8 animate-in fade-in duration-500 bg-zinc-50 dark:bg-black min-h-screen">
       <Toast {...toast} onClose={hideToast} />
       
       <MeetingHeader meeting={meeting} journeySteps={journeySteps} onRefresh={handleRefresh} />

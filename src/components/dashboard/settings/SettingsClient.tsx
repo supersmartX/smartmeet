@@ -310,7 +310,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 lg:p-10 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-[720px] mx-auto p-6 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <Toast {...toast} onClose={hideToast} />
       <div className="space-y-2">
         <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Account Settings</h1>
@@ -388,7 +388,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
         {/* Usage & Limits */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <section className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-4 mb-6">
               <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
                 <Zap className="w-4 h-4" />
               </div>
@@ -411,21 +411,21 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
           </section>
 
           <section className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-4 mb-6">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                 <Check className="w-4 h-4" />
               </div>
               <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">API Health</h3>
             </div>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
                 <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Connection</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Optimal
                 </span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
                 <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Latency</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">124ms</span>
               </div>

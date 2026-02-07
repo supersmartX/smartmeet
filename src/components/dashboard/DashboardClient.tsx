@@ -156,7 +156,7 @@ export default function DashboardClient() {
   }, [stats]);
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-8 animate-in fade-in duration-500">
+    <div className="p-6 max-w-[1440px] mx-auto w-full flex flex-col gap-8 animate-in fade-in duration-500">
       <Toast {...toast} onClose={hideToast} />
       {/* Welcome Header */}
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -211,7 +211,7 @@ export default function DashboardClient() {
                 }`}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-2xl ${step.isCompleted ? "bg-emerald-500/10 text-emerald-500" : "bg-brand-via/10 text-brand-via"}`}>
+                  <div className={`p-4 rounded-2xl ${step.isCompleted ? "bg-emerald-500/10 text-emerald-500" : "bg-brand-via/10 text-brand-via"}`}>
                     {step.isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
                   </div>
                   {!step.isCompleted && <ArrowRight className="w-4 h-4 text-brand-via group-hover:translate-x-1 transition-transform" />}
@@ -233,7 +233,7 @@ export default function DashboardClient() {
         ) : mappedStats.map((stat, i) => (
           <div key={i} className="group p-6 bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 transition-all shadow-sm hover:shadow-xl hover:shadow-black/5">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 text-zinc-400 group-hover:text-brand-via transition-colors">
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 text-zinc-400 group-hover:text-brand-via transition-colors">
                 <stat.icon className="w-5 h-5" />
               </div>
               <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${
@@ -312,7 +312,7 @@ export default function DashboardClient() {
                   
                   {/* Search Match Snippets */}
                   {searchQuery && (rec.summary?.content?.toLowerCase().includes(searchQuery.toLowerCase()) || rec.transcripts?.some(t => t.text.toLowerCase().includes(searchQuery.toLowerCase()))) && (
-                    <div className="mx-6 -mt-2 mb-2 p-3 bg-zinc-50/50 dark:bg-zinc-800/20 rounded-b-2xl border-x border-b border-zinc-100 dark:border-zinc-800/50">
+                    <div className="mx-6 -mt-2 mb-2 p-4 bg-zinc-50/50 dark:bg-zinc-800/20 rounded-b-2xl border-x border-b border-zinc-100 dark:border-zinc-800/50">
                       {rec.summary?.content?.toLowerCase().includes(searchQuery.toLowerCase()) && (
                         <div className="mb-2 last:mb-0">
                           <span className="text-[7px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Summary Match</span>
@@ -386,7 +386,7 @@ export default function DashboardClient() {
           <div className="p-6 bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4">Upcoming Sessions</h3>
             <div className="space-y-4">
-              <div className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-950 transition-colors group cursor-pointer">
+              <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-950 transition-colors group cursor-pointer">
                 <div className="w-10 h-10 rounded-xl bg-brand-via/10 flex items-center justify-center text-brand-via font-black text-xs">
                   24
                 </div>

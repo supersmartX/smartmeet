@@ -120,7 +120,7 @@ export function UsageDashboard() {
         <div className="lg:col-span-2 space-y-8">
           <section className="p-8 rounded-[2rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-8">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center text-brand-via">
                   <BarChart3 className="w-5 h-5" />
                 </div>
@@ -135,7 +135,7 @@ export function UsageDashboard() {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em]">
                 <span className="text-zinc-400">Consumption Progress</span>
                 <span className={isAtLimit ? "text-red-500" : isNearingLimit ? "text-amber-500" : "text-brand-via"}>
@@ -179,7 +179,7 @@ export function UsageDashboard() {
           {/* AI Token Usage Card */}
           <section className="p-8 rounded-[2rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
                   <Zap className="w-5 h-5" />
                 </div>
@@ -208,7 +208,7 @@ export function UsageDashboard() {
 
         {/* Features Card */}
         <section className="p-8 rounded-[2rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm h-full">
-          <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-4 mb-8">
             <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
               <Shield className="w-5 h-5" />
             </div>
@@ -221,7 +221,7 @@ export function UsageDashboard() {
           <div className="space-y-4">
             {usage.features.map((feature) => (
               <div key={feature} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 group hover:border-brand-via transition-colors">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-zinc-300">
                     {feature.replace(/_/g, ' ')}
@@ -235,7 +235,7 @@ export function UsageDashboard() {
               <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
                 {['detailed_summary', 'code_generation', 'test_execution', 'rbac'].map((feature) => (
                   <div key={feature} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50/50 dark:bg-zinc-950/30 border border-zinc-100/50 dark:border-zinc-800/50 opacity-60 grayscale">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       <XCircle className="w-4 h-4 text-zinc-400" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
                         {feature.replace(/_/g, ' ')}

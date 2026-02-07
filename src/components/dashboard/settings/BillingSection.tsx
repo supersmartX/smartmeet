@@ -44,9 +44,9 @@ export function BillingSection({
     <section className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="space-y-6 flex-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-              <CreditCard className="w-5 h-5" />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+              <CreditCard className="w-6 h-6" />
             </div>
             <div>
               <h3 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-900 dark:text-zinc-100">Plan & Billing</h3>
@@ -60,7 +60,7 @@ export function BillingSection({
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black text-zinc-900 dark:text-zinc-100">{plan}</span>
                 {plan === "PRO" && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest">Active</span>
+                  <span className="px-2 py-2 rounded-full bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest">Active</span>
                 )}
               </div>
             </div>
@@ -89,7 +89,7 @@ export function BillingSection({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 min-w-[200px]">
+        <div className="flex flex-col gap-4 min-w-[200px]">
           <Link href="/dashboard/usage" className="w-full">
             <Button
               variant="secondary"
