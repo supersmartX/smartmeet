@@ -12,15 +12,9 @@ import {
   createSignedUploadUrl, 
   togglePinned,
   toggleFavorite,
-  saveMeetingSummary,
-  saveMeetingCode,
-  saveMeetingTestResults,
-  saveMeetingPlan,
-  saveMeetingTranscript,
-  updateMeetingStatus
+  processMeetingAI
 } from "@/actions/meeting"
 import { Meeting } from "@/types/meeting"
-import { audioToCode } from "@/services/api"
 import logger from "@/lib/logger"
 import { useToast } from "@/hooks/useToast"
 import { RecordingHeader } from "@/components/dashboard/recordings/RecordingHeader"
@@ -330,53 +324,16 @@ export default function RecordingsClient() {
       
       const meetingId = createResult.data.id;
 
-      // Direct API Call to /audio-to-code
+      // Direct API Call via Server Action (avoids client-side proxy limits)
       dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Processing with AI..." })
       
-      // Update status to PROCESSING manually since we skipped the worker
-      await updateMeetingStatus(meetingId, 'PROCESSING', { processingStep: 'TRANSCRIPTION' })
-
-      const aiResult = await audioToCode(file);
+      const aiResult = await processMeetingAI(meetingId);
       
-      if (aiResult.success && aiResult.data) {
-        dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Saving results..." })
-        
-        // Save all results
-        const data = aiResult.data;
-        
-        // 1. Transcript
-        if (data.transcription) {
-          await saveMeetingTranscript(meetingId, data.transcription);
-        }
-        
-        // 2. Summary
-        if (data.summary) {
-          await saveMeetingSummary(meetingId, data.summary);
-        }
-        
-        // 3. Code
-        if (data.code) {
-          await saveMeetingCode(meetingId, data.code);
-        }
-        
-        // 4. Test Results
-        if (data.test_output) {
-          await saveMeetingTestResults(meetingId, JSON.stringify(data.test_output, null, 2));
-        }
-        
-        // 5. Plan/Docs
-        if (data.project_doc) {
-          await saveMeetingPlan(meetingId, data.project_doc);
-        }
-        
-        // Mark as COMPLETED
-        await updateMeetingStatus(meetingId, 'COMPLETED');
-        
+      if (aiResult.success) {
         toastVisible("AI Processing Complete!", "success")
       } else {
         // Fallback or Error
         console.error("AI Processing failed:", aiResult.error);
-        await updateMeetingStatus(meetingId, 'FAILED', { testResults: aiResult.error?.message || "AI Processing Failed" });
         toastVisible("AI Processing failed, but recording is saved.", "info")
       }
 

@@ -146,7 +146,9 @@ export async function POST(request: NextRequest) {
       '/transcribe-upload',
       '/summarize',
       '/generate-code',
-      '/test-code'
+      '/test-code',
+      '/generate-plan',
+      '/build-prompt'
     ];
     
     // Validate endpoint to prevent SSRF

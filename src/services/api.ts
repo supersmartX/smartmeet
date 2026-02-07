@@ -382,7 +382,7 @@ export async function buildPrompt(
     language?: string;
   } = {}
 ): Promise<ApiResponse<PromptBuildingResponse>> {
-  return makeApiRequest<PromptBuildingResponse>("/api/AI/prompt/build", "POST", {
+  return makeApiRequest<PromptBuildingResponse>("/build-prompt", "POST", {
     discussion_summary,
     context: options.context || null,
     api_key: options.api_key || null,
@@ -404,7 +404,7 @@ export async function generatePlan(
     language?: string;
   } = {}
 ): Promise<ApiResponse<PlanGenerationResponse>> {
-  return makeApiRequest<PlanGenerationResponse>("/api/AI/plan", "POST", {
+  return makeApiRequest<PlanGenerationResponse>("/generate-plan", "POST", {
     description,
     api_key: options.api_key || null,
     provider: options.provider || "openai",
