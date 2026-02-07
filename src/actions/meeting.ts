@@ -21,6 +21,11 @@ import {
   updateMeetingTitle,
   updateMeetingCode,
   updateMeetingStatus,
+  saveMeetingSummary,
+  saveMeetingCode,
+  saveMeetingTestResults,
+  saveMeetingPlan,
+  saveMeetingTranscript,
   revokeSession
 } from "./meeting/mutations";
 
@@ -60,6 +65,11 @@ export {
   updateMeetingTitle,
   updateMeetingCode,
   updateMeetingStatus,
+  saveMeetingSummary,
+  saveMeetingCode,
+  saveMeetingTestResults,
+  saveMeetingPlan,
+  saveMeetingTranscript,
   revokeSession,
   internalProcessMeetingAI,
   processMeetingAI,

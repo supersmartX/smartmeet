@@ -322,7 +322,7 @@ export async function audioToCode(
   if (params.code_model) formData.append("code_model", params.code_model);
   if (params.test_provider) formData.append("test_provider", params.test_provider);
 
-  return makeApiRequest<CompletePipelineResponse>("/api/AI/audio/process", "POST", formData);
+  return makeApiRequest<CompletePipelineResponse>("/audio-to-code", "POST", formData);
 }
 
 /**

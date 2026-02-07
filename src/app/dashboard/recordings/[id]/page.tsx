@@ -8,18 +8,23 @@ import { useParams, useRouter } from "next/navigation"
 import { highlightText } from "@/utils/text"
 import { 
   getMeetingById, 
-  generateMeetingLogic, 
   askAIAboutMeeting,
-  generateMeetingSummary,
-  testMeetingCompliance,
-  generateMeetingPlan,
-  processMeetingAI,
-  enqueueMeetingAI
+  enqueueMeetingAI,
+  saveMeetingSummary,
+  saveMeetingCode,
+  saveMeetingTestResults,
+  saveMeetingPlan
 } from "@/actions/meeting"
 import { MeetingWithRelations, Transcript, ActionItem } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
-import { downloadFile } from "@/services/api"
+import { 
+  downloadFile, 
+  summarizeText, 
+  generateCode, 
+  testCode, 
+  generatePlan
+} from "@/services/api"
 
 import { 
   Clock, 
@@ -43,6 +48,8 @@ import {
   Maximize2,
   Minimize2
 } from "lucide-react"
+
+import { CodeEditor } from "@/components/dashboard/recordings/CodeEditor"
 
 /* --------------------------- COMPONENT ---------------------------- */
 
@@ -221,15 +228,33 @@ export default function RecordingDetailPage() {
     setIsGeneratingLogic(true)
     
     try {
-      const result = await generateMeetingLogic(params.id as string)
+      const summaryContent = meeting?.summary?.content
+      const transcripts = meeting?.transcripts || []
+      
+      let promptContext = ""
+      if (summaryContent) {
+        promptContext = summaryContent
+      } else if (transcripts.length > 0) {
+        promptContext = transcripts.map((t: Transcript) => `${t.speaker}: ${t.text}`).join("\n")
+      } else {
+         toastVisible("No context available to generate logic", "error")
+         setIsGeneratingLogic(false)
+         return
+      }
+
+      const result = await generateCode(promptContext)
+      
       if (result.success && result.data) {
-        setMeeting((prev: MeetingWithRelations | null) => prev ? { ...prev, code: result.data! } : null)
+        const codeContent = result.data.code
+        await saveMeetingCode(params.id as string, codeContent)
+        
+        setMeeting((prev: MeetingWithRelations | null) => prev ? { ...prev, code: codeContent } : null)
         setIsLogicGenerated(true)
         setIsGeneratingLogic(false)
         setActiveTab("code")
         toastVisible("Business logic generated successfully", "success")
       } else {
-        toastVisible(result.error || "Failed to generate logic", "error")
+        toastVisible(result.error?.message || "Failed to generate logic", "error")
         setIsGeneratingLogic(false)
       }
     } catch (error) {
@@ -242,14 +267,25 @@ export default function RecordingDetailPage() {
   const handleGenerateSummary = async () => {
     setIsGeneratingSummary(true)
     try {
-      const result = await generateMeetingSummary(params.id as string)
+      const transcripts = meeting?.transcripts || []
+      if (transcripts.length === 0) {
+        toastVisible("No transcripts available to summarize", "error")
+        setIsGeneratingSummary(false)
+        return
+      }
+      
+      const text = transcripts.map((t: Transcript) => `${t.speaker}: ${t.text}`).join("\n")
+      const result = await summarizeText(text)
+      
       if (result.success && result.data) {
+        const summaryText = result.data.summary
+        await saveMeetingSummary(params.id as string, summaryText)
         setMeeting((prev: MeetingWithRelations | null) => 
-          prev ? { ...prev, summary: result.data! } : null
+          prev ? { ...prev, summary: { ...prev.summary, content: summaryText, meetingId: params.id as string, id: prev.summary?.id || "temp" } } : null
         )
         toastVisible("Summary regenerated successfully", "success")
       } else {
-        toastVisible(result.error || "Failed to generate summary", "error")
+        toastVisible(result.error?.message || "Failed to generate summary", "error")
       }
     } catch (error) {
       console.error("Failed to generate summary:", error)
@@ -262,15 +298,26 @@ export default function RecordingDetailPage() {
   const handleTestCompliance = async () => {
     setIsTestingCompliance(true)
     try {
-      const result = await testMeetingCompliance(params.id as string)
+      const codeToTest = meeting?.code
+      if (!codeToTest) {
+         toastVisible("No code available to test", "error")
+         setIsTestingCompliance(false)
+         return
+      }
+
+      const result = await testCode(codeToTest)
+      
       if (result.success && result.data) {
-        setTestResults(result.data)
+        const output = result.data.output || "Tests completed successfully."
+        await saveMeetingTestResults(params.id as string, output)
+        
+        setTestResults(output)
         setMeeting((prev: MeetingWithRelations | null) => 
-          prev ? { ...prev, testResults: result.data! } : null
+          prev ? { ...prev, testResults: output } : null
         )
         toastVisible("Compliance tests completed", "success")
       } else {
-        toastVisible(result.error || "Failed to run compliance tests", "error")
+        toastVisible(result.error?.message || "Failed to run compliance tests", "error")
       }
     } catch (error) {
       console.error("Failed to run compliance tests:", error)
@@ -283,15 +330,28 @@ export default function RecordingDetailPage() {
   const handleGeneratePlan = async () => {
     setIsGeneratingPlan(true)
     try {
-      const result = await generateMeetingPlan(params.id as string)
+      const summaryContent = meeting?.summary?.content || ""
+      const description = summaryContent || (meeting?.transcripts || []).map((t: Transcript) => `${t.speaker}: ${t.text}`).join("\n")
+      
+      if (!description) {
+         toastVisible("No content available to generate plan", "error")
+         setIsGeneratingPlan(false)
+         return
+      }
+      
+      const result = await generatePlan(description)
+      
       if (result.success && result.data) {
-        setPlanResult(result.data)
+        const planContent = result.data.plan
+        await saveMeetingPlan(params.id as string, planContent)
+        
+        setPlanResult(planContent)
         setMeeting((prev: MeetingWithRelations | null) => 
-          prev ? { ...prev, projectDoc: result.data! } : null
+          prev ? { ...prev, projectDoc: planContent } : null
         )
         toastVisible("Development plan generated", "success")
       } else {
-        toastVisible(result.error || "Failed to generate plan", "error")
+        toastVisible(result.error?.message || "Failed to generate plan", "error")
       }
     } catch (error) {
       console.error("Failed to generate plan:", error)
@@ -713,7 +773,7 @@ export default function RecordingDetailPage() {
                   </p>
                 </div>
                 <button 
-                  onClick={() => processMeetingAI(meeting.id)}
+                  onClick={handleRetry}
                   className="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
                 >
                   Retry Analysis
@@ -902,11 +962,18 @@ export default function RecordingDetailPage() {
                   )}
                   <div className="bg-zinc-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-zinc-800 shadow-2xl overflow-hidden relative group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand-via/5 rounded-full -mr-32 -mt-32 blur-[100px]" />
-                    <pre className="text-[10px] sm:text-xs md:text-sm font-mono text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar relative z-10">
-                      <code>
-                        {meeting?.code || "// No logic code was generated for this meeting context."}
-                      </code>
-                    </pre>
+                    <div className="relative z-10">
+                      <CodeEditor 
+                        code={meeting?.code || "# No logic code was generated for this meeting context."}
+                        language="python"
+                        readOnly={false}
+                        onChange={(value) => {
+                          if (meeting && value !== undefined) {
+                              setMeeting({ ...meeting, code: value });
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

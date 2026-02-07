@@ -140,7 +140,13 @@ export async function POST(request: NextRequest) {
       '/api/v1/usage',
       '/process-meet-audio',
       '/model-info',
-      '/'
+      '/',
+      // User requested endpoints
+      '/audio-to-code',
+      '/transcribe-upload',
+      '/summarize',
+      '/generate-code',
+      '/test-code'
     ];
     
     // Validate endpoint to prevent SSRF
@@ -178,7 +184,8 @@ export async function POST(request: NextRequest) {
                             sanitizedEndpoint.includes('/document/') || 
                             sanitizedEndpoint.includes('/process') ||
                             sanitizedEndpoint.includes('/transcribe') ||
-                            sanitizedEndpoint.includes('/generate-code');
+                            sanitizedEndpoint.includes('/generate-code') ||
+                            sanitizedEndpoint.includes('/audio-to-code');
     
     if (isAudioEndpoint && data) {
       logger.info({ endpoint, sanitizedEndpoint, dataType: typeof data }, "Proxying multipart request to AWS");

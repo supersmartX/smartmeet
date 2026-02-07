@@ -249,7 +249,10 @@ export async function validateApiKey(provider: string, key: string): Promise<Act
   }
 }
 
-export async function createMeeting(data: MeetingInput): Promise<ActionResult<Meeting>> {
+export async function createMeeting(
+  data: MeetingInput,
+  options?: { skipProcessing?: boolean }
+): Promise<ActionResult<Meeting>> {
   let session;
   try {
     session = await getServerSession(enhancedAuthOptions);
@@ -283,28 +286,30 @@ export async function createMeeting(data: MeetingInput): Promise<ActionResult<Me
     revalidatePath('/dashboard');
     revalidatePath('/dashboard/recordings');
     
-    // Enqueue background processing task
-    try {
-      await enqueueTask({
-        id: uuidv4(),
-        type: "PROCESS_MEETING_AI",
-        data: { meetingId: meeting.id }
-      });
-      
-      // Trigger worker to start processing immediately
-      await triggerWorker(meeting.id);
-    } catch (enqueueError) {
-      logger.error({ enqueueError, meetingId: meeting.id }, "Failed to enqueue meeting processing");
-      
-      // Update meeting to FAILED so user knows processing didn't start
-      await prisma.meeting.update({
-        where: { id: meeting.id },
-        data: { 
-          status: "FAILED", 
-          processingStep: "FAILED",
-          testResults: enqueueError instanceof Error ? enqueueError.message : "Failed to start processing queue"
-        }
-      });
+    // Enqueue background processing task only if not skipped
+    if (!options?.skipProcessing) {
+      try {
+        await enqueueTask({
+          id: uuidv4(),
+          type: "PROCESS_MEETING_AI",
+          data: { meetingId: meeting.id }
+        });
+        
+        // Trigger worker to start processing immediately
+        await triggerWorker(meeting.id);
+      } catch (enqueueError) {
+        logger.error({ enqueueError, meetingId: meeting.id }, "Failed to enqueue meeting processing");
+        
+        // Update meeting to FAILED so user knows processing didn't start
+        await prisma.meeting.update({
+          where: { id: meeting.id },
+          data: { 
+            status: "FAILED", 
+            processingStep: "FAILED",
+            testResults: enqueueError instanceof Error ? enqueueError.message : "Failed to start processing queue"
+          }
+        });
+      }
     }
     
     return { success: true, data: meeting as Meeting };
@@ -444,6 +449,134 @@ export async function updateMeetingStatus(id: string, status: MeetingStatus, dat
   } catch (error: unknown) {
     logger.error({ error, meetingId: id }, "Update meeting status error");
     return { success: false, error: "Failed to update meeting status" };
+  }
+}
+
+export async function saveMeetingTranscript(id: string, text: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+
+    if (!meeting || meeting.userId !== session.user.id) {
+      return { success: false, error: "Meeting not found" };
+    }
+
+    // Delete existing transcripts and create a new one
+    await prisma.$transaction([
+      prisma.transcript.deleteMany({ where: { meetingId: id } }),
+      prisma.transcript.create({
+        data: {
+          meetingId: id,
+          text: text,
+          speaker: "Speaker",
+          // Use default values for required fields not provided by the API
+          time: "0:00",
+          confidence: 1.0
+        }
+      })
+    ]);
+
+    revalidatePath(`/dashboard/recordings/${id}`);
+    return { success: true };
+  } catch (error: unknown) {
+    logger.error({ error, meetingId: id }, "Save transcript error");
+    return { success: false, error: "Failed to save transcript" };
+  }
+}
+
+export async function saveMeetingSummary(id: string, content: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+
+    if (!meeting || meeting.userId !== session.user.id) {
+      return { success: false, error: "Meeting not found" };
+    }
+
+    await prisma.summary.upsert({
+      where: { meetingId: id },
+      create: {
+        meetingId: id,
+        content
+      },
+      update: {
+        content
+      }
+    });
+
+    revalidatePath(`/dashboard/recordings/${id}`);
+    return { success: true };
+  } catch (error: unknown) {
+    logger.error({ error, meetingId: id }, "Save meeting summary error");
+    return { success: false, error: "Failed to save summary" };
+  }
+}
+
+export async function saveMeetingCode(id: string, code: string): Promise<ActionResult> {
+  return updateMeetingCode(id, code);
+}
+
+export async function saveMeetingTestResults(id: string, results: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+
+    if (!meeting || meeting.userId !== session.user.id) {
+      return { success: false, error: "Meeting not found" };
+    }
+
+    await prisma.meeting.update({
+      where: { id },
+      data: { testResults: results }
+    });
+
+    revalidatePath(`/dashboard/recordings/${id}`);
+    return { success: true };
+  } catch (error: unknown) {
+    logger.error({ error, meetingId: id }, "Save test results error");
+    return { success: false, error: "Failed to save test results" };
+  }
+}
+
+export async function saveMeetingPlan(id: string, plan: string): Promise<ActionResult> {
+  try {
+    const session = await getServerSession(enhancedAuthOptions);
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+    const meeting = await prisma.meeting.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+
+    if (!meeting || meeting.userId !== session.user.id) {
+      return { success: false, error: "Meeting not found" };
+    }
+
+    await prisma.meeting.update({
+      where: { id },
+      data: { projectDoc: plan }
+    });
+
+    revalidatePath(`/dashboard/recordings/${id}`);
+    return { success: true };
+  } catch (error: unknown) {
+    logger.error({ error, meetingId: id }, "Save plan error");
+    return { success: false, error: "Failed to save plan" };
   }
 }
 
