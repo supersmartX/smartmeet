@@ -8,24 +8,17 @@ import { useParams, useRouter } from "next/navigation"
 import { highlightText } from "@/utils/text"
 import { 
   getMeetingById, 
-<<<<<<< HEAD
   askAIAboutMeeting,
   enqueueMeetingAI,
   saveMeetingSummary,
   saveMeetingCode,
   saveMeetingTestResults,
-  saveMeetingPlan
-=======
-  generateMeetingSummary,
-  processMeetingAI,
-  enqueueMeetingAI,
+  saveMeetingPlan,
   retryStuckMeeting
->>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
 } from "@/actions/meeting"
 import { MeetingWithRelations, Transcript } from "@/types/meeting"
 import { useToast } from "@/hooks/useToast"
 import { Toast } from "@/components/Toast"
-<<<<<<< HEAD
 import { 
   downloadFile, 
   summarizeText, 
@@ -33,10 +26,8 @@ import {
   testCode, 
   generatePlan
 } from "@/services/api"
-=======
 import { MeetingHeader } from "@/components/dashboard/recordings/MeetingHeader"
 import { MeetingTabs, EditorTab } from "@/components/dashboard/recordings/MeetingTabs"
->>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
 
 import { 
   Video,
@@ -45,7 +36,14 @@ import {
   MessageSquare,
   Loader2,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Code,
+  CheckCircle2,
+  FileText,
+  Minimize2,
+  Maximize2,
+  Send,
+  ArrowRight
 } from "lucide-react"
 
 import { CodeEditor } from "@/components/dashboard/recordings/CodeEditor"
@@ -66,6 +64,26 @@ export default function RecordingDetailPage() {
   
   // New AI States
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+  const [isGeneratingLogic, setIsGeneratingLogic] = useState(false)
+  const [isTestingCompliance, setIsTestingCompliance] = useState(false)
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
+  
+  // Feature States
+  const [isLogicGenerated, setIsLogicGenerated] = useState(false)
+  const [testResults, setTestResults] = useState<string | null>(null)
+  const [planResult, setPlanResult] = useState<string | null>(null)
+
+  // Terminal States
+  const [terminalTab, setTerminalTab] = useState<"chat" | "context">("chat")
+  const [terminalHeight, setTerminalHeight] = useState(400)
+  const [prompt, setPrompt] = useState("")
+  const [isAnswering, setIsAnswering] = useState(false)
+  const [answer, setAnswer] = useState<string | null>(null)
+  const [suggestions] = useState<string[]>([
+    "Summarize the technical decisions",
+    "What are the main blockers?",
+    "List the action items"
+  ])
   
   // SSR Protection: Check authentication and authorization
   const { data: session, status } = useSession()
@@ -99,6 +117,11 @@ export default function RecordingDetailPage() {
         return false // Return false to signal stop polling
       } else {
         setMeeting(result.data)
+        
+        // Update local states if data exists
+        if (result.data.code) setIsLogicGenerated(true)
+        if (result.data.testResults) setTestResults(result.data.testResults)
+        if (result.data.projectDoc) setPlanResult(result.data.projectDoc)
         
         // Stop polling if completed or failed
         if ((result.data.status === 'COMPLETED' || result.data.status === 'FAILED')) {
@@ -168,13 +191,10 @@ export default function RecordingDetailPage() {
   const tabs = useMemo(() => [
     { id: "transcript", label: "Transcript", icon: MessageSquare, ext: "" },
     { id: "summary", label: "AI Summary", icon: Sparkles, ext: "" },
-<<<<<<< HEAD
     { id: "code", label: "Meeting Logic", icon: Code, ext: "", hidden: !isLogicGenerated && !meeting?.code && meeting?.status !== 'PROCESSING' },
     { id: "tests", label: "Compliance", icon: CheckCircle2, ext: "", hidden: !isLogicGenerated && !testResults && !meeting?.testResults && meeting?.status !== 'PROCESSING' },
     { id: "docs", label: "Documentation", icon: FileText, ext: "", hidden: !isLogicGenerated && !planResult && !meeting?.projectDoc && meeting?.status !== 'PROCESSING' },
   ], [isLogicGenerated, meeting?.code, meeting?.testResults, meeting?.projectDoc, testResults, planResult, meeting?.status]) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
-
-  const [terminalTab, setTerminalTab] = useState<"chat" | "context">("chat")
 
   const handleGenerateLogic = async () => {
     setIsGeneratingLogic(true)
@@ -215,9 +235,6 @@ export default function RecordingDetailPage() {
       setIsGeneratingLogic(false)
     }
   }
-=======
-  ], []) as { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }>; ext: string; hidden?: boolean }[]
->>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
 
   const handleGenerateSummary = async () => {
     setIsGeneratingSummary(true)
@@ -250,7 +267,6 @@ export default function RecordingDetailPage() {
     }
   }
 
-<<<<<<< HEAD
   const handleTestCompliance = async () => {
     setIsTestingCompliance(true)
     try {
@@ -338,8 +354,6 @@ export default function RecordingDetailPage() {
     }
   }
 
-=======
->>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
   useEffect(() => {
     // Persist active tab in session storage (client-side only)
     if (typeof window !== 'undefined') {
@@ -449,11 +463,54 @@ export default function RecordingDetailPage() {
     }
   };
 
+  // Terminal Handlers
+  const toggleTerminalSize = () => {
+    setTerminalHeight(h => h > 300 ? 60 : 400)
+  }
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = terminalHeight;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newHeight = startHeight - (moveEvent.clientY - startY);
+      setTerminalHeight(Math.max(60, Math.min(window.innerHeight - 200, newHeight)));
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  };
+
+  const handleAskAI = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!prompt.trim()) return
+    
+    setIsAnswering(true)
+    try {
+        const result = await askAIAboutMeeting(params.id as string, prompt)
+        if (result.success) {
+            setAnswer(result.data || "No response")
+        } else {
+            setAnswer("Failed to get response")
+        }
+    } catch (err) {
+        console.error(err)
+        setAnswer("Error communicating with AI")
+    } finally {
+        setIsAnswering(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-500">
         <Toast {...toast} onClose={hideToast} />
-        {/* Header Skeleton */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3">
             <div className="h-10 w-64 bg-zinc-200 dark:bg-zinc-800 rounded-2xl animate-pulse" />
@@ -465,7 +522,6 @@ export default function RecordingDetailPage() {
           </div>
         </div>
 
-        {/* Stats Row Skeleton */}
         <div className="flex flex-wrap gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-8 w-24 bg-zinc-100 dark:bg-zinc-800 rounded-full animate-pulse" />
@@ -473,13 +529,11 @@ export default function RecordingDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-320px)] min-h-[600px]">
-          {/* Main Content Skeleton */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             <div className="h-14 w-full bg-zinc-200 dark:bg-zinc-800 rounded-2xl animate-pulse" />
             <div className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] animate-pulse" />
           </div>
 
-          {/* Sidebar Skeleton */}
           <div className="lg:col-span-4 flex flex-col gap-6">
             <div className="h-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] animate-pulse" />
             <div className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] animate-pulse" />
@@ -532,7 +586,6 @@ export default function RecordingDetailPage() {
     )
   }
 
-  // SSR Protection: Show authentication error or redirect
   if (status === 'loading') {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-zinc-950">
@@ -823,180 +876,138 @@ export default function RecordingDetailPage() {
                           </div>
                         </div>
                       </div>
+                      
+                      {/* Action Button */}
+                      <div className="mt-8 flex justify-center">
+                        <button 
+                          onClick={handleGenerateLogic}
+                          disabled={isGeneratingLogic}
+                          className="px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-black/10 disabled:opacity-50"
+                        >
+                          {isGeneratingLogic ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : <Code className="w-4 h-4 inline mr-2" />}
+                          {isGeneratingLogic ? "Analyzing Logic..." : "Extract Business Logic"}
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
-                      <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                        <Sparkles className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
+                    <div className="flex flex-col items-center justify-center py-20 text-center gap-6 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-[32px] bg-zinc-50/50 dark:bg-zinc-900/20">
+                      <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-xl">
+                        <Sparkles className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
                       </div>
-                      <div className="max-w-xs">
-                        <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">Generating Summary</h3>
-                        <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">Our AI is analyzing your meeting audio to generate an executive summary. This usually takes 1-2 minutes.</p>
+                      <div>
+                        <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight mb-2">No summary available</h3>
+                        <p className="text-sm text-zinc-500 font-medium max-w-xs mx-auto mb-4">
+                          Generate a summary to get AI-powered insights from this meeting.
+                        </p>
+                        <button 
+                          onClick={handleGenerateSummary}
+                          disabled={isGeneratingSummary}
+                          className="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg"
+                        >
+                          {isGeneratingSummary ? "Generating..." : "Generate Summary"}
+                        </button>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
             )}
-<<<<<<< HEAD
 
+            {/* Code Tab */}
             {activeTab === "code" && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-                      <Code className="w-5 h-5 text-brand-via" />
+              <div className="max-w-4xl animate-in fade-in duration-500 space-y-6">
+                <div className="flex items-center justify-between mb-8 p-6 bg-brand-via/5 border border-brand-via/10 rounded-3xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20 shadow-lg shadow-brand-via/5">
+                      <Code className="w-6 h-6 text-brand-via" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Meeting Logic</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Extracted Pseudo-code</p>
+                      <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Business Logic</h2>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Extracted Rules & Algorithms</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={handleCopyCode}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    {copyStatus}
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleGenerateLogic}
+                      disabled={isGeneratingLogic}
+                      className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all border border-zinc-200 dark:border-zinc-800 shadow-sm disabled:opacity-50"
+                    >
+                      {isGeneratingLogic ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {isGeneratingLogic ? "Regenerating..." : "Regenerate"}
+                    </button>
+                    <button 
+                      onClick={handleTestCompliance}
+                      disabled={isTestingCompliance}
+                      className="flex items-center gap-2 px-4 py-2 bg-brand-via text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-brand-via/20 disabled:opacity-50"
+                    >
+                      {isTestingCompliance ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      {isTestingCompliance ? "Running Tests..." : "Run Compliance Tests"}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="relative">
-                  {isLogicGenerated && meeting?.code && (
-                    <div className="absolute -top-3 -right-3 px-3 py-1 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg z-10 animate-bounce">
-                      Verified Logic
-                    </div>
-                  )}
-                  <div className="bg-zinc-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-zinc-800 shadow-2xl overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-via/5 rounded-full -mr-32 -mt-32 blur-[100px]" />
-                    <div className="relative z-10">
-                      <CodeEditor 
-                        code={meeting?.code || "# No logic code was generated for this meeting context."}
-                        language="python"
-                        readOnly={false}
-                        onChange={(value) => {
-                          if (meeting && value !== undefined) {
-                              setMeeting({ ...meeting, code: value });
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
+                <div className="bg-zinc-950 rounded-[24px] sm:rounded-[32px] border border-zinc-800 shadow-2xl overflow-hidden min-h-[500px]">
+                  <CodeEditor 
+                    code={meeting?.code || "// No logic generated yet"} 
+                    onChange={() => {
+                      // Optional: Allow editing
+                    }}
+                    language="typescript"
+                  />
                 </div>
               </div>
             )}
 
+            {/* Tests Tab */}
             {activeTab === "tests" && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-                      <CheckCircle2 className="w-5 h-5 text-brand-via" />
+              <div className="max-w-4xl animate-in fade-in duration-500 space-y-6">
+                <div className="flex items-center justify-between mb-8 p-6 bg-brand-via/5 border border-brand-via/10 rounded-3xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20 shadow-lg shadow-brand-via/5">
+                      <CheckCircle2 className="w-6 h-6 text-brand-via" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Compliance & Testing</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Automated Validation</p>
+                      <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Compliance & Testing</h2>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Verification Results</p>
                     </div>
                   </div>
                   <button 
                     onClick={handleTestCompliance}
-                    disabled={isTestingCompliance || !isLogicGenerated}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg disabled:opacity-50 disabled:hover:scale-100"
+                    disabled={isTestingCompliance}
+                    className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all border border-zinc-200 dark:border-zinc-800 shadow-sm"
                   >
-                    {isTestingCompliance ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                    {isTestingCompliance ? "Running Tests..." : "Run Compliance"}
+                    {isTestingCompliance ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-brand-via" />}
+                    {isTestingCompliance ? "Running Tests..." : "Rerun Tests"}
                   </button>
                 </div>
 
-                {testResults ? (
-                  <div className="space-y-6">
-                    <div className="bg-zinc-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-zinc-800 shadow-2xl overflow-hidden relative group">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-32 -mt-32 blur-[100px]" />
-                      <div className="flex items-center gap-2 mb-4 border-b border-zinc-800 pb-4">
-                        <div className="flex gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/40" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20 border border-amber-500/40" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20 border border-emerald-500/40" />
-                        </div>
-                        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest ml-2">Test Execution Output</span>
-                      </div>
-                      <pre className="text-[10px] sm:text-xs md:text-sm font-mono text-emerald-400/90 leading-relaxed overflow-x-auto custom-scrollbar relative z-10">
-                        <code>{testResults}</code>
-                      </pre>
-                    </div>
-
-                    {/* Logic for showing success/failure badge based on test output */}
-                    <div className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-                        testResults.toLowerCase().includes("fail") || testResults.toLowerCase().includes("error")
-                        ? "bg-red-500/10 border-red-500/20 text-red-500"
-                        : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                      }`}>
-                        {testResults.toLowerCase().includes("fail") || testResults.toLowerCase().includes("error") 
-                        ? <ShieldCheck className="w-5 h-5 rotate-180" /> 
-                        : <CheckCircle2 className="w-5 h-5" />}
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Validation Status</p>
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                          {testResults.toLowerCase().includes("fail") || testResults.toLowerCase().includes("error")
-                          ? "Compliance Issues Detected"
-                          : "All Validation Checks Passed"}
-                        </h4>
-                      </div>
-                    </div>
-                  </div>
-                ) : meeting?.actionItems?.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {meeting.actionItems.map((test: ActionItem, i: number) => (
-                      <div key={i} className="bg-white dark:bg-zinc-900 p-6 rounded-[24px] border border-zinc-100 dark:border-zinc-800 hover:border-brand-via/30 transition-all group relative overflow-hidden">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            </div>
-                            <span className="text-[10px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Action Item {i + 1}</span>
-                          </div>
-                          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">Identified</span>
-                        </div>
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-2">{test.title}</h4>
-                        <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">Assigned/Status: {test.status || 'Pending'}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] p-12 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center text-center gap-4">
-                    <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                      <ShieldCheck className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
-                    </div>
-                    <div className="max-w-xs">
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest mb-2">No Action Items</h3>
-                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed uppercase tracking-wider">No specific action items or compliance tasks were identified in this meeting.</p>
-                    </div>
-                  </div>
-                )}
+                <div className="bg-zinc-950 rounded-[24px] sm:rounded-[32px] p-6 border border-zinc-800 shadow-xl font-mono text-sm text-zinc-300 whitespace-pre-wrap overflow-x-auto">
+                  {meeting?.testResults || testResults || "No test results available."}
+                </div>
               </div>
             )}
+
+            {/* Docs Tab */}
             {activeTab === "docs" && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20">
-                      <FileText className="w-5 h-5 text-brand-via" />
+              <div className="max-w-4xl animate-in fade-in duration-500 space-y-6">
+                <div className="flex items-center justify-between mb-8 p-6 bg-brand-via/5 border border-brand-via/10 rounded-3xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-via/10 flex items-center justify-center border border-brand-via/20 shadow-lg shadow-brand-via/5">
+                      <FileText className="w-6 h-6 text-brand-via" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Project Documentation</h2>
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Implementation Roadmap</p>
+                      <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Project Documentation</h2>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Implementation Plan & Specs</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {(planResult?.includes("Document saved at:") || meeting?.projectDoc?.includes("Document saved at:")) && (
+                  <div className="flex gap-2">
+                    {meeting?.projectDoc && meeting.projectDoc.includes("Document saved at:") && (
                       <button 
                         onClick={handleDownloadDoc}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-emerald-500/20"
+                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all border border-zinc-200 dark:border-zinc-800 shadow-sm"
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        Download .docx
+                        <FileText className="w-3.5 h-3.5" />
+                        Download
                       </button>
                     )}
                     <button 
@@ -1169,8 +1180,8 @@ export default function RecordingDetailPage() {
                         key={i}
                         onClick={() => {
                           setPrompt(s)
-                          const mockEvent = { preventDefault: () => {} } as React.FormEvent
-                          handleAskAI(mockEvent)
+                          // Trigger submit manually or just set prompt
+                          // For now just set prompt as users usually want to edit
                         }}
                         className="p-3 text-left bg-zinc-100/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl transition-all group"
                       >
@@ -1248,8 +1259,6 @@ export default function RecordingDetailPage() {
                 {isAnswering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
             </form>
-=======
->>>>>>> 00ef848330908cfb158ce754e0ca50d54312a269
           </div>
         </div>
       </div>

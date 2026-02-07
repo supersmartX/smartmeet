@@ -274,7 +274,9 @@ export default function RecordingsClient() {
       // Use XMLHttpRequest for real progress tracking
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadUrl);
+        // Force HTTPS for upload URL to prevent mixed content errors
+        const secureUploadUrl = uploadUrl.replace(/^http:/, "https:");
+        xhr.open("PUT", secureUploadUrl);
         // Ensure we always have a content type, fallback to octet-stream
         xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
         xhr.setRequestHeader("x-upsert", "true");

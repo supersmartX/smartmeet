@@ -46,11 +46,24 @@ async function handleRateLimit(req: NextRequest) {
 
 export default withAuth(
   async function middleware(req: NextRequest) {
-    // 1. Check Rate Limit first (at the edge)
+    // 1. Handle CORS Preflight (OPTIONS)
+    if (req.method === "OPTIONS") {
+      return new NextResponse(null, {
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
+    // 2. Check Rate Limit first (at the edge)
     const rateLimitResponse = await handleRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
 
-    // 2. Security Headers (CSP)
+    // 3. Security Headers (CSP)
     const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
 
     const csp = `
@@ -59,7 +72,7 @@ export default withAuth(
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com;
       img-src 'self' data: blob: https:;
       font-src 'self' data: https://fonts.gstatic.com;
-      connect-src 'self' https://accounts.google.com https://github.com https://nifnqjfgcgdyfbsjgmlw.supabase.co wss://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.ngrok-free.app https://*.ngrok-free.dev https://*.supabase.co wss://*.supabase.co https://*.supabase.in;
+      connect-src 'self' https://accounts.google.com https://github.com https://nifnqjfgcgdyfbsjgmlw.supabase.co wss://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.ngrok-free.app https://*.ngrok-free.dev https://*.supabase.co wss://*.supabase.co https://*.supabase.in http://api.supersmartx.com:8000;
       frame-src 'self' https://accounts.google.com https://github.com;
       media-src 'self' blob: https://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.supabase.co;
       object-src 'none';
@@ -69,6 +82,12 @@ export default withAuth(
     `.replace(/\n/g, '').replace(/\s{2,}/g, ' ').trim();
 
     const response = NextResponse.next();
+    
+    // Add CORS headers to all responses
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version");
+
     response.headers.set("Content-Security-Policy", csp);
     response.headers.set("x-nonce", nonce);
 
@@ -78,6 +97,11 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
+
+        // Allow OPTIONS requests (CORS preflight)
+        if (req.method === "OPTIONS") {
+          return true;
+        }
         
         // Public routes that don't require authentication
         const publicRoutes = [
