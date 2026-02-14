@@ -127,7 +127,7 @@ export async function makeApiRequest<T>(
     if (!useProxy) {
       // Direct call to API if on server OR if it's a local route on the client
       const baseUrl = isServer 
-        ? (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://api.supersmartx.com:8000")
+        ? (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "https://api.supersmartx.com")
         : ""; // Empty base for client-side local calls to use current origin
       
       url = isLocalRoute ? endpoint : `${baseUrl}${endpoint}`;

@@ -318,7 +318,7 @@ export function AIConfigSection({
               <label htmlFor="model-select" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">Preferred Model</label>
               <button 
                 onClick={() => setIsCustomModel(!isCustomModel)}
-                className="text-[9px] font-black text-brand-via uppercase tracking-widest hover:underline"
+                className="text-[9px] font-black text-brand-via uppercase tracking-widest hover:underline hover:opacity-80 transition-opacity"
               >
                 {isCustomModel ? "Choose from list" : "Enter custom model ID"}
               </button>

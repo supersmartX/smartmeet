@@ -100,6 +100,6 @@ if (!_env.success) {
 export const env = _env.success 
   ? _env.data 
   : (isBuildTime 
-      ? { ...buildTimeMocks, NEXTAUTH_URL: "http://localhost:3000", NEXT_PUBLIC_API_BASE_URL: "http://api.supersmartx.com:8000", NODE_ENV: "production" } as z.infer<typeof envSchema>
+      ? { ...buildTimeMocks, NEXTAUTH_URL: "http://localhost:3000", NEXT_PUBLIC_API_BASE_URL: "https://api.supersmartx.com", NODE_ENV: "production" } as z.infer<typeof envSchema>
       : {} as z.infer<typeof envSchema>
     );
