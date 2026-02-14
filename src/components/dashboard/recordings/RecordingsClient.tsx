@@ -249,11 +249,18 @@ export default function RecordingsClient() {
   }
 
   const handleUploadFile = async (file: File) => {
+    if (!file) return;
+
     try {
-      // 0. Pre-check file size (Supabase limit is 50MB as per user)
-      const MAX_SIZE = 50 * 1024 * 1024;
+      // Check file size (max 25MB as recommended by the AI backend)
+      const MAX_SIZE = 25 * 1024 * 1024;
+      if (file.size === 0) {
+        toastVisible("The file is empty. Please try a different recording.", "error");
+        return;
+      }
+      
       if (file.size > MAX_SIZE) {
-        toastVisible(`File too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size is 50MB.`, "error");
+        toastVisible(`File too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size for AI processing is 25MB.`, "error");
         return;
       }
 
@@ -298,6 +305,7 @@ export default function RecordingsClient() {
           } else {
             // Try to parse error details from Supabase response
             let errorMessage = `Upload failed with status ${xhr.status}`;
+            console.error(`Supabase upload error (Status ${xhr.status}):`, xhr.responseText);
             try {
               const response = JSON.parse(xhr.responseText);
               if (response.error || response.message) {

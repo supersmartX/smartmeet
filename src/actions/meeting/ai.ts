@@ -82,6 +82,12 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
           .download(meeting.audioUrl);
 
         if (downloadError) throw new Error(`Storage error: ${downloadError.message}`);
+        if (!audioBlob || audioBlob.size === 0) {
+          logger.error({ meetingId, path: meeting.audioUrl }, "Downloaded audio blob is empty");
+          throw new Error("The audio file in storage is empty. Please try recording again.");
+        }
+
+        logger.info({ meetingId, size: audioBlob.size, type: audioBlob.type }, "Downloaded audio for processing");
 
         const isDocument = meeting.audioUrl?.toLowerCase().endsWith('.pdf') || 
                           meeting.audioUrl?.toLowerCase().endsWith('.doc') || 
@@ -141,7 +147,11 @@ export async function internalProcessMeetingAI(meetingId: string): Promise<Actio
         }
 
         if (!transcription || transcription.trim().length === 0) {
-          throw new ServiceError("No content detected in file", "ERR_EMPTY_TRANSCRIPTION");
+          logger.warn({ meetingId, blobSize: audioBlob.size }, "Transcription returned empty result");
+          throw new ServiceError(
+            `No content detected in ${isDocument ? 'document' : 'audio file'}. The file might be silent or have unreadable content.`, 
+            "ERR_EMPTY_TRANSCRIPTION"
+          );
         }
 
         // Step 1.5: Save transcription to database immediately
