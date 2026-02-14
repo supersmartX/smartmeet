@@ -35,7 +35,7 @@ async function createBucket() {
     // Update public access just in case
     const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
       public: false,
-      fileSizeLimit: null, // Use project default
+      fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
       allowedMimeTypes: ['audio/*', 'video/*', 'application/pdf', 'text/plain']
     });
     
@@ -48,7 +48,7 @@ async function createBucket() {
     console.log(`Creating "${bucketName}" bucket...`);
     const { data, error } = await supabase.storage.createBucket(bucketName, {
       public: false,
-      fileSizeLimit: null, // Use project default
+      fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
       allowedMimeTypes: ['audio/*', 'video/*', 'application/pdf', 'text/plain']
     });
 

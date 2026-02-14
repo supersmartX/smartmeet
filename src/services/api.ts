@@ -219,6 +219,10 @@ export async function makeApiRequest<T>(
           errorCode = ApiErrorCode.RATE_LIMIT_EXCEEDED;
           errorMessage = "Too many requests. Please try again later.";
           break;
+        case 413:
+          errorCode = ApiErrorCode.PAYLOAD_TOO_LARGE;
+          errorMessage = "The audio file is too large to process. Please try a shorter recording or a smaller file (max 25MB recommended).";
+          break;
         case 503:
           errorCode = ApiErrorCode.SERVICE_UNAVAILABLE;
           errorMessage = "AI service is temporarily overloaded. Please try again in a moment.";

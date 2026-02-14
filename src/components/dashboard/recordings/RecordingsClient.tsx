@@ -250,6 +250,13 @@ export default function RecordingsClient() {
 
   const handleUploadFile = async (file: File) => {
     try {
+      // 0. Pre-check file size (Supabase limit is 50MB as per user)
+      const MAX_SIZE = 50 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        toastVisible(`File too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size is 50MB.`, "error");
+        return;
+      }
+
       dispatch({ type: 'SET_UPLOADING', payload: true })
       dispatch({ type: 'SET_UPLOAD_STATUS', payload: "Getting upload permission..." })
 
@@ -334,7 +341,16 @@ export default function RecordingsClient() {
       } else {
         // Fallback or Error
         console.error("AI Processing failed:", aiResult.error);
-        toastVisible("AI Processing failed, but recording is saved.", "info")
+        const isSizeError = aiResult.error?.toLowerCase().includes("large") || 
+                           aiResult.error?.toLowerCase().includes("size") ||
+                           aiResult.error?.toLowerCase().includes("413");
+        
+        toastVisible(
+          isSizeError 
+            ? `AI Processing failed: ${aiResult.error}` 
+            : "AI Processing failed, but recording is saved.", 
+          "info"
+        )
       }
 
       dispatch({ type: 'SET_MODAL_OPEN', payload: false })
