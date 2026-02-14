@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Fetch from Backend
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://api.supersmartx.com:8000";
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "https://api.supersmartx.com";
     const fileUrl = `${baseUrl}/${path}`;
 
     logger.info({ fileUrl, userId: session.user.id }, "Proxying download request");

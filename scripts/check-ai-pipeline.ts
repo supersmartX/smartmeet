@@ -72,7 +72,7 @@ async function runDiagnostics() {
 
   // 5. Check AI API Connectivity
   try {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://api.supersmartx.com:8000";
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.supersmartx.com";
     console.log(`\n5. AI API Base: ${apiBase}`);
     const res = await fetch(`${apiBase}/health`).catch(() => null);
     if (res && res.ok) {

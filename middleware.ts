@@ -72,7 +72,7 @@ export default withAuth(
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com;
       img-src 'self' data: blob: https:;
       font-src 'self' data: https://fonts.gstatic.com;
-      connect-src 'self' https://accounts.google.com https://github.com https://nifnqjfgcgdyfbsjgmlw.supabase.co wss://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.ngrok-free.app https://*.ngrok-free.dev https://*.supabase.co wss://*.supabase.co https://*.supabase.in http://api.supersmartx.com:8000;
+      connect-src 'self' https://accounts.google.com https://github.com https://nifnqjfgcgdyfbsjgmlw.supabase.co wss://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.ngrok-free.app https://*.ngrok-free.dev https://*.supabase.co wss://*.supabase.co https://*.supabase.in https://api.supersmartx.com;
       frame-src 'self' https://accounts.google.com https://github.com;
       media-src 'self' blob: https://nifnqjfgcgdyfbsjgmlw.supabase.co https://*.supabase.co;
       object-src 'none';

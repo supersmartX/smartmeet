@@ -9,7 +9,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://api.supersmartx.com:8000";
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.supersmartx.com";
 
 if (!supabaseUrl || !supabaseSecretKey) {
   console.error('Missing Supabase URL or Secret Key');
